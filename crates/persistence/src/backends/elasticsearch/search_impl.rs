@@ -60,20 +60,55 @@ fn reject_unsupported_metadata_modifier(query: &SearchQuery) -> StorageResult<()
     crate::search::reject_unsupported_metadata_modifier(query)?;
     crate::search::validate_date_values(query)?;
     // And a number or quantity value that is not a number (#1319, #1340).
-    crate::search::validate_numeric_values(query)
+    crate::search::validate_numeric_values(query)?;
+    // And a value that is empty, or has an empty alternative: `family=Zzz,`
+    // is a prefix match on `""`, which is every family name (#1380).
+    crate::search::validate_value_presence(query)
 }
 
 /// Maximum retry attempts for transient ES search failures (in addition to the
 /// initial attempt). Transient failures observed in CI: shard allocation
 /// flapping during recovery/relocation, brief master-node hiccups.
-const MAX_SEARCH_RETRIES: u32 = 2;
+pub(super) const MAX_SEARCH_RETRIES: u32 = 2;
 
 /// Initial backoff before retrying a transient ES error. Doubled per attempt.
-const RETRY_BASE_DELAY_MS: u64 = 100;
+pub(super) const RETRY_BASE_DELAY_MS: u64 = 100;
+
+/// The error type of a read that reached an index whose primary shard has no
+/// started copy.
+const NO_SHARD_AVAILABLE: &str = "no_shard_available_action_exception";
+
+/// Retries for a read answered [`NO_SHARD_AVAILABLE`] (in addition to the
+/// initial attempt), in place of [`MAX_SEARCH_RETRIES`] (#1402).
+///
+/// Unlike the other transient answers this one is *expected*: an index is in
+/// the cluster state — so it is not an `index_not_found_exception`, which
+/// reads as an empty set — from the moment its creation starts, and its
+/// primary shard is started only some time later. The request that creates
+/// the index waits for that; a read from anyone else (another request, the
+/// composite's asynchronous sync worker indexing behind a write, another HFS
+/// instance) does not, and gets a `503` for the whole window. The window is
+/// ~100 ms on an idle single node and was seen to pass the general budget's
+/// ~300 ms on a loaded one, so the first search after the first write of a
+/// resource type failed.
+///
+/// With [`NO_SHARD_RETRY_MAX_DELAY_MS`] the waits are 100, 200, 400, 800 ms
+/// and then four of 1 s: at most [`NO_SHARD_RETRY_BUDGET_MS`] of waiting
+/// before the failure is reported. A shard that is genuinely lost (a red
+/// index) therefore costs a read that long instead of ~300 ms; the answer is
+/// an error either way.
+const MAX_NO_SHARD_RETRIES: u32 = 8;
+
+/// Cap on the doubling backoff between [`MAX_NO_SHARD_RETRIES`] attempts.
+const NO_SHARD_RETRY_MAX_DELAY_MS: u64 = 1_000;
+
+/// Total waiting the [`NO_SHARD_AVAILABLE`] schedule can add to one read.
+#[cfg(test)]
+const NO_SHARD_RETRY_BUDGET_MS: u64 = 5_500;
 
 /// How a non-success Elasticsearch response is handled (#1294).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum EsFailureClass {
+pub(super) enum EsFailureClass {
     /// The cluster could not answer right now; the same request may succeed
     /// shortly. Retried with backoff.
     Retryable,
@@ -95,7 +130,7 @@ enum EsFailureClass {
 const RETRYABLE_ES_ERROR_TYPES: &[&str] = &[
     "es_rejected_execution_exception",
     "circuit_breaking_exception",
-    "no_shard_available_action_exception",
+    NO_SHARD_AVAILABLE,
 ];
 
 /// Error types under which Elasticsearch 7.17 reports a query *value* it could
@@ -161,7 +196,7 @@ fn es_error_types(body: &str) -> Vec<String> {
 /// A `search_phase_execution_exception` wrapper is deliberately not evidence of
 /// anything by itself: it used to be matched as a substring and treated as
 /// transient, which retried every malformed-query `400` (#1294).
-fn classify_es_failure(status: u16, body: &str) -> EsFailureClass {
+pub(super) fn classify_es_failure(status: u16, body: &str) -> EsFailureClass {
     let types = es_error_types(body);
     let names_any = |wanted: &[&str]| types.iter().any(|t| wanted.contains(&t.as_str()));
 
@@ -189,7 +224,7 @@ fn classify_es_failure(status: u16, body: &str) -> EsFailureClass {
 /// is empty, and a query value that happens to contain the exception's name is
 /// echoed back inside other errors. Substring matching on these bodies is what
 /// #1294 was.
-fn is_index_not_found(status: u16, body: &str) -> bool {
+pub(super) fn is_index_not_found(status: u16, body: &str) -> bool {
     const INDEX_NOT_FOUND: &str = "index_not_found_exception";
     if status != 404 {
         return false;
@@ -390,6 +425,26 @@ enum RetryableFailure {
     Transient { status: u16, body: String },
 }
 
+impl RetryableFailure {
+    /// How many times a read that failed this way is sent again, and how long
+    /// to wait before resend number `attempt` (0-based): the general schedule,
+    /// or the longer one for [`NO_SHARD_AVAILABLE`].
+    fn retry_schedule(&self, attempt: u32) -> (u32, u64) {
+        let delay_ms = RETRY_BASE_DELAY_MS << attempt.min(16);
+        match self {
+            RetryableFailure::Transient { body, .. }
+                if es_error_types(body).iter().any(|t| t == NO_SHARD_AVAILABLE) =>
+            {
+                (
+                    MAX_NO_SHARD_RETRIES,
+                    delay_ms.min(NO_SHARD_RETRY_MAX_DELAY_MS),
+                )
+            }
+            _ => (MAX_SEARCH_RETRIES, delay_ms),
+        }
+    }
+}
+
 /// The result of searching an index that does not exist.
 ///
 /// Indices are created lazily on the first write of a resource type, so a type
@@ -438,9 +493,8 @@ pub(super) async fn send_read_with_retry(
     index: &str,
     body: Value,
 ) -> StorageResult<Option<Value>> {
-    let mut last_failure: Option<RetryableFailure> = None;
-
-    for attempt in 0..=MAX_SEARCH_RETRIES {
+    let mut attempt: u32 = 0;
+    let (attempts, last_failure) = loop {
         let failure = match send_search_once(backend, op, index, body.clone()).await {
             SearchAttempt::Body(v) => return Ok(Some(v)),
             SearchAttempt::EmptyIndex => return Ok(None),
@@ -451,33 +505,34 @@ pub(super) async fn send_read_with_retry(
             }
         };
 
-        if attempt < MAX_SEARCH_RETRIES {
-            let delay_ms = RETRY_BASE_DELAY_MS << attempt;
-            tracing::warn!(
-                attempt = attempt + 1,
-                max = MAX_SEARCH_RETRIES + 1,
-                delay_ms,
-                index,
-                "Retryable ES {} failure, retrying",
-                op.name()
-            );
-            sleep(Duration::from_millis(delay_ms)).await;
+        // The budget is that of the failure just seen, so a read that meets
+        // an unstarted shard and then some other transient answer stops as
+        // soon as it is past the general budget.
+        let (max_retries, delay_ms) = failure.retry_schedule(attempt);
+        if attempt >= max_retries {
+            break (attempt + 1, failure);
         }
-        last_failure = Some(failure);
-    }
+        tracing::warn!(
+            attempt = attempt + 1,
+            max = max_retries + 1,
+            delay_ms,
+            index,
+            "Retryable ES {} failure, retrying",
+            op.name()
+        );
+        sleep(Duration::from_millis(delay_ms)).await;
+        attempt += 1;
+    };
 
-    let attempts = MAX_SEARCH_RETRIES + 1;
-    Err(
-        match last_failure.expect("a retryable branch always sets last_failure") {
-            RetryableFailure::Unreachable(message) => unavailable_error(format!(
-                "Elasticsearch unreachable after {attempts} attempts: {message}"
-            )),
-            RetryableFailure::Transient { status, body } => internal_error(format!(
-                "{} failed after {attempts} attempts (status {status}): {body}",
-                op.title()
-            )),
-        },
-    )
+    Err(match last_failure {
+        RetryableFailure::Unreachable(message) => unavailable_error(format!(
+            "Elasticsearch unreachable after {attempts} attempts: {message}"
+        )),
+        RetryableFailure::Transient { status, body } => internal_error(format!(
+            "{} failed after {attempts} attempts (status {status}): {body}",
+            op.title()
+        )),
+    })
 }
 
 /// Converts an Elasticsearch hit's `sort` array into cursor values, dropping
@@ -765,6 +820,13 @@ impl SearchProvider for ElasticsearchBackend {
     ) -> StorageResult<u64> {
         reject_unsupported_metadata_modifier(query)?;
 
+        // Under `_contained` the count is of what `search` returns (#1383): a
+        // plain document count would count contained documents, not the
+        // containers they stand for, and would misread `_id`.
+        if query.contained != crate::types::ContainedMode::Off {
+            return Ok(self.contained_keys(tenant, query).await?.len() as u64);
+        }
+
         let tenant_id = tenant.tenant_id().as_str();
         let resource_type = &query.resource_type;
         let index = self.index_name(tenant_id, resource_type);
@@ -808,17 +870,122 @@ impl SearchProvider for ElasticsearchBackend {
 
 impl ElasticsearchBackend {
     /// Executes a `_contained=true|both` search. The query builder restricts the
-    /// hit set (`is_contained=true` for `on`; no restriction for `both`); this
-    /// post-processes each hit: contained-doc hits resolve to their container
-    /// (`_containedType=container`, default) or the contained resource itself
-    /// (`_containedType=contained`), while top-level hits (only present for
-    /// `both`) pass through. Single window (no keyset cursor).
+    /// hit set (`is_contained=true` for `on`; no restriction for `both`);
+    /// [`Self::contained_keys`] turns the hits into the result list — a
+    /// contained-doc hit stands for its container (`_containedType=container`,
+    /// default) or for the contained resource itself
+    /// (`_containedType=contained`), a top-level hit (only present for `both`)
+    /// for itself — and this materializes the `_offset`/`_count` window of it
+    /// (no keyset cursor). `_total` and `search_count` are the length of that
+    /// same list (#1383).
+    ///
+    /// `_sort` is applied, by the query itself, to each hit's own values — a
+    /// contained document carries the contained resource's search values, so
+    /// `_sort=date` orders by the *contained* resource's date, across the
+    /// top-level and contained hits of `both` alike. A container stands where
+    /// its first matching contained resource does. A contained resource has no
+    /// `meta.lastUpdated` of its own: its document carries the container's, and
+    /// that is what `_sort=_lastUpdated` reads. The SQL backends and MongoDB
+    /// refuse `_sort` here instead (#1407).
     async fn search_contained(
         &self,
         tenant: &TenantContext,
         query: &SearchQuery,
     ) -> StorageResult<SearchResult> {
+        let tenant_id = tenant.tenant_id().as_str();
+        let index = self.index_name(tenant_id, &query.resource_type);
+
+        let keys = self.contained_keys(tenant, query).await?;
+        let total = query.wants_total().then_some(keys.len() as u64);
+        let count = query.count.unwrap_or(100) as usize;
+        let offset = query.offset.unwrap_or(0) as usize;
+        let window: Vec<&ContainedKey> = keys.iter().skip(offset).take(count).collect();
+
+        // Top-level and contained documents are returned from their own
+        // `content`: fetch the window's documents in one request.
+        let doc_ids: Vec<&str> = window
+            .iter()
+            .filter_map(|key| match key {
+                ContainedKey::Document { doc_id, .. } => Some(doc_id.as_str()),
+                ContainedKey::Container { .. } => None,
+            })
+            .collect();
+        let mut sources: HashMap<String, Value> = HashMap::new();
+        if !doc_ids.is_empty() {
+            let body = json!({
+                "query": { "ids": { "values": doc_ids } },
+                "size": doc_ids.len(),
+            });
+            if let Some(found) = send_search_with_retry(self, &index, body).await? {
+                for hit in found["hits"]["hits"].as_array().into_iter().flatten() {
+                    if let (Some(id), Some(source)) =
+                        (hit.get("_id").and_then(Value::as_str), hit.get("_source"))
+                    {
+                        sources.insert(id.to_string(), source.clone());
+                    }
+                }
+            }
+        }
+
+        let mut items: Vec<StoredResource> = Vec::new();
+        for key in window {
+            match key {
+                ContainedKey::Container {
+                    container_type,
+                    container_id,
+                } => {
+                    if let Some(container) = self.read(tenant, container_type, container_id).await?
+                    {
+                        items.push(container);
+                    }
+                }
+                ContainedKey::Document { doc_id, local_id } => {
+                    let Some(source) = sources.get(doc_id) else {
+                        continue;
+                    };
+                    let Some(stored) = parse_hit_to_stored_resource(source, tenant)? else {
+                        continue;
+                    };
+                    match local_id {
+                        // The contained doc's `content` IS the contained
+                        // resource; return it under its local id.
+                        Some(local_id) => items.push(StoredResource::from_storage(
+                            stored.resource_type().to_string(),
+                            local_id.to_string(),
+                            stored.version_id().to_string(),
+                            tenant.tenant_id().clone(),
+                            stored.content().clone(),
+                            stored.created_at(),
+                            stored.last_modified(),
+                            None,
+                            stored.fhir_version(),
+                        )),
+                        None => items.push(stored),
+                    }
+                }
+            }
+        }
+
+        let page = Page::new(items, PageInfo::end());
+        let mut result = SearchResult::new(page);
+        if let Some(t) = total {
+            result = result.with_total(t);
+        }
+        Ok(result)
+    }
+
+    /// The result list of a `_contained=true|both` search, unmaterialized and
+    /// de-duplicated, in the query's sort order: every hit, reduced to the
+    /// fields that identify what it stands for. Bounded by the index's
+    /// `max_result_window`, like any single Elasticsearch request.
+    async fn contained_keys(
+        &self,
+        tenant: &TenantContext,
+        query: &SearchQuery,
+    ) -> StorageResult<Vec<ContainedKey>> {
         use crate::types::ContainedReturn;
+
+        reject_contained_out_of_band(query)?;
 
         let tenant_id = tenant.tenant_id().as_str();
         let resource_type = &query.resource_type;
@@ -837,7 +1004,6 @@ impl ElasticsearchBackend {
         let mut standard_query = query.clone();
         standard_query.parameters = parameters;
 
-        // Fetch a generous window of candidate hits (offset/count applied below).
         let mut es_query =
             EsQueryBuilder::new(tenant_id, resource_type, index.clone()).build(&standard_query);
         for param in &id_params {
@@ -863,112 +1029,144 @@ impl ElasticsearchBackend {
                 None => *clauses = json!([matches_id]),
             }
         }
-        let count = query.count.unwrap_or(100) as usize;
-        let offset = query.offset.unwrap_or(0) as usize;
         if let Some(obj) = es_query.body.as_object_mut() {
-            obj.insert("size".to_string(), json!(offset + count));
+            obj.insert("size".to_string(), json!(self.config().max_result_window));
+            obj.insert(
+                "_source".to_string(),
+                json!([
+                    "is_deleted",
+                    "is_contained",
+                    "resource_type",
+                    "resource_id",
+                    "container_type",
+                    "container_id",
+                    "contained_local_id",
+                ]),
+            );
             obj.remove("from");
             obj.remove("search_after");
         }
 
-        let body = match send_search_with_retry(self, &index, es_query.body).await? {
-            Some(v) => v,
-            None => return Ok(empty_index_result()),
+        let Some(body) = send_search_with_retry(self, &index, es_query.body).await? else {
+            return Ok(Vec::new());
         };
-        let hits = body
-            .get("hits")
-            .and_then(|h| h.get("hits"))
-            .and_then(|h| h.as_array())
-            .cloned()
-            .unwrap_or_default();
 
-        let mut items: Vec<StoredResource> = Vec::new();
+        // One request returns at most `max_result_window` hits, and the result
+        // list is de-duplicated from the hits, so past that bound the list —
+        // and with it `_total`, `search_count` and the pages beyond it — is
+        // truncated. It cannot be repaired from `hits.total`, which counts
+        // documents, not containers. Say so rather than report a short total
+        // as if it were exact (#1407).
+        let hit_count = body["hits"]["hits"].as_array().map_or(0, Vec::len);
+        if hit_count >= self.config().max_result_window as usize {
+            tracing::warn!(
+                resource_type = %resource_type,
+                max_result_window = self.config().max_result_window,
+                "_contained search reached max_result_window: the result list and its \
+                 _total are truncated to the first {hit_count} hits"
+            );
+        }
+
+        let mut keys: Vec<ContainedKey> = Vec::new();
         let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for hit in &hits {
-            let Some(source) = hit.get("_source") else {
+        for hit in body["hits"]["hits"].as_array().into_iter().flatten() {
+            let (Some(doc_id), Some(source)) =
+                (hit.get("_id").and_then(Value::as_str), hit.get("_source"))
+            else {
                 continue;
             };
-            if source
-                .get("is_deleted")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false)
-            {
+            let text = |field: &str| source.get(field).and_then(Value::as_str);
+            let flag = |field: &str| source.get(field).and_then(Value::as_bool).unwrap_or(false);
+            if flag("is_deleted") {
                 continue;
             }
 
-            let is_contained = source
-                .get("is_contained")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-
-            if !is_contained {
-                // Top-level hit (only in `both` mode) — pass through.
-                if let Some(stored) = parse_hit_to_stored_resource(source, tenant)? {
-                    if seen.insert(stored.url()) {
-                        items.push(stored);
-                    }
+            if !flag("is_contained") {
+                // Top-level hit (only in `both` mode) — stands for itself.
+                let (Some(rtype), Some(rid)) = (text("resource_type"), text("resource_id")) else {
+                    continue;
+                };
+                if seen.insert(format!("{rtype}/{rid}")) {
+                    keys.push(ContainedKey::Document {
+                        doc_id: doc_id.to_string(),
+                        local_id: None,
+                    });
                 }
                 continue;
             }
 
-            let (Some(container_type), Some(container_id)) = (
-                source.get("container_type").and_then(|v| v.as_str()),
-                source.get("container_id").and_then(|v| v.as_str()),
-            ) else {
+            let (Some(container_type), Some(container_id)) =
+                (text("container_type"), text("container_id"))
+            else {
                 continue;
             };
-
             match query.contained_return {
                 ContainedReturn::Container => {
-                    if !seen.insert(format!("{container_type}/{container_id}")) {
-                        continue;
-                    }
-                    if let Some(container) = self.read(tenant, container_type, container_id).await?
-                    {
-                        items.push(container);
+                    if seen.insert(format!("{container_type}/{container_id}")) {
+                        keys.push(ContainedKey::Container {
+                            container_type: container_type.to_string(),
+                            container_id: container_id.to_string(),
+                        });
                     }
                 }
                 ContainedReturn::Contained => {
-                    // The contained doc's `content` IS the contained resource;
-                    // return it directly with its local id.
-                    if let Some(stored) = parse_hit_to_stored_resource(source, tenant)? {
-                        let local_id = source
-                            .get("contained_local_id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or_else(|| stored.id());
-                        let key = format!("{container_type}/{container_id}#{local_id}");
-                        if seen.insert(key) {
-                            let rebuilt = StoredResource::from_storage(
-                                stored.resource_type().to_string(),
-                                local_id.to_string(),
-                                stored.version_id().to_string(),
-                                tenant.tenant_id().clone(),
-                                stored.content().clone(),
-                                stored.created_at(),
-                                stored.last_modified(),
-                                None,
-                                stored.fhir_version(),
-                            );
-                            items.push(rebuilt);
-                        }
+                    let Some(local_id) = text("contained_local_id").or(text("resource_id")) else {
+                        continue;
+                    };
+                    if seen.insert(format!("{container_type}/{container_id}#{local_id}")) {
+                        keys.push(ContainedKey::Document {
+                            doc_id: doc_id.to_string(),
+                            local_id: Some(local_id.to_string()),
+                        });
                     }
                 }
             }
         }
+        Ok(keys)
+    }
+}
 
-        // Apply the offset/count window.
-        let total = if query.wants_total() {
-            Some(items.len() as u64)
-        } else {
-            None
-        };
-        let windowed: Vec<StoredResource> = items.into_iter().skip(offset).take(count).collect();
-        let page = Page::new(windowed, PageInfo::end());
-        let mut result = SearchResult::new(page);
-        if let Some(t) = total {
-            result = result.with_total(t);
-        }
-        Ok(result)
+/// One entry of a `_contained` result list.
+enum ContainedKey {
+    /// A container, read from storage when its page is materialized.
+    Container {
+        container_type: String,
+        container_id: String,
+    },
+    /// A document returned from its own `content`: a top-level resource
+    /// (`local_id` is `None`) or a contained one, under its local id.
+    Document {
+        doc_id: String,
+        local_id: Option<String>,
+    },
+}
+
+/// Refuses the `_contained=true|both` constraints that select *top-level*
+/// resources — `_has`, `_list`, chained parameters — which a contained
+/// resource never is: nothing outside its container can reference it (#1383).
+/// They used to be dropped here (`_has`, `_list`) or to match nothing (chains).
+fn reject_contained_out_of_band(query: &SearchQuery) -> StorageResult<()> {
+    let refused = if !query.reverse_chains.is_empty() {
+        Some("_has")
+    } else if !query.list.is_empty() {
+        Some("_list")
+    } else {
+        query
+            .parameters
+            .iter()
+            .find(|p| !p.chain.is_empty())
+            .map(|p| p.name.as_str())
+    };
+    match refused {
+        Some(name) => Err(crate::error::StorageError::Search(
+            crate::error::SearchError::QueryParseError {
+                message: format!(
+                    "'{name}' cannot be combined with _contained=true or both: it selects \
+                     top-level resources, which a contained resource is not"
+                ),
+            },
+        )),
+        None => Ok(()),
     }
 }
 
@@ -1214,6 +1412,47 @@ mod tests {
             }
         })
         .to_string()
+    }
+
+    /// #1402: only a shard with no started copy gets the longer schedule, and
+    /// what that schedule can cost a read is the documented bound.
+    #[test]
+    fn only_an_unstarted_shard_gets_the_longer_retry_schedule() {
+        const SPEE: &str = "search_phase_execution_exception";
+        let transient = |status: u16, body: String| RetryableFailure::Transient { status, body };
+
+        for status in [500, 503] {
+            let no_shard = transient(status, es_error_body(SPEE, NO_SHARD_AVAILABLE, None));
+            let waits: Vec<u64> = (0..MAX_NO_SHARD_RETRIES)
+                .map(|attempt| {
+                    let (max_retries, delay_ms) = no_shard.retry_schedule(attempt);
+                    assert_eq!(max_retries, MAX_NO_SHARD_RETRIES);
+                    delay_ms
+                })
+                .collect();
+            assert_eq!(waits, [100, 200, 400, 800, 1_000, 1_000, 1_000, 1_000]);
+            assert_eq!(waits.iter().sum::<u64>(), NO_SHARD_RETRY_BUDGET_MS);
+        }
+
+        for other in [
+            transient(503, String::new()),
+            transient(
+                503,
+                es_error_body(SPEE, "node_disconnected_exception", None),
+            ),
+            transient(
+                429,
+                es_error_body(
+                    "es_rejected_execution_exception",
+                    "es_rejected_execution_exception",
+                    None,
+                ),
+            ),
+            RetryableFailure::Unreachable("connection refused".to_string()),
+        ] {
+            assert_eq!(other.retry_schedule(0), (MAX_SEARCH_RETRIES, 100));
+            assert_eq!(other.retry_schedule(1), (MAX_SEARCH_RETRIES, 200));
+        }
     }
 
     /// #1294: status × error type → retry / client error / server error.

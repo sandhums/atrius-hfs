@@ -254,6 +254,11 @@ pub enum ValidationError {
         /// Human-readable failure detail.
         message: String,
     },
+
+    /// A patch document could not be applied; nothing was written. Kept typed
+    /// so the REST layer chooses the status per cause (#1406).
+    #[error(transparent)]
+    Patch(#[from] crate::core::PatchError),
 }
 
 /// Detailed validation error information.
@@ -374,6 +379,21 @@ pub enum SearchError {
         value: String,
         /// What is wrong with it, and the forms that are accepted.
         reason: String,
+    },
+
+    /// A search value that is empty, or has an empty alternative in its
+    /// comma-separated list (`family=Zzz,`).
+    ///
+    /// Raised by [`crate::search::validate_value_presence`] before any backend
+    /// builds a query: the empty string is a prefix of every string, so such a
+    /// value used to match everything (#1380).
+    #[error(
+        "invalid value for parameter '{param}': {}",
+        crate::search::EMPTY_VALUE_REASON
+    )]
+    EmptyValue {
+        /// The search parameter carrying the value, as nearly as written.
+        param: String,
     },
 
     /// Composite search parameter error.

@@ -40,6 +40,8 @@ use crate::state::AppState;
 /// - `GET /health` - Health check
 /// - `GET /_history` - System history
 /// - `POST /` - Batch/Transaction
+/// - `GET /?params`, `GET|POST /_search` - System-level search: refused with
+///   `501` + OperationOutcome; not implemented (#1338)
 ///
 /// ## Type-level
 /// - `GET /{type}` - Search
@@ -291,7 +293,21 @@ where
         // Natural-language search translation (#255): returns a generated
         // query for the client to review and run via the normal search path.
         .route("/$nl-search", post(handlers::nl_search_handler::<S>))
-        .route("/", post(handlers::batch_handler::<S>))
+        // `GET [base]?params` and `[base]/_search` are system-level search,
+        // which is not implemented. They are routed — rather than left to fall
+        // through as a bare `405` and as "`_search` is not a resource type" —
+        // so the client gets a `501` OperationOutcome saying so (#1338).
+        // `POST /` stays the batch/transaction endpoint whatever its
+        // Content-Type: the spec's POST form of this search is `/_search`.
+        .route(
+            "/",
+            post(handlers::batch_handler::<S>).get(handlers::search_system_not_supported_handler),
+        )
+        .route(
+            "/_search",
+            get(handlers::search_system_not_supported_handler)
+                .post(handlers::search_system_not_supported_handler),
+        )
         // Bulk Data Export ($export) — operation routes precede the catch-all.
         .route(
             "/$export",
@@ -539,7 +555,15 @@ where
 /// of functionality.
 pub fn create_minimal_routes<S>(state: AppState<S>) -> Router
 where
-    S: ResourceStorage + SearchProvider + BundleProvider + Send + Sync + 'static,
+    // `ConditionalStorage`: `/metadata` reads which conditional interactions
+    // the storage serves (#1384).
+    S: ResourceStorage
+        + ConditionalStorage
+        + SearchProvider
+        + BundleProvider
+        + Send
+        + Sync
+        + 'static,
 {
     Router::new()
         .route("/health", get(handlers::health_handler::<S>))

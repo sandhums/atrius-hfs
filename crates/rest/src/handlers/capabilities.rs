@@ -20,7 +20,9 @@ use axum::{
     response::Response,
 };
 use helios_fhir::FhirVersion;
-use helios_persistence::core::{BundleProvider, ResourceStorage, SearchProvider};
+use helios_persistence::core::{
+    BundleProvider, ConditionalStorage, ResourceStorage, SearchProvider,
+};
 use helios_persistence::search::SearchParameterRegistry;
 use helios_persistence::types::SearchParamType;
 use tracing::debug;
@@ -75,7 +77,13 @@ pub async fn capabilities_handler<S>(
     req_headers: HeaderMap,
 ) -> RestResult<Response>
 where
-    S: ResourceStorage + SearchProvider + BundleProvider + Send + Sync + 'static,
+    S: ResourceStorage
+        + SearchProvider
+        + BundleProvider
+        + ConditionalStorage
+        + Send
+        + Sync
+        + 'static,
 {
     // Determine which version to describe (from Accept header or default)
     let fhir_version = version.accept_version_or(state.config().default_fhir_version);
@@ -122,7 +130,13 @@ fn build_capability_statement<S>(
     base_url: &str,
 ) -> serde_json::Value
 where
-    S: ResourceStorage + SearchProvider + BundleProvider + Send + Sync + 'static,
+    S: ResourceStorage
+        + SearchProvider
+        + BundleProvider
+        + ConditionalStorage
+        + Send
+        + Sync
+        + 'static,
 {
     // Get resource types for the requested FHIR version
     let resource_types = get_resource_type_names_for_version(version);
@@ -159,12 +173,18 @@ where
     // each resource's real `searchRevInclude` targets.
     let revinclude_by_target = build_revinclude_index(&registry);
 
+    // The conditional interactions are the storage's to declare, not literals:
+    // S3 serves none on its own, and a composite's answer depends on how it
+    // is composed (#1384). The conditional handlers
+    // refuse with `501` from this same source.
+    let conditionals = super::conditional_support::advertised(state.storage(), version);
+
     let resources: Vec<serde_json::Value> = resource_types
         .iter()
         .map(|rt| {
             build_resource_capability(
                 rt,
-                version,
+                &conditionals,
                 &registry,
                 supports_contained,
                 &modifier_map,
@@ -194,7 +214,9 @@ where
     }
     system_interactions.push(serde_json::json!({ "code": "batch" }));
     system_interactions.push(serde_json::json!({ "code": "history-system" }));
-    system_interactions.push(serde_json::json!({ "code": "search-system" }));
+    // No `search-system`: `GET [base]?params` and `POST [base]/_search` are
+    // refused with `501` (`search_system_not_supported_handler`). It was listed
+    // here unconditionally while no route served it (#1338).
 
     // Standard operations, extended with the system-level SQL on FHIR
     // operations. Partial parameter support is advertised through the
@@ -203,13 +225,68 @@ where
     // 3.0.0-ballot.
     let mut operations = build_rest_operations(state);
 
+    // When auth is on, a client must be able to discover SMART App Launch from
+    // the CapabilityStatement itself, not only from
+    // `/.well-known/smart-configuration`: SMART's discovery reads both, and the
+    // security block was a `cors`-only literal regardless of auth (#1441). The
+    // endpoints come from the same `AuthConfig` that backs the discovery
+    // document, so the two never disagree. Advertised only when auth is enabled
+    // *and* both required oauth-uris (authorize, token) are configured — a plain
+    // bearer deployment with no SMART endpoints is not SMART-on-FHIR and stays
+    // `cors`-only rather than publishing an incomplete profile.
+    let mut security = serde_json::json!({
+        "cors": state.config().enable_cors,
+        "description": "This server supports CORS for cross-origin requests"
+    });
+    let auth = state.auth_config();
+    if auth.enabled
+        && auth.smart_authorize_endpoint.is_some()
+        && auth.smart_token_endpoint.is_some()
+    {
+        security["service"] = serde_json::json!([{
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/restful-security-service",
+                "code": "SMART-on-FHIR",
+                "display": "SMART-on-FHIR"
+            }],
+            "text": "OAuth2 using SMART-on-FHIR profile (see http://docs.smarthealthit.org)"
+        }]);
+
+        // `oauth-uris` sub-extensions, in SMART's documented order. `authorize`
+        // and `token` are always present here (guarded above); the rest are
+        // added only when configured.
+        let mut oauth_uris = vec![
+            serde_json::json!({
+                "url": "authorize",
+                "valueUri": auth.smart_authorize_endpoint.as_deref().unwrap()
+            }),
+            serde_json::json!({
+                "url": "token",
+                "valueUri": auth.smart_token_endpoint.as_deref().unwrap()
+            }),
+        ];
+        if let Some(uri) = auth.smart_introspection_endpoint.as_deref() {
+            oauth_uris.push(serde_json::json!({ "url": "introspect", "valueUri": uri }));
+        }
+        if let Some(uri) = auth.smart_revocation_endpoint.as_deref() {
+            oauth_uris.push(serde_json::json!({ "url": "revoke", "valueUri": uri }));
+        }
+        if let Some(uri) = auth.smart_registration_endpoint.as_deref() {
+            oauth_uris.push(serde_json::json!({ "url": "register", "valueUri": uri }));
+        }
+        if let Some(uri) = auth.smart_management_endpoint.as_deref() {
+            oauth_uris.push(serde_json::json!({ "url": "manage", "valueUri": uri }));
+        }
+        security["extension"] = serde_json::json!([{
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris",
+            "extension": oauth_uris
+        }]);
+    }
+
     let rest_entry = serde_json::json!({
         "mode": "server",
         "documentation": "Helios FHIR RESTful API",
-        "security": {
-            "cors": state.config().enable_cors,
-            "description": "This server supports CORS for cross-origin requests"
-        },
+        "security": security,
         "resource": resources,
         "interaction": system_interactions
     });
@@ -331,7 +408,7 @@ fn build_rest_operations<S: ResourceStorage + Send + Sync + 'static>(
 /// Builds the capability entry for a resource type.
 fn build_resource_capability(
     resource_type: &str,
-    version: FhirVersion,
+    conditionals: &serde_json::Map<String, serde_json::Value>,
     registry: &SearchParameterRegistry,
     supports_contained: bool,
     modifier_map: &std::collections::HashMap<SearchParamType, Vec<&'static str>>,
@@ -371,15 +448,8 @@ fn build_resource_capability(
 
     if resource_type != "AuditEvent" {
         entry["updateCreate"] = serde_json::Value::Bool(true);
-        entry["conditionalCreate"] = serde_json::Value::Bool(true);
-        entry["conditionalUpdate"] = serde_json::Value::Bool(true);
-        entry["conditionalDelete"] = serde_json::Value::String("single".to_string());
-        // `PATCH [type]?criteria` is served for every version, but only R5 and
-        // later have an element to say so: `rest.resource.conditionalPatch`
-        // does not exist in R4 / R4B, where emitting it would make the
-        // statement invalid.
-        if matches!(version.as_mime_param(), "5.0" | "6.0") {
-            entry["conditionalPatch"] = serde_json::Value::Bool(true);
+        for (element, value) in conditionals {
+            entry[element.as_str()] = value.clone();
         }
     }
 

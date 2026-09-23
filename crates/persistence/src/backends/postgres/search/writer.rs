@@ -569,8 +569,9 @@ const MULTI_BATCH_ROWS: usize = 4096;
 /// value column; `sort_expression` maps both to the bare columns rather than
 /// the correlated `search_index` subquery it uses for indexed parameters;
 /// `build_missing_condition` selects from `resources`; `primary_keyset_key`
-/// pages on `last_updated`; and `build_contained_condition` excludes
-/// `_`-prefixed parameters outright. `ChainQueryBuilder` was the one path that
+/// pages on `last_updated`; and `build_contained` answers `_id` from the
+/// `contained_local_id` column and refuses `_lastUpdated` (#1373).
+/// `ChainQueryBuilder` was the one path that
 /// still read the rows, for a chained or reverse-chained terminal such as
 /// `Observation?subject:Patient._id=p1`, and it now reads `resources` too.
 ///
@@ -1084,10 +1085,23 @@ impl PostgresSearchIndexWriter {
     /// Flattens the values extracted from one `contained[]` entry into rows.
     ///
     /// [`Self::drop_resources_backed`] applies here too, and did not before.
-    /// `build_contained` (`search/query_builder.rs`) skips every parameter whose
-    /// name `starts_with('_')` outright, so a contained `_id` or `_lastUpdated`
-    /// row has no reader at all — not "answered from `resources`" as on the
-    /// plain path, but genuinely unreachable.
+    /// `build_contained` (`search/query_builder.rs`) reads neither row: since
+    /// #1373 it answers `_id` from the `contained_local_id` column every
+    /// contained row carries and refuses `_lastUpdated` (a contained resource
+    /// has none of its own), so a contained `_id` or `_lastUpdated` row has no
+    /// reader at all — not "answered from `resources`" as on the plain path,
+    /// but genuinely unreachable. (The other `_`-parameters — `_tag`,
+    /// `_profile`, `_security`, `_source`, `_language` — are read, and kept.)
+    ///
+    /// The one `_id` row that IS written is the presence row of a contained
+    /// resource that yields no other indexed value (#1407). `build_contained`
+    /// finds contained resources by grouping their rows, so with no row at all
+    /// such a resource was invisible to every `_contained` search — the
+    /// no-criteria form, `_id`, and `:not` included — on this backend only
+    /// (SQLite, MongoDB and Elasticsearch keep the `_id` value). Any row makes
+    /// the entity visible, so the `_id` row is kept exactly when it would
+    /// otherwise have none; every resource with another indexed value still
+    /// saves it.
     ///
     /// The `_id` row is worse than merely unread: it is a byte-for-byte
     /// restatement of a column the same row already carries. On the benchmark's
@@ -1117,10 +1131,20 @@ impl PostgresSearchIndexWriter {
         contained: (&str, &str),
         values: &[ExtractedValue],
     ) -> Vec<IndexRow> {
-        values
+        let rows: Vec<IndexRow> = values
             .iter()
             .filter(|value| !answered_from_resources(&value.param_name))
             .filter_map(|value| IndexRow::from_contained(value, container, contained))
+            .collect();
+        if !rows.is_empty() {
+            return rows;
+        }
+        // Nothing but `_id` / `_lastUpdated`: keep `_id` as the presence row.
+        values
+            .iter()
+            .filter(|value| value.param_name == "_id")
+            .filter_map(|value| IndexRow::from_contained(value, container, contained))
+            .take(1)
             .collect()
     }
 
@@ -2110,6 +2134,33 @@ mod tests {
 
         let names: Vec<&str> = rows.iter().map(|r| r.param_name.as_str()).collect();
         assert_eq!(names, vec!["family"], "contained rows: {names:?}");
+    }
+
+    /// A contained resource with nothing indexed but its id keeps the `_id` row:
+    /// it is the only row that makes the resource visible to `build_contained`,
+    /// which finds contained resources by grouping their rows (#1407).
+    #[test]
+    fn an_id_only_contained_resource_keeps_its_id_row_as_a_presence_row() {
+        let mut id_value = extracted(IndexValue::Token {
+            system: None,
+            code: "bare".to_string(),
+            display: None,
+            identifier_type_system: None,
+            identifier_type_code: None,
+        });
+        id_value.param_name = "_id".to_string();
+
+        let rows = PostgresSearchIndexWriter::build_contained_rows(
+            ("DiagnosticReport", "dr1"),
+            ("Location", "bare"),
+            &[id_value],
+        );
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].param_name, "_id");
+        assert!(rows[0].is_contained);
+        assert_eq!(rows[0].contained_type.as_deref(), Some("Location"));
+        assert_eq!(rows[0].contained_local_id.as_deref(), Some("bare"));
     }
 
     /// The re-index `DELETE` is folded into the insert, so the two texts have to

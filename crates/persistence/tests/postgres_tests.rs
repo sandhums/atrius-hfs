@@ -98,6 +98,36 @@ mod numeric_validation_suite;
 #[path = "search/token_code_system_suite.rs"]
 mod token_code_system_suite;
 
+/// The backend-agnostic conditional `If-Match` suite (#1381). Same `#[path]`
+/// arrangement.
+#[path = "search/conditional_if_match_suite.rs"]
+mod conditional_if_match_suite;
+
+/// The backend-agnostic empty search value suite (#1380). Same `#[path]`
+/// arrangement.
+#[path = "search/empty_value_suite.rs"]
+mod empty_value_suite;
+
+/// The backend-agnostic modifier parity suite (#1408). Same `#[path]`
+/// arrangement.
+#[path = "search/modifier_parity_suite.rs"]
+mod modifier_parity_suite;
+
+/// The backend-agnostic race suite for version-aware writes (#1404, #1405).
+/// Same `#[path]` arrangement.
+#[path = "search/versioned_write_race_suite.rs"]
+mod versioned_write_race_suite;
+
+/// The backend-agnostic conditional patch suite (#1406). Same `#[path]`
+/// arrangement.
+#[path = "search/conditional_patch_suite.rs"]
+mod conditional_patch_suite;
+
+/// The backend-agnostic contract of the secondary sync failure ledger
+/// (#1334). Same `#[path]` arrangement.
+#[path = "common/sync_failure_ledger_suite.rs"]
+mod sync_failure_ledger_suite;
+
 #[path = "common/container_cleanup.rs"]
 mod container_cleanup;
 
@@ -203,7 +233,7 @@ mod query_builder_tests {
         let result = PostgresQueryBuilder::build_search_query(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
-        assert!(fragment.sql.contains("id = $"));
+        assert_eq!(fragment.sql, "id = $3");
         assert_eq!(fragment.params.len(), 1);
         match &fragment.params[0] {
             SqlParam::Text(s) => assert_eq!(s, "123"),
@@ -705,7 +735,7 @@ mod query_builder_tests {
     }
 
     #[test]
-    fn test_multiple_values_or() {
+    fn test_multiple_id_values_use_flat_in() {
         let query = SearchQuery::new("Patient").with_parameter(SearchParameter {
             name: "_id".to_string(),
             param_type: SearchParamType::Token,
@@ -718,9 +748,15 @@ mod query_builder_tests {
         let result = PostgresQueryBuilder::build_search_query(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
-        // Multiple _id values should be OR'd
-        assert!(fragment.sql.contains("OR"));
-        assert_eq!(fragment.params.len(), 2);
+        assert_eq!(fragment.sql, "id IN ($3, $4)");
+        assert!(!fragment.sql.contains("OR"));
+        match &fragment.params[..] {
+            [SqlParam::Text(first), SqlParam::Text(second)] => {
+                assert_eq!(first, "123");
+                assert_eq!(second, "456");
+            }
+            other => panic!("expected ordered text binds, got {other:?}"),
+        }
     }
 
     #[test]
@@ -5904,6 +5940,74 @@ mod postgres_integration {
         assert_eq!(result_two.total, Some(1));
     }
 
+    /// #1413: chain resolution can rewrite a broad result set into thousands
+    /// of positive `_id` alternatives. PostgreSQL exhausts memory while
+    /// parsing the former left-deep `id = $n OR ...` tree, even when only a
+    /// handful of those ids exist for the tenant. Both result and count paths
+    /// must accept the same wide, flat predicate.
+    #[tokio::test]
+    async fn postgres_integration_search_wide_id_list_uses_flat_predicate() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{
+            SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        const ID_COUNT: usize = 12_000;
+        const MATCHING_IDS: [&str; 3] = ["wide-id-0", "wide-id-5999", "wide-id-11999"];
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("wide-id-list");
+
+        for id in MATCHING_IDS {
+            backend
+                .create(
+                    &tenant,
+                    "Patient",
+                    json!({ "resourceType": "Patient", "id": id }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+
+        let query = SearchQuery::new("Patient").with_parameter(SearchParameter {
+            name: "_id".to_string(),
+            param_type: SearchParamType::Token,
+            modifier: None,
+            values: (0..ID_COUNT)
+                .map(|i| SearchValue::eq(format!("wide-id-{i}")))
+                .collect(),
+            chain: vec![],
+            components: vec![],
+        });
+        assert_eq!(
+            query.total, None,
+            "the result path must not run an implicit count"
+        );
+
+        let result = backend
+            .search(&tenant, &query)
+            .await
+            .expect("the result query accepts a wide positive _id list");
+        assert_eq!(result.total, None);
+        let mut ids: Vec<String> = result
+            .resources
+            .items
+            .iter()
+            .map(|resource| resource.id().to_string())
+            .collect();
+        ids.sort();
+        let mut expected: Vec<String> = MATCHING_IDS.iter().map(ToString::to_string).collect();
+        expected.sort();
+        assert_eq!(ids, expected);
+
+        let count = backend
+            .search_count(&tenant, &query)
+            .await
+            .expect("the count query accepts a wide positive _id list");
+        assert_eq!(count, MATCHING_IDS.len() as u64);
+    }
+
     /// #1092: modifiers the `_id` builder cannot honour must be rejected
     /// rather than silently degrading to a positive match (mirrors
     /// #1055/#1091's MongoDB `metadata_param_honoured` gate).
@@ -7396,37 +7500,178 @@ mod postgres_integration {
         assert!(ids.contains(&"obs-2"));
     }
 
-    /// A bare logical id must match a stored `Patient/<id>` reference.
-    ///
-    /// `Observation?patient=<id>` is the primary form in the spec and the shape
-    /// Inferno uses throughout, but Postgres compared the raw search value
-    /// against the stored `Patient/<id>` and so matched nothing — every clinical
-    /// search returned an empty Bundle (#490). The sibling test above covers the
-    /// `Type/id` form, which always worked; only that form was ever asserted,
-    /// which is how the gap survived.
-    #[tokio::test]
-    async fn postgres_integration_search_reference_bare_id() {
-        use helios_persistence::core::SearchProvider;
+    fn observation_reference_query(
+        parameter: &str,
+        values: &[&str],
+    ) -> helios_persistence::types::SearchQuery {
         use helios_persistence::types::{
-            SearchModifier, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+            SearchParamType, SearchParameter, SearchQuery, SearchValue,
         };
 
+        SearchQuery::new("Observation").with_parameter(SearchParameter {
+            name: parameter.to_string(),
+            param_type: SearchParamType::Reference,
+            modifier: None,
+            values: values.iter().map(|value| SearchValue::eq(*value)).collect(),
+            chain: vec![],
+            components: vec![],
+        })
+    }
+
+    async fn reference_search_ids(
+        backend: &PostgresBackend,
+        tenant: &TenantContext,
+        query: &helios_persistence::types::SearchQuery,
+    ) -> Vec<String> {
+        use helios_persistence::core::SearchProvider;
+
+        let mut ids: Vec<String> = backend
+            .search(tenant, query)
+            .await
+            .unwrap()
+            .resources
+            .items
+            .iter()
+            .map(|resource| resource.id().to_string())
+            .collect();
+        ids.sort_unstable();
+        ids
+    }
+
+    async fn create_subject_observation(
+        backend: &PostgresBackend,
+        tenant: &TenantContext,
+        id: &str,
+        reference: &str,
+    ) -> helios_persistence::types::StoredResource {
+        backend
+            .create(
+                tenant,
+                "Observation",
+                json!({
+                    "resourceType": "Observation",
+                    "id": id,
+                    "subject": {"reference": reference},
+                    "code": {"coding": [{"code": "8867-4"}]},
+                    "status": "final"
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap()
+    }
+
+    /// Bare ids match the last path segment without losing exact-reference
+    /// semantics for `Type/id` searches.
+    #[tokio::test]
+    async fn postgres_integration_search_reference_bare_id_forms_and_tenant_isolation() {
         let backend = create_backend().await;
-        let tenant = create_tenant("test-tenant");
+        let tenant = create_tenant("bare-reference-forms");
+        let other_tenant = create_tenant("bare-reference-forms-other");
 
         for (id, subject) in [
-            ("obs-1", "Patient/patient-1"),
-            ("obs-2", "Patient/patient-1"),
-            ("obs-3", "Patient/patient-2"),
+            ("ref-prefixed", "Patient/shared-id"),
+            ("ref-bare", "shared-id"),
+            (
+                "ref-absolute",
+                "https://records.example.test/fhir/Patient/shared-id",
+            ),
+            ("ref-versioned", "Patient/shared-id/_history/7"),
+            ("ref-other-type", "Device/shared-id"),
+            ("ref-patient-only", "Patient/patient-only"),
+            ("ref-percent", "Patient/literal%id"),
+            ("ref-underscore", "Patient/literal_id"),
         ] {
+            create_subject_observation(&backend, &tenant, id, subject).await;
+        }
+        create_subject_observation(
+            &backend,
+            &other_tenant,
+            "ref-other-tenant",
+            "Patient/shared-id",
+        )
+        .await;
+
+        assert_eq!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["shared-id"]),
+            )
+            .await,
+            vec![
+                "ref-absolute",
+                "ref-bare",
+                "ref-other-type",
+                "ref-prefixed",
+                "ref-versioned",
+            ],
+            "a bare id is polymorphic and tenant-scoped"
+        );
+        assert_eq!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["Patient/shared-id"]),
+            )
+            .await,
+            vec!["ref-prefixed", "ref-versioned"],
+            "Type/id remains exact and version-normalized"
+        );
+        assert_eq!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["shared-id", "Patient/patient-only"],),
+            )
+            .await,
+            vec![
+                "ref-absolute",
+                "ref-bare",
+                "ref-other-type",
+                "ref-patient-only",
+                "ref-prefixed",
+                "ref-versioned",
+            ],
+            "mixed bare and Type/id values are ORed"
+        );
+
+        for (value, expected) in [
+            ("literal%id", vec!["ref-percent".to_string()]),
+            ("literal_id", vec!["ref-underscore".to_string()]),
+            ("missing-id", Vec::new()),
+        ] {
+            assert_eq!(
+                reference_search_ids(
+                    &backend,
+                    &tenant,
+                    &observation_reference_query("subject", &[value]),
+                )
+                .await,
+                expected,
+                "bare reference value {value:?} must use literal equality"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_search_reference_bare_id_page_dedup_and_maintenance() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::{SearchParamType, SortDirective, TotalMode};
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("bare-reference-page");
+
+        for day in 1..=7 {
             backend
                 .create(
                     &tenant,
                     "Observation",
                     json!({
                         "resourceType": "Observation",
-                        "id": id,
-                        "subject": {"reference": subject},
+                        "id": format!("page-{day:02}"),
+                        "subject": {"reference": "Patient/page-target"},
+                        "effectiveDateTime": format!("2024-01-{day:02}T00:00:00Z"),
                         "code": {"coding": [{"code": "8867-4"}]},
                         "status": "final"
                     }),
@@ -7436,54 +7681,324 @@ mod postgres_integration {
                 .unwrap();
         }
 
-        let bare_id = |modifier: Option<SearchModifier>| {
-            SearchQuery::new("Observation").with_parameter(SearchParameter {
-                name: "subject".to_string(),
-                param_type: SearchParamType::Reference,
-                modifier,
-                values: vec![SearchValue::eq("patient-1")],
-                chain: vec![],
-                components: vec![],
-            })
+        let page_query = |reference: &str| {
+            let mut query = observation_reference_query("subject", &[reference])
+                .with_count(5)
+                .with_sort(
+                    SortDirective::parse("-date").with_param_type(Some(SearchParamType::Date)),
+                );
+            query.total = Some(TotalMode::Accurate);
+            query
+        };
+        let bare_page = backend
+            .search(&tenant, &page_query("page-target"))
+            .await
+            .unwrap();
+        let typed_page = backend
+            .search(&tenant, &page_query("Patient/page-target"))
+            .await
+            .unwrap();
+        let page_ids = |page: &helios_persistence::core::SearchResult| {
+            page.resources
+                .items
+                .iter()
+                .map(|resource| resource.id().to_string())
+                .collect::<Vec<_>>()
         };
 
-        for (label, query) in [
-            ("bare id", bare_id(None)),
-            (
-                ":Type + bare id",
-                bare_id(Some(SearchModifier::Type("Patient".to_string()))),
-            ),
-        ] {
-            let result = backend.search(&tenant, &query).await.unwrap();
-            let mut ids: Vec<&str> = result.resources.items.iter().map(|r| r.id()).collect();
-            ids.sort_unstable();
-            assert_eq!(
-                ids,
-                vec!["obs-1", "obs-2"],
-                "{label} must match Patient/patient-1 and not the decoy patient-2"
-            );
+        assert_eq!(bare_page.total, Some(7));
+        assert_eq!(bare_page.total, typed_page.total);
+        assert_eq!(
+            page_ids(&bare_page),
+            vec!["page-07", "page-06", "page-05", "page-04", "page-03"]
+        );
+        assert_eq!(
+            page_ids(&bare_page),
+            page_ids(&typed_page),
+            "bare id and Patient/id must return the same five-row descending page"
+        );
+
+        backend
+            .create(
+                &tenant,
+                "Observation",
+                json!({
+                    "resourceType": "Observation",
+                    "id": "duplicate-reference-row",
+                    "performer": [
+                        {"reference": "Patient/duplicate-target"},
+                        {"reference": "Patient/duplicate-target"}
+                    ],
+                    "code": {"coding": [{"code": "8867-4"}]},
+                    "status": "final"
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("performer", &["duplicate-target"]),
+            )
+            .await,
+            vec!["duplicate-reference-row"],
+            "duplicate index rows must not duplicate a resource"
+        );
+
+        let stored = create_subject_observation(
+            &backend,
+            &tenant,
+            "maintained-reference",
+            "Patient/old-target",
+        )
+        .await;
+        assert_eq!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["old-target"]),
+            )
+            .await,
+            vec!["maintained-reference"]
+        );
+        backend
+            .update(
+                &tenant,
+                &stored,
+                json!({
+                    "resourceType": "Observation",
+                    "id": "maintained-reference",
+                    "subject": {"reference": "Patient/new-target"},
+                    "code": {"coding": [{"code": "8867-4"}]},
+                    "status": "final"
+                }),
+            )
+            .await
+            .unwrap();
+        assert!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["old-target"]),
+            )
+            .await
+            .is_empty(),
+            "an update must remove the old reference index entry"
+        );
+        assert_eq!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["new-target"]),
+            )
+            .await,
+            vec!["maintained-reference"]
+        );
+        backend
+            .delete(&tenant, "Observation", "maintained-reference")
+            .await
+            .unwrap();
+        assert!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["new-target"]),
+            )
+            .await
+            .is_empty(),
+            "a delete must remove the reference index entry"
+        );
+    }
+
+    /// The bare-id reference predicate must remain a four-column expression-index
+    /// seek when PostgreSQL plans the complete count query with or without bind
+    /// values available.
+    #[tokio::test]
+    async fn postgres_reference_bare_id_count_plan_uses_target_index_for_custom_and_generic_plans()
+    {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::types::TotalMode;
+
+        fn visit_plan_nodes(
+            plan: &serde_json::Value,
+            visitor: &mut impl FnMut(&serde_json::Value),
+        ) {
+            match plan {
+                serde_json::Value::Object(fields) => {
+                    if fields.contains_key("Node Type") {
+                        visitor(plan);
+                    }
+                    for value in fields.values() {
+                        visit_plan_nodes(value, visitor);
+                    }
+                }
+                serde_json::Value::Array(values) => {
+                    for value in values {
+                        visit_plan_nodes(value, visitor);
+                    }
+                }
+                _ => {}
+            }
         }
 
-        // The suffix match must not become a wildcard: `subject=%` matches the
-        // literal id `%`, i.e. nothing, rather than every reference.
-        let wildcard = SearchQuery::new("Observation").with_parameter(SearchParameter {
-            name: "subject".to_string(),
-            param_type: SearchParamType::Reference,
-            modifier: None,
-            values: vec![SearchValue::eq("%")],
-            chain: vec![],
-            components: vec![],
-        });
-        assert!(
-            backend
-                .search(&tenant, &wildcard)
-                .await
-                .unwrap()
-                .resources
-                .items
-                .is_empty(),
-            "a LIKE metacharacter must be matched literally, not as a wildcard"
+        let backend = create_backend_with_max_connections(1).await;
+        let tenant = create_tenant("bare-reference-count-plan");
+        let tenant_id = tenant.tenant_id().as_str();
+        let target_id = "rare-plan-target";
+        let client = backend.get_client().await.unwrap();
+        client
+            .execute(
+                "INSERT INTO resources \
+                 (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted) \
+                 SELECT $1, 'Observation', 'bare-plan-' || series, '1', \
+                        jsonb_build_object('resourceType', 'Observation', 'id', 'bare-plan-' || series), \
+                        statement_timestamp(), FALSE \
+                 FROM generate_series(1, 20000) AS series",
+                &[&tenant_id],
+            )
+            .await
+            .unwrap();
+        client
+            .execute(
+                "INSERT INTO search_index \
+                 (tenant_id, resource_type, resource_id, param_name, value_reference) \
+                 SELECT $1, 'Observation', 'bare-plan-' || series, 'subject', \
+                        CASE WHEN series = 1 THEN 'Patient/rare-plan-target' \
+                             ELSE 'Patient/decoy-' || series END \
+                 FROM generate_series(1, 20000) AS series",
+                &[&tenant_id],
+            )
+            .await
+            .unwrap();
+        client
+            .batch_execute("ANALYZE resources; ANALYZE search_index")
+            .await
+            .unwrap();
+        drop(client);
+
+        let mut query = observation_reference_query("subject", &[target_id]);
+        query.total = Some(TotalMode::Accurate);
+        let result = backend.search(&tenant, &query).await.unwrap();
+        assert_eq!(result.total, Some(1));
+
+        // The pool has one connection, so this is the same PostgreSQL session
+        // on which search_count cached its actual statement.
+        let client = backend.get_client().await.unwrap();
+        let prepared_counts = client
+            .query(
+                "SELECT name, statement FROM pg_prepared_statements \
+                 WHERE statement LIKE 'SELECT COUNT(*) FROM resources%' \
+                   AND statement LIKE '%split_part(value_reference%' \
+                 ORDER BY name",
+                &[],
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            prepared_counts.len(),
+            1,
+            "expected one cached bare-reference count statement, got: {:?}",
+            prepared_counts
+                .iter()
+                .map(|row| (row.get::<_, String>(0), row.get::<_, String>(1)))
+                .collect::<Vec<_>>()
         );
+        let statement_name: String = prepared_counts[0].get(0);
+        let count_sql: String = prepared_counts[0].get(1);
+        assert!(
+            count_sql.starts_with(
+                "SELECT COUNT(*) FROM resources WHERE tenant_id = $1 AND resource_type = $2 \
+                 AND is_deleted = FALSE"
+            ),
+            "unexpected prepared count statement: {count_sql}"
+        );
+        assert!(
+            count_sql.contains(
+                "param_name = 'subject' AND ((value_reference IS NOT NULL AND \
+                 split_part(value_reference, '/', -1) = $3))"
+            ),
+            "prepared count must contain the indexed bare-id predicate: {count_sql}"
+        );
+        assert!(
+            !count_sql.contains(" LIKE ") && !count_sql.contains("%/"),
+            "prepared count must not contain the old suffix predicate: {count_sql}"
+        );
+        let quoted_statement_name = format!("\"{}\"", statement_name.replace('"', "\"\""));
+
+        let mut plans = Vec::new();
+        for mode in ["force_custom_plan", "force_generic_plan"] {
+            client
+                .batch_execute(&format!("SET plan_cache_mode = {mode}"))
+                .await
+                .unwrap();
+            let row = client
+                .query_one(
+                    &format!(
+                        "EXPLAIN (FORMAT JSON) EXECUTE {quoted_statement_name} \
+                         ('{tenant_id}', 'Observation', '{target_id}')"
+                    ),
+                    &[],
+                )
+                .await
+                .unwrap();
+            plans.push((mode, row.get::<_, serde_json::Value>(0)));
+        }
+
+        client.batch_execute("RESET plan_cache_mode").await.unwrap();
+
+        for (mode, plan) in plans {
+            let mut target_index_conditions = Vec::new();
+            let mut filters = Vec::new();
+            visit_plan_nodes(&plan, &mut |node| {
+                if node.get("Index Name").and_then(serde_json::Value::as_str)
+                    == Some("idx_search_reference_target_id")
+                {
+                    target_index_conditions.push(
+                        node.get("Index Cond")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
+                    );
+                }
+                if let Some(filter) = node.get("Filter").and_then(serde_json::Value::as_str) {
+                    filters.push(filter.to_string());
+                }
+            });
+
+            assert_eq!(
+                target_index_conditions.len(),
+                1,
+                "{mode} must use idx_search_reference_target_id exactly once: {plan}"
+            );
+            let index_condition = &target_index_conditions[0];
+            assert!(
+                index_condition.contains("split_part(value_reference"),
+                "{mode} must constrain the indexed target-id expression: {index_condition}"
+            );
+            if mode == "force_generic_plan" {
+                assert!(
+                    index_condition.contains("$3"),
+                    "the generic plan must retain the target bind: {index_condition}"
+                );
+            } else {
+                assert!(
+                    index_condition.contains(target_id) && !index_condition.contains("$3"),
+                    "the custom plan must contain the known target value: {index_condition}"
+                );
+            }
+            assert!(
+                filters.iter().all(|filter| {
+                    !filter.contains("~~") && !filter.contains("LIKE") && !filter.contains("%/")
+                }),
+                "{mode} must not retain a suffix/LIKE filter: {filters:?}"
+            );
+            println!(
+                "{mode}: idx_search_reference_target_id Index Cond: {index_condition}; \
+                 Filters: {filters:?}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -7840,6 +8355,7 @@ mod postgres_integration {
                 "identifier=http://hospital.org/mrn|MRN-UPDATE-1",
                 false,
                 FhirVersion::default(),
+                &helios_persistence::core::EntityTagPrecondition::Absent,
             )
             .await
             .unwrap();
@@ -8067,6 +8583,7 @@ mod postgres_integration {
                 &tenant,
                 "Patient",
                 "identifier=http://hospital.org/mrn|MRN-DELETE-1",
+                &helios_persistence::core::EntityTagPrecondition::Absent,
             )
             .await
             .unwrap();
@@ -11254,6 +11771,429 @@ mod postgres_integration {
             .await
             .unwrap();
         assert!(page3.resources.is_empty() || page3.next_cursor.is_none());
+    }
+
+    async fn capped_reindex_fixture(
+        backend: &PostgresBackend,
+        dbname: &str,
+        tenant: &TenantContext,
+    ) -> Vec<(String, i64)> {
+        for (id, size) in [("p01", 1), ("p02", 2), ("p03", 2000), ("p04", 3)] {
+            backend
+                .create(
+                    tenant,
+                    "Patient",
+                    json!({"resourceType":"Patient","id":id,"note":"x".repeat(size)}),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+        let client = reindex_test_client_for(dbname).await;
+        client
+            .execute(
+                "UPDATE resources SET last_updated = '2026-01-01T00:00:00Z'
+                 WHERE tenant_id = $1 AND resource_type = 'Patient'",
+                &[&tenant.tenant_id().as_str()],
+            )
+            .await
+            .unwrap();
+        client
+            .query(
+                "SELECT id, octet_length(data::text)::bigint FROM resources
+                 WHERE tenant_id = $1 AND resource_type = 'Patient'
+                 ORDER BY last_updated, id",
+                &[&tenant.tenant_id().as_str()],
+            )
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|row| (row.get(0), row.get(1)))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_reindex_fetch_capped_boundaries() {
+        use helios_persistence::search::ReindexSource;
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("capped-boundaries");
+        let sizes = capped_reindex_fixture(&backend, &dbname, &tenant).await;
+        let ids: Vec<_> = sizes.iter().map(|(id, _)| id.as_str()).collect();
+        assert_eq!(ids, ["p01", "p02", "p03", "p04"]);
+        let first = sizes[0].1 as u64;
+        let two = (sizes[0].1 + sizes[1].1) as u64;
+
+        for (cap, expected_first) in [
+            (two, vec!["p01", "p02"]),
+            (two - 1, vec!["p01"]),
+            (first - 1, vec!["p01"]),
+            (two + 1, vec!["p01", "p02"]),
+        ] {
+            let mut cursor = None;
+            let mut pages = Vec::new();
+            let mut seen = Vec::new();
+            for _ in 0..5 {
+                let page = backend
+                    .fetch_resources_page_capped(&tenant, "Patient", cursor.as_deref(), 4, cap)
+                    .await
+                    .unwrap();
+                let page_ids: Vec<_> = page.resources.iter().map(|r| r.id().to_string()).collect();
+                let page_bytes: u64 = page_ids
+                    .iter()
+                    .map(|id| sizes.iter().find(|(key, _)| key == id).unwrap().1 as u64)
+                    .sum();
+                assert!(page_ids.len() <= 4);
+                assert!(
+                    page_bytes <= cap || (page_ids.len() == 1 && page_bytes > cap),
+                    "cap {cap}, page {page_ids:?}, bytes {page_bytes}"
+                );
+                if pages.is_empty() {
+                    assert_eq!(page_ids, expected_first);
+                    assert!(page.next_cursor.is_some());
+                }
+                seen.extend(page_ids.clone());
+                pages.push(page_ids);
+                cursor = page.next_cursor;
+                if cursor.is_none() {
+                    break;
+                }
+            }
+            assert_eq!(seen, ["p01", "p02", "p03", "p04"], "cap {cap}: {pages:?}");
+            assert!(cursor.is_none(), "pagination did not exhaust");
+        }
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_reindex_fetch_capped_exhaustion() {
+        use helios_persistence::search::ReindexSource;
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("capped-exhaustion");
+        let empty = backend
+            .fetch_resources_page_capped(&tenant, "Observation", None, 2, 1)
+            .await
+            .unwrap();
+        assert!(empty.resources.is_empty());
+        assert!(empty.next_cursor.is_none());
+        let sizes = capped_reindex_fixture(&backend, &dbname, &tenant).await;
+        let cap = (sizes[0].1 + sizes[1].1) as u64;
+        let mut cursor = None;
+        let mut seen = Vec::new();
+        for expected_more in [true, true, false] {
+            let page = backend
+                .fetch_resources_page_capped(&tenant, "Patient", cursor.as_deref(), 2, cap)
+                .await
+                .unwrap();
+            seen.extend(page.resources.iter().map(|r| r.id().to_string()));
+            assert_eq!(page.next_cursor.is_some(), expected_more);
+            cursor = page.next_cursor;
+        }
+        assert_eq!(seen, ["p01", "p02", "p03", "p04"]);
+
+        // A full count page can be final when the lookahead sees no next key.
+        let page = backend
+            .fetch_resources_page_capped(&tenant, "Patient", None, 4, u64::MAX)
+            .await
+            .unwrap();
+        assert_eq!(page.resources.len(), 4);
+        assert!(page.next_cursor.is_none());
+        let page = backend
+            .fetch_resources_page_capped(&tenant, "Patient", None, 3, u64::MAX)
+            .await
+            .unwrap();
+        assert_eq!(page.resources.len(), 3);
+        assert!(page.next_cursor.is_some());
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_reindex_fetch_capped_disabled_and_zero() {
+        use helios_persistence::search::ReindexSource;
+
+        let (backend, dbname) = isolated_reindex_backend_with_max_connections(1).await;
+        let tenant = create_tenant("capped-zero");
+        let sizes = capped_reindex_fixture(&backend, &dbname, &tenant).await;
+        let held = backend.get_client().await.unwrap();
+        for max_bytes in [0, 1] {
+            let page = tokio::time::timeout(
+                std::time::Duration::from_millis(200),
+                backend.fetch_resources_page_capped(&tenant, "Patient", None, 0, max_bytes),
+            )
+            .await
+            .expect("limit zero must not acquire a connection")
+            .unwrap();
+            assert!(page.resources.is_empty());
+            assert!(page.next_cursor.is_none());
+            assert!(page.skipped.is_empty());
+        }
+        drop(held);
+        let old = backend
+            .fetch_resources_page(&tenant, "Patient", None, 2)
+            .await
+            .unwrap();
+        let disabled = backend
+            .fetch_resources_page_capped(&tenant, "Patient", None, 2, 0)
+            .await
+            .unwrap();
+        assert_eq!(
+            old.resources.iter().map(|r| r.id()).collect::<Vec<_>>(),
+            disabled
+                .resources
+                .iter()
+                .map(|r| r.id())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(old.next_cursor, disabled.next_cursor);
+        let huge = backend
+            .fetch_resources_page_capped(&tenant, "Patient", None, 4, u64::MAX)
+            .await
+            .unwrap();
+        assert_eq!(huge.resources.len(), sizes.len());
+        assert!(huge.next_cursor.is_none());
+        let restarted = backend
+            .fetch_resources_page_capped(&tenant, "Patient", Some("bad-token"), 2, 1)
+            .await
+            .unwrap();
+        assert_eq!(restarted.resources[0].id(), "p01");
+        let invalid = backend
+            .fetch_resources_page_capped(&tenant, "Patient", Some("bad-time|p01"), 2, 1)
+            .await;
+        assert!(
+            invalid
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid cursor timestamp")
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_reindex_fetch_capped_scope_and_decode() {
+        use helios_persistence::search::ReindexSource;
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("capped-scope");
+        let other = create_tenant("capped-scope-other");
+        let versions = [
+            #[cfg(feature = "R4")]
+            FhirVersion::R4,
+            #[cfg(feature = "R4B")]
+            FhirVersion::R4B,
+            #[cfg(feature = "R5")]
+            FhirVersion::R5,
+            #[cfg(feature = "R6")]
+            FhirVersion::R6,
+        ];
+        for version in versions.iter().copied() {
+            let id = format!("same-{}", version.as_str());
+            backend
+                .create(
+                    &tenant,
+                    "Patient",
+                    json!({
+                        "resourceType":"Patient",
+                        "id":id,
+                        "contained":[{"resourceType":"Organization","id":"inside"}]
+                    }),
+                    version,
+                )
+                .await
+                .unwrap();
+        }
+        for (scope_tenant, resource_type) in [(&other, "Patient"), (&tenant, "Observation")] {
+            backend
+                .create(
+                    scope_tenant,
+                    resource_type,
+                    json!({"resourceType":resource_type,"id":"same-R4"}),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"deleted"}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let client = reindex_test_client_for(&dbname).await;
+        client
+            .execute(
+                "UPDATE resources SET is_deleted = TRUE
+                 WHERE tenant_id = $1 AND resource_type = 'Patient' AND id = 'deleted'",
+                &[&tenant.tenant_id().as_str()],
+            )
+            .await
+            .unwrap();
+        let page = backend
+            .fetch_resources_page_capped(&tenant, "Patient", None, 100, u64::MAX)
+            .await
+            .unwrap();
+        assert_eq!(page.resources.len(), versions.len());
+        assert!(page.next_cursor.is_none());
+        assert!(page.skipped.is_empty());
+        for resource in page.resources {
+            let version = versions
+                .iter()
+                .find(|version| resource.id() == format!("same-{}", version.as_str()))
+                .unwrap();
+            assert_eq!(resource.fhir_version(), *version);
+            assert_eq!(resource.tenant_id(), tenant.tenant_id());
+            assert_eq!(resource.version_id(), "1");
+            assert_eq!(resource.content()["contained"][0]["id"], "inside");
+            assert_eq!(resource.created_at(), resource.last_modified());
+        }
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_reindex_fetch_capped_server_prefix() {
+        use helios_persistence::search::ReindexSource;
+
+        fn keys_actual_rows(plan: &serde_json::Value) -> Option<f64> {
+            match plan {
+                serde_json::Value::Object(fields) => {
+                    if fields.get("Subplan Name").and_then(|v| v.as_str()) == Some("CTE keys") {
+                        return fields.get("Actual Rows").and_then(|v| v.as_f64());
+                    }
+                    fields.values().find_map(keys_actual_rows)
+                }
+                serde_json::Value::Array(items) => items.iter().find_map(keys_actual_rows),
+                _ => None,
+            }
+        }
+
+        let (backend, dbname) = isolated_reindex_backend_with_max_connections(1).await;
+        let tenant = create_tenant("capped-server-prefix");
+        let sizes = capped_reindex_fixture(&backend, &dbname, &tenant).await;
+        let cap = (sizes[0].1 + sizes[1].1) as u64;
+        let tenant_id = tenant.tenant_id().as_str();
+        let lookahead = 5_i64;
+        let limit = 4_i64;
+        let cap_text = cap.to_string();
+        let first = backend
+            .fetch_resources_page_capped(&tenant, "Patient", None, 4, cap)
+            .await
+            .unwrap();
+        assert_eq!(
+            first.resources.iter().map(|r| r.id()).collect::<Vec<_>>(),
+            ["p01", "p02"]
+        );
+        let cursor = first.next_cursor.unwrap();
+
+        let client = backend.get_client().await.unwrap();
+        let pid: i32 = client
+            .query_one("SELECT pg_backend_pid()", &[])
+            .await
+            .unwrap()
+            .get(0);
+        let matches = client
+            .query(
+                "SELECT statement FROM pg_prepared_statements WHERE statement LIKE $1",
+                &[&"%/* hfs_reindex_capped_initial */%"],
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            matches.len(),
+            1,
+            "expected the actual cached initial statement"
+        );
+        let sql: String = matches[0].get(0);
+        let binds: [&(dyn tokio_postgres::types::ToSql + Sync); 5] =
+            [&tenant_id, &"Patient", &lookahead, &limit, &cap_text];
+        let rows = client.query(&sql, &binds).await.unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(
+            rows.iter()
+                .map(|r| r.get::<_, String>(0))
+                .collect::<Vec<_>>(),
+            ["p01", "p02"]
+        );
+        assert_eq!(
+            rows.iter().map(|r| r.get::<_, i64>(5)).sum::<i64>() as u64,
+            cap
+        );
+        assert!(rows.iter().all(|r| r.get::<_, bool>(6)));
+        let explain = client
+            .query_one(
+                &format!("EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON) {sql}"),
+                &binds,
+            )
+            .await
+            .unwrap();
+        let plan: serde_json::Value = explain.get(0);
+        let keys = keys_actual_rows(&plan).expect("EXPLAIN must report the materialized keys");
+        assert!(keys <= f64::from(lookahead as u32), "keys produced: {keys}");
+        assert_eq!(
+            client
+                .query_one("SELECT pg_backend_pid()", &[])
+                .await
+                .unwrap()
+                .get::<_, i32>(0),
+            pid
+        );
+        drop(client);
+
+        let next = backend
+            .fetch_resources_page_capped(&tenant, "Patient", Some(&cursor), 4, cap)
+            .await
+            .unwrap();
+        assert_eq!(next.resources[0].id(), "p03");
+        let (cursor_ts, cursor_id) = cursor.split_once('|').unwrap();
+        let ts = chrono::DateTime::parse_from_rfc3339(cursor_ts)
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let client = backend.get_client().await.unwrap();
+        assert_eq!(
+            client
+                .query_one("SELECT pg_backend_pid()", &[])
+                .await
+                .unwrap()
+                .get::<_, i32>(0),
+            pid
+        );
+        let matches = client
+            .query(
+                "SELECT statement FROM pg_prepared_statements WHERE statement LIKE $1",
+                &[&"%/* hfs_reindex_capped_continuation */%"],
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            matches.len(),
+            1,
+            "expected the actual cached continuation statement"
+        );
+        let sql: String = matches[0].get(0);
+        let binds: [&(dyn tokio_postgres::types::ToSql + Sync); 7] = [
+            &tenant_id, &"Patient", &ts, &cursor_id, &lookahead, &limit, &cap_text,
+        ];
+        let rows = client.query(&sql, &binds).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].get::<_, String>(0), "p03");
+        assert_eq!(rows[0].get::<_, i64>(5), sizes[2].1);
+        assert!(rows[0].get::<_, bool>(6));
+        let explain = client
+            .query_one(
+                &format!("EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON) {sql}"),
+                &binds,
+            )
+            .await
+            .unwrap();
+        let plan: serde_json::Value = explain.get(0);
+        let keys = keys_actual_rows(&plan).expect("EXPLAIN must report the materialized keys");
+        assert!(keys <= f64::from(lookahead as u32), "keys produced: {keys}");
+        assert_eq!(
+            client
+                .query_one("SELECT pg_backend_pid()", &[])
+                .await
+                .unwrap()
+                .get::<_, i32>(0),
+            pid
+        );
     }
 
     /// Inserts a row directly into the search_index table. Mirrors what the
@@ -15529,11 +16469,22 @@ mod postgres_integration {
     /// individual savepoints.
     #[tokio::test]
     async fn postgres_bulk_submit_grouped_row_failure_replays_with_pool_size_one() {
-        use helios_persistence::core::{BulkEntryOutcome, BulkSubmitProvider, NdjsonEntry};
+        use helios_persistence::core::{
+            BulkEntryOutcome, BulkSubmitProvider, BulkSubmitRollbackProvider, NdjsonEntry,
+        };
 
         let (backend, dbname) = isolated_reindex_backend_with_max_connections(1).await;
         let tenant = create_tenant("bulk-submit-grouped-row-error");
         let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"existing","name":[{"family":"Before"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
         let (submission, manifest) =
             new_bulk_submit_manifest(&backend, &tenant, "grouped-row-error").await;
         let client = reindex_test_client_for(&dbname).await;
@@ -15553,17 +16504,24 @@ mod postgres_integration {
             .await
             .unwrap();
         let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-        let entries = ["good-a", "bad", "good-b"]
-            .into_iter()
-            .enumerate()
-            .map(|(index, id)| {
-                NdjsonEntry::new(
-                    (index + 1) as u64,
-                    "Patient",
-                    json!({"resourceType":"Patient","id":id}),
-                )
-            })
-            .collect();
+        let entries = vec![
+            NdjsonEntry::new(
+                1,
+                "Patient",
+                json!({"resourceType":"Patient","id":"good-a"}),
+            ),
+            NdjsonEntry::new(
+                2,
+                "Patient",
+                json!({"resourceType":"Patient","id":"existing","name":[{"family":"After"}]}),
+            ),
+            NdjsonEntry::new(3, "Patient", json!({"resourceType":"Patient","id":"bad"})),
+            NdjsonEntry::new(
+                4,
+                "Patient",
+                json!({"resourceType":"Patient","id":"good-b"}),
+            ),
+        ];
 
         let results = tokio::time::timeout(
             std::time::Duration::from_secs(10),
@@ -15578,16 +16536,17 @@ mod postgres_integration {
         .await
         .expect("replay deadlocked while waiting for the only pool connection")
         .unwrap();
-        assert_eq!(results.len(), 3);
-        assert!(results[0].is_success());
-        assert_eq!(results[1].outcome, BulkEntryOutcome::ProcessingError);
-        assert!(results[2].is_success());
+        assert_eq!(results.len(), 4);
+        assert!(results[0].is_success() && results[0].created);
+        assert!(results[1].is_success() && !results[1].created);
+        assert_eq!(results[2].outcome, BulkEntryOutcome::ProcessingError);
+        assert!(results[3].is_success() && results[3].created);
         assert_eq!(observer.0.lock().unwrap().len(), 1);
 
-        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 2).await;
-        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 2).await;
-        assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 3).await;
-        assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 2).await;
+        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 3).await;
+        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 4).await;
+        assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 4).await;
+        assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 3).await;
         for id in ["good-a", "good-b"] {
             let history: i64 = client
                 .query_one(
@@ -15599,14 +16558,253 @@ mod postgres_integration {
                 .get(0);
             assert_eq!(history, 1, "{id} must be created once after replay");
         }
+        let existing = backend
+            .read(&tenant, "Patient", "existing")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(existing.version_id(), "2");
+        assert_eq!(existing.content()["name"][0]["family"], "After");
+        assert_eq!(
+            backend
+                .history_instance(&tenant, "Patient", "existing", &HistoryParams::default(),)
+                .await
+                .unwrap()
+                .items
+                .len(),
+            2,
+            "the provisional update must roll back before the individual replay"
+        );
+        let changes = backend
+            .list_changes(&tenant, &submission, 10, 0)
+            .await
+            .unwrap();
+        assert_eq!(changes.len(), 3);
         let counts = backend
             .get_entry_counts(&tenant, &submission, &manifest.manifest_id)
             .await
             .unwrap();
         assert_eq!(
             (counts.total, counts.success, counts.processing_error),
-            (3, 2, 1)
+            (4, 3, 1)
         );
+    }
+
+    #[tokio::test]
+    async fn postgres_bulk_submit_mixed_existing_error_is_contained_by_savepoint() {
+        use helios_persistence::core::{
+            BulkEntryOutcome, BulkSubmitProvider, BulkSubmitRollbackProvider, NdjsonEntry,
+        };
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("bulk-submit-mixed-contained-error");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"contained-existing","name":[{"family":"Before"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let (submission, manifest) =
+            new_bulk_submit_manifest(&backend, &tenant, "mixed-contained-error").await;
+        let client = reindex_test_client_for(&dbname).await;
+        client
+            .batch_execute(&format!(
+                "CREATE FUNCTION reject_mixed_existing_update() RETURNS trigger LANGUAGE plpgsql AS $$
+                 BEGIN
+                   IF NEW.tenant_id = '{tenant_id}' AND NEW.id = 'contained-existing' THEN
+                     RAISE EXCEPTION 'deliberate existing-entry update failure';
+                   END IF;
+                   RETURN NEW;
+                 END $$;
+                 CREATE TRIGGER reject_mixed_existing_update
+                 BEFORE UPDATE ON resources
+                 FOR EACH ROW EXECUTE FUNCTION reject_mixed_existing_update();"
+            ))
+            .await
+            .unwrap();
+        let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+        let results = backend
+            .process_entries(
+                &tenant,
+                &submission,
+                &manifest.manifest_id,
+                vec![
+                    NdjsonEntry::new(
+                        1,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"contained-fresh-a"}),
+                    ),
+                    NdjsonEntry::new(
+                        2,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"contained-existing","name":[{"family":"After"}]}),
+                    ),
+                    NdjsonEntry::new(
+                        3,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"contained-fresh-b"}),
+                    ),
+                ],
+                &grouped_create_options(observer.clone()),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 3);
+        assert!(results[0].is_success() && results[0].created);
+        assert_eq!(results[1].outcome, BulkEntryOutcome::ProcessingError);
+        assert!(
+            results[1].operation_outcome.as_ref().unwrap()["issue"][0]["diagnostics"]
+                .as_str()
+                .unwrap()
+                .contains("Failed to update resource")
+        );
+        assert!(results[2].is_success() && results[2].created);
+        assert_eq!(observer.0.lock().unwrap().len(), 1);
+
+        let existing = backend
+            .read(&tenant, "Patient", "contained-existing")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(existing.version_id(), "1");
+        assert_eq!(existing.content()["name"][0]["family"], "Before");
+        let histories = resource_history_counts(&client, &tenant_id).await;
+        assert_eq!(histories.get("contained-existing"), Some(&1));
+        assert_eq!(histories.get("contained-fresh-a"), Some(&1));
+        assert_eq!(histories.get("contained-fresh-b"), Some(&1));
+        let changes = backend
+            .list_changes(&tenant, &submission, 10, 0)
+            .await
+            .unwrap();
+        assert_eq!(changes.len(), 2);
+        assert!(
+            changes
+                .iter()
+                .all(|change| change.resource_id.starts_with("contained-fresh-"))
+        );
+        let page = backend
+            .get_entry_results_page(&tenant, &submission, &manifest.manifest_id, None, 10, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            page.entries
+                .iter()
+                .map(|entry| entry.result.line_number)
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_bulk_submit_mixed_rollback_to_savepoint_failure_is_fatal() {
+        use helios_persistence::core::{BulkSubmitProvider, NdjsonEntry};
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("bulk-submit-mixed-savepoint-fatal");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"fatal-existing","name":[{"family":"Before"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let (submission, manifest) =
+            new_bulk_submit_manifest(&backend, &tenant, "mixed-savepoint-fatal").await;
+        let client = reindex_test_client_for(&dbname).await;
+        client
+            .batch_execute(&format!(
+                "CREATE SEQUENCE mixed_savepoint_termination_attempts;
+                 CREATE FUNCTION terminate_mixed_existing_update() RETURNS trigger LANGUAGE plpgsql AS $$
+                 BEGIN
+                   IF NEW.tenant_id = '{tenant_id}' AND NEW.id = 'fatal-existing' THEN
+                     PERFORM nextval('mixed_savepoint_termination_attempts');
+                     PERFORM pg_terminate_backend(pg_backend_pid());
+                   END IF;
+                   RETURN NEW;
+                 END $$;
+                 CREATE TRIGGER terminate_mixed_existing_update
+                 BEFORE UPDATE ON resources
+                 FOR EACH ROW EXECUTE FUNCTION terminate_mixed_existing_update();"
+            ))
+            .await
+            .unwrap();
+        let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+        let error = tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            backend.process_entries(
+                &tenant,
+                &submission,
+                &manifest.manifest_id,
+                vec![
+                    NdjsonEntry::new(
+                        1,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"fatal-fresh-a"}),
+                    ),
+                    NdjsonEntry::new(
+                        2,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"fatal-existing","name":[{"family":"After"}]}),
+                    ),
+                    NdjsonEntry::new(
+                        3,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"fatal-fresh-b"}),
+                    ),
+                ],
+                &grouped_create_options(observer.clone()),
+            ),
+        )
+        .await
+        .expect("connection termination left the mixed attempt blocked")
+        .expect_err("rollback-to-savepoint failure must be fatal");
+        assert!(
+            error.to_string().contains("after"),
+            "the fatal error should retain the write and rollback failures: {error}"
+        );
+        assert!(observer.0.lock().unwrap().is_empty());
+        let attempts: i64 = client
+            .query_one(
+                "SELECT last_value FROM mixed_savepoint_termination_attempts",
+                &[],
+            )
+            .await
+            .unwrap()
+            .get(0);
+        assert_eq!(attempts, 1, "the fatal path must not replay the batch");
+        let existing = backend
+            .read(&tenant, "Patient", "fatal-existing")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(existing.version_id(), "1");
+        assert_eq!(existing.content()["name"][0]["family"], "Before");
+        assert!(
+            backend
+                .read(&tenant, "Patient", "fatal-fresh-a")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            backend
+                .read(&tenant, "Patient", "fatal-fresh-b")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 0).await;
+        assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 0).await;
     }
 
     async fn install_resource_insert_statement_counter(client: &tokio_postgres::Client) {
@@ -15639,9 +16837,78 @@ mod postgres_integration {
             .get(0)
     }
 
-    /// An active target-tenant key must select the individual path before any
-    /// grouped insert is attempted. The fresh companion therefore accounts for
-    /// the only resource INSERT statement.
+    async fn reset_resource_insert_statement_counter(client: &tokio_postgres::Client) {
+        client
+            .batch_execute("ALTER SEQUENCE grouped_resource_insert_statements RESTART WITH 0")
+            .await
+            .unwrap();
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum ExistingPlacement {
+        Start,
+        Middle,
+        End,
+    }
+
+    fn existing_positions(
+        count: usize,
+        placement: ExistingPlacement,
+    ) -> std::collections::HashSet<usize> {
+        let start = match placement {
+            ExistingPlacement::Start => 0,
+            ExistingPlacement::Middle => (100 - count) / 2,
+            ExistingPlacement::End => 100 - count,
+        };
+        (start..start + count).collect()
+    }
+
+    fn fresh_run_count(existing: &std::collections::HashSet<usize>, entries: usize) -> i64 {
+        (0..entries)
+            .filter(|position| {
+                !existing.contains(position)
+                    && (*position == 0 || existing.contains(&(position - 1)))
+            })
+            .count() as i64
+    }
+
+    async fn resource_versions_and_families(
+        client: &tokio_postgres::Client,
+        tenant_id: &str,
+    ) -> std::collections::HashMap<String, (String, String)> {
+        client
+            .query(
+                "SELECT id, version_id, COALESCE(data->'name'->0->>'family', '')
+                 FROM resources WHERE tenant_id = $1 AND resource_type = 'Patient'",
+                &[&tenant_id],
+            )
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|row| (row.get(0), (row.get(1), row.get(2))))
+            .collect()
+    }
+
+    async fn resource_history_counts(
+        client: &tokio_postgres::Client,
+        tenant_id: &str,
+    ) -> std::collections::HashMap<String, i64> {
+        client
+            .query(
+                "SELECT id, COUNT(*)::BIGINT FROM resource_history
+                 WHERE tenant_id = $1 AND resource_type = 'Patient' GROUP BY id",
+                &[&tenant_id],
+            )
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|row| (row.get(0), row.get(1)))
+            .collect()
+    }
+
+    /// Existing keys split the input into maximal fresh runs. Each run uses one
+    /// resource INSERT statement while existing entries retain update/skip
+    /// semantics and input-ordered receipts.
     #[tokio::test]
     async fn postgres_bulk_submit_active_candidate_routes_before_grouped_insert() {
         use helios_persistence::core::{
@@ -15650,150 +16917,1007 @@ mod postgres_integration {
 
         for allow_updates in [false, true] {
             let (backend, dbname) = isolated_reindex_backend().await;
-            let tenant = create_tenant(if allow_updates {
-                "grouped-active-update"
-            } else {
-                "grouped-active-skip"
-            });
+            let client = reindex_test_client_for(&dbname).await;
+            install_resource_insert_statement_counter(&client).await;
+
+            for existing_count in [1, 10] {
+                for placement in [
+                    ExistingPlacement::Start,
+                    ExistingPlacement::Middle,
+                    ExistingPlacement::End,
+                ] {
+                    let label = format!(
+                        "grouped-active-{}-{existing_count}-{placement:?}",
+                        if allow_updates { "update" } else { "skip" }
+                    );
+                    let tenant = create_tenant(&label);
+                    let tenant_id = tenant.tenant_id().as_str().to_string();
+                    let existing = existing_positions(existing_count, placement);
+                    for position in &existing {
+                        let id = format!("active-{position:03}");
+                        backend
+                            .create(
+                                &tenant,
+                                "Patient",
+                                json!({
+                                    "resourceType":"Patient",
+                                    "id":id,
+                                    "name":[{"family":"Stored"}]
+                                }),
+                                FhirVersion::default(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                    let (submission, manifest) =
+                        new_bulk_submit_manifest(&backend, &tenant, &label).await;
+                    let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+                    let options =
+                        grouped_create_options(observer.clone()).with_allow_updates(allow_updates);
+                    let entries = (0..100)
+                        .map(|position| {
+                            let id = format!("active-{position:03}");
+                            NdjsonEntry::new(
+                                (position + 1) as u64,
+                                "Patient",
+                                json!({
+                                    "resourceType":"Patient",
+                                    "id":id,
+                                    "name":[{"family":"Submitted"}]
+                                }),
+                            )
+                        })
+                        .collect();
+                    reset_resource_insert_statement_counter(&client).await;
+
+                    let results = backend
+                        .process_entries(
+                            &tenant,
+                            &submission,
+                            &manifest.manifest_id,
+                            entries,
+                            &options,
+                        )
+                        .await
+                        .unwrap();
+
+                    assert_eq!(results.len(), 100, "{label}");
+                    for (position, result) in results.iter().enumerate() {
+                        let id = format!("active-{position:03}");
+                        assert_eq!(result.line_number, (position + 1) as u64, "{label}");
+                        assert_eq!(
+                            result.resource_id.as_deref(),
+                            if existing.contains(&position) && !allow_updates {
+                                None
+                            } else {
+                                Some(id.as_str())
+                            },
+                            "{label}"
+                        );
+                        if existing.contains(&position) {
+                            assert!(!result.created, "{label} at {position}");
+                            assert_eq!(
+                                result.outcome,
+                                if allow_updates {
+                                    BulkEntryOutcome::Success
+                                } else {
+                                    BulkEntryOutcome::Skipped
+                                },
+                                "{label} at {position}"
+                            );
+                        } else {
+                            assert!(
+                                result.is_success() && result.created,
+                                "{label} at {position}"
+                            );
+                        }
+                    }
+                    assert_eq!(
+                        resource_insert_statements(&client).await,
+                        fresh_run_count(&existing, 100),
+                        "{label}"
+                    );
+                    assert_eq!(observer.0.lock().unwrap().len(), 1, "{label}");
+
+                    let rows = resource_versions_and_families(&client, &tenant_id).await;
+                    let histories = resource_history_counts(&client, &tenant_id).await;
+                    assert_eq!(rows.len(), 100, "{label}");
+                    assert_eq!(histories.len(), 100, "{label}");
+                    for position in 0..100 {
+                        let id = format!("active-{position:03}");
+                        let expected_version = if existing.contains(&position) && allow_updates {
+                            "2"
+                        } else {
+                            "1"
+                        };
+                        let expected_family = if existing.contains(&position) && !allow_updates {
+                            "Stored"
+                        } else {
+                            "Submitted"
+                        };
+                        assert_eq!(
+                            rows.get(&id),
+                            Some(&(expected_version.to_string(), expected_family.to_string())),
+                            "{label} at {position}"
+                        );
+                        assert_eq!(
+                            histories.get(&id),
+                            Some(&if expected_version == "2" { 2 } else { 1 }),
+                            "{label} at {position}"
+                        );
+                    }
+
+                    let page = backend
+                        .get_entry_results_page(
+                            &tenant,
+                            &submission,
+                            &manifest.manifest_id,
+                            None,
+                            101,
+                            None,
+                        )
+                        .await
+                        .unwrap();
+                    assert_eq!(page.entries.len(), 100, "{label}");
+                    assert!(page.entries.iter().enumerate().all(|(position, entry)| {
+                        let id = format!("active-{position:03}");
+                        entry.result.line_number == (position + 1) as u64
+                            && entry.result.resource_id.as_deref()
+                                == if existing.contains(&position) && !allow_updates {
+                                    None
+                                } else {
+                                    Some(id.as_str())
+                                }
+                    }));
+
+                    let changes = backend
+                        .list_changes(&tenant, &submission, 101, 0)
+                        .await
+                        .unwrap();
+                    assert_eq!(
+                        changes.len(),
+                        100 - if allow_updates { 0 } else { existing_count },
+                        "{label}"
+                    );
+                    for change in &changes {
+                        let position: usize = change.resource_id[7..].parse().unwrap();
+                        if existing.contains(&position) {
+                            assert!(allow_updates, "{label}");
+                            assert_eq!(change.previous_version.as_deref(), Some("1"), "{label}");
+                            assert_eq!(change.new_version, "2", "{label}");
+                        } else {
+                            assert!(change.previous_version.is_none(), "{label}");
+                            assert_eq!(change.new_version, "1", "{label}");
+                        }
+                    }
+                    let counts = backend
+                        .get_entry_counts(&tenant, &submission, &manifest.manifest_id)
+                        .await
+                        .unwrap();
+                    assert_eq!(counts.total, 100, "{label}");
+                    assert_eq!(
+                        counts.success,
+                        (100 - if allow_updates { 0 } else { existing_count }) as u64,
+                        "{label}"
+                    );
+                    assert_eq!(
+                        counts.skipped,
+                        if allow_updates {
+                            0
+                        } else {
+                            existing_count as u64
+                        },
+                        "{label}"
+                    );
+                    assert_eq!(counts.processing_error, 0, "{label}");
+                }
+            }
+        }
+    }
+
+    /// Soft-deleted rows split fresh runs but retain their individual create
+    /// conflict. Fresh neighbours still commit in input order.
+    #[tokio::test]
+    async fn postgres_bulk_submit_deleted_candidate_routes_before_grouped_insert() {
+        use helios_persistence::core::{
+            BulkEntryOutcome, BulkSubmitProvider, BulkSubmitRollbackProvider, NdjsonEntry,
+        };
+
+        for allow_updates in [false, true] {
+            let (backend, dbname) = isolated_reindex_backend().await;
+            let client = reindex_test_client_for(&dbname).await;
+            install_resource_insert_statement_counter(&client).await;
+
+            for placement in [
+                ExistingPlacement::Start,
+                ExistingPlacement::Middle,
+                ExistingPlacement::End,
+            ] {
+                let label = format!(
+                    "grouped-deleted-{}-{placement:?}",
+                    if allow_updates { "update" } else { "skip" }
+                );
+                let tenant = create_tenant(&label);
+                let tenant_id = tenant.tenant_id().as_str().to_string();
+                let deleted = existing_positions(1, placement);
+                let deleted_position = *deleted.iter().next().unwrap();
+                let deleted_id = format!("deleted-{deleted_position:03}");
+                backend
+                    .create(
+                        &tenant,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":deleted_id}),
+                        FhirVersion::default(),
+                    )
+                    .await
+                    .unwrap();
+                backend
+                    .delete(&tenant, "Patient", &deleted_id)
+                    .await
+                    .unwrap();
+                let (submission, manifest) =
+                    new_bulk_submit_manifest(&backend, &tenant, &label).await;
+                let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+                let options =
+                    grouped_create_options(observer.clone()).with_allow_updates(allow_updates);
+                let entries = (0..100)
+                    .map(|position| {
+                        let id = format!("deleted-{position:03}");
+                        NdjsonEntry::new(
+                            (position + 1) as u64,
+                            "Patient",
+                            json!({"resourceType":"Patient","id":id}),
+                        )
+                    })
+                    .collect();
+                reset_resource_insert_statement_counter(&client).await;
+
+                let results = backend
+                    .process_entries(
+                        &tenant,
+                        &submission,
+                        &manifest.manifest_id,
+                        entries,
+                        &options,
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(results.len(), 100, "{label}");
+                for (position, result) in results.iter().enumerate() {
+                    assert_eq!(result.line_number, (position + 1) as u64, "{label}");
+                    if position == deleted_position {
+                        assert_eq!(result.outcome, BulkEntryOutcome::ProcessingError, "{label}");
+                        assert!(result.resource_id.is_none(), "{label}");
+                    } else {
+                        assert!(
+                            result.is_success() && result.created,
+                            "{label} at {position}"
+                        );
+                    }
+                }
+                assert_eq!(
+                    resource_insert_statements(&client).await,
+                    fresh_run_count(&deleted, 100) + 1,
+                    "{label}"
+                );
+                assert_eq!(observer.0.lock().unwrap().len(), 1, "{label}");
+                assert!(matches!(
+                    backend.read(&tenant, "Patient", &deleted_id).await,
+                    Err(StorageError::Resource(ResourceError::Gone { .. }))
+                ));
+
+                let rows = resource_versions_and_families(&client, &tenant_id).await;
+                assert_eq!(rows.len(), 100, "{label}");
+                assert_eq!(rows.get(&deleted_id).unwrap().0, "2", "{label}");
+                let histories = resource_history_counts(&client, &tenant_id).await;
+                assert_eq!(histories.len(), 100, "{label}");
+                assert_eq!(histories.get(&deleted_id), Some(&2), "{label}");
+                assert!(
+                    histories
+                        .iter()
+                        .all(|(id, count)| { id == &deleted_id || *count == 1 })
+                );
+                let changes = backend
+                    .list_changes(&tenant, &submission, 101, 0)
+                    .await
+                    .unwrap();
+                assert_eq!(changes.len(), 99, "{label}");
+                assert!(
+                    changes
+                        .iter()
+                        .all(|change| change.resource_id != deleted_id)
+                );
+                let page = backend
+                    .get_entry_results_page(
+                        &tenant,
+                        &submission,
+                        &manifest.manifest_id,
+                        None,
+                        101,
+                        None,
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(page.entries.len(), 100, "{label}");
+                assert!(page.entries.iter().enumerate().all(|(position, entry)| {
+                    entry.result.line_number == (position + 1) as u64
+                }));
+                let counts = backend
+                    .get_entry_counts(&tenant, &submission, &manifest.manifest_id)
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    (counts.total, counts.success, counts.processing_error),
+                    (100, 99, 1),
+                    "{label}"
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn postgres_bulk_submit_mixed_runs_preserve_input_order() {
+        use helios_persistence::core::{
+            BulkEntryOutcome, BulkProcessingOptions, BulkSubmitProvider,
+            BulkSubmitRollbackProvider, ChangeType, NdjsonEntry,
+        };
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("grouped-mixed-order");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        for (id, family) in [("mixed-same", "Same"), ("mixed-changed", "Before")] {
             backend
                 .create(
                     &tenant,
                     "Patient",
-                    json!({"resourceType":"Patient","id":"active","name":[{"family":"Stored"}]}),
+                    json!({"resourceType":"Patient","id":id,"name":[{"family":family}]}),
                     FhirVersion::default(),
                 )
                 .await
                 .unwrap();
-            let (submission, manifest) =
-                new_bulk_submit_manifest(&backend, &tenant, "grouped-active").await;
-            let client = reindex_test_client_for(&dbname).await;
-            install_resource_insert_statement_counter(&client).await;
-            let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-            let options =
-                grouped_create_options(observer.clone()).with_allow_updates(allow_updates);
-
-            let results = backend
-                .process_entries(
-                    &tenant,
-                    &submission,
-                    &manifest.manifest_id,
-                    vec![
-                        NdjsonEntry::new(
-                            1,
-                            "Patient",
-                            json!({"resourceType":"Patient","id":"active","name":[{"family":"Submitted"}]}),
-                        ),
-                        NdjsonEntry::new(
-                            2,
-                            "Patient",
-                            json!({"resourceType":"Patient","id":"fresh"}),
-                        ),
-                    ],
-                    &options,
-                )
-                .await
-                .unwrap();
-
-            assert_eq!(results.len(), 2);
-            if allow_updates {
-                assert!(results[0].is_success());
-                assert!(!results[0].created);
-            } else {
-                assert_eq!(results[0].outcome, BulkEntryOutcome::Skipped);
-            }
-            assert!(results[1].is_success() && results[1].created);
-            assert_eq!(resource_insert_statements(&client).await, 1);
-            assert_eq!(observer.0.lock().unwrap().len(), 1);
-
-            let active = backend
-                .read(&tenant, "Patient", "active")
-                .await
-                .unwrap()
-                .unwrap();
-            assert_eq!(
-                active.content()["name"][0]["family"],
-                if allow_updates { "Submitted" } else { "Stored" }
-            );
-            assert_eq!(active.version_id(), if allow_updates { "2" } else { "1" });
-            let changes = backend
-                .list_changes(&tenant, &submission, 10, 0)
-                .await
-                .unwrap();
-            assert_eq!(changes.len(), if allow_updates { 2 } else { 1 });
-            let counts = backend
-                .get_entry_counts(&tenant, &submission, &manifest.manifest_id)
-                .await
-                .unwrap();
-            assert_eq!(counts.total, 2);
-            assert_eq!(counts.success, if allow_updates { 2 } else { 1 });
-            assert_eq!(counts.skipped, if allow_updates { 0 } else { 1 });
-            assert_eq!(counts.processing_error, 0);
         }
+        let (submission, manifest) =
+            new_bulk_submit_manifest(&backend, &tenant, "grouped-mixed-order").await;
+        let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+        let file_url = "https://provider.example/mixed-order.ndjson";
+        let options = BulkProcessingOptions::new()
+            .with_defer_indexing(true)
+            .with_skip_unchanged(true)
+            .with_file_url(file_url)
+            .with_batch_observer(observer.clone());
+        let entries = vec![
+            NdjsonEntry::new(
+                1,
+                "Patient",
+                json!({"resourceType":"Patient","id":"mixed-same","name":[{"family":"Same"}]}),
+            ),
+            NdjsonEntry::new(
+                2,
+                "Patient",
+                json!({"resourceType":"Patient","id":"mixed-fresh-a","name":[{"family":"Fresh A"}]}),
+            ),
+            NdjsonEntry::new(
+                3,
+                "Patient",
+                json!({"resourceType":"Patient","id":"mixed-changed","name":[{"family":"After"}]}),
+            ),
+            NdjsonEntry::new(
+                4,
+                "Patient",
+                json!({"resourceType":"Patient","id":"mixed-fresh-b","name":[{"family":"Fresh B"}]}),
+            ),
+        ];
+
+        let results = backend
+            .process_entries(
+                &tenant,
+                &submission,
+                &manifest.manifest_id,
+                entries,
+                &options,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 4);
+        assert_eq!(
+            results
+                .iter()
+                .map(|result| (
+                    result.line_number,
+                    result.resource_id.as_deref().unwrap(),
+                    result.created,
+                    result.unchanged,
+                    result.outcome,
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (1, "mixed-same", false, true, BulkEntryOutcome::Success),
+                (2, "mixed-fresh-a", true, false, BulkEntryOutcome::Success),
+                (3, "mixed-changed", false, false, BulkEntryOutcome::Success),
+                (4, "mixed-fresh-b", true, false, BulkEntryOutcome::Success),
+            ]
+        );
+        assert_eq!(observer.0.lock().unwrap().len(), 1);
+
+        let rows =
+            resource_versions_and_families(&reindex_test_client_for(&dbname).await, &tenant_id)
+                .await;
+        assert_eq!(
+            rows.get("mixed-same"),
+            Some(&("1".to_string(), "Same".to_string()))
+        );
+        assert_eq!(
+            rows.get("mixed-changed"),
+            Some(&("2".to_string(), "After".to_string()))
+        );
+        assert_eq!(
+            rows.get("mixed-fresh-a"),
+            Some(&("1".to_string(), "Fresh A".to_string()))
+        );
+        assert_eq!(
+            rows.get("mixed-fresh-b"),
+            Some(&("1".to_string(), "Fresh B".to_string()))
+        );
+        let client = reindex_test_client_for(&dbname).await;
+        let histories = resource_history_counts(&client, &tenant_id).await;
+        assert_eq!(histories.get("mixed-same"), Some(&1));
+        assert_eq!(histories.get("mixed-changed"), Some(&2));
+        assert_eq!(histories.get("mixed-fresh-a"), Some(&1));
+        assert_eq!(histories.get("mixed-fresh-b"), Some(&1));
+
+        let changes = backend
+            .list_changes(&tenant, &submission, 10, 0)
+            .await
+            .unwrap();
+        let changes_by_id: std::collections::HashMap<_, _> = changes
+            .iter()
+            .map(|change| (change.resource_id.as_str(), change))
+            .collect();
+        assert_eq!(changes_by_id.len(), 3);
+        assert!(!changes_by_id.contains_key("mixed-same"));
+        let changed = changes_by_id["mixed-changed"];
+        assert_eq!(changed.change_type, ChangeType::Update);
+        assert_eq!(changed.previous_version.as_deref(), Some("1"));
+        assert_eq!(changed.new_version, "2");
+        for id in ["mixed-fresh-a", "mixed-fresh-b"] {
+            assert_eq!(changes_by_id[id].change_type, ChangeType::Create);
+            assert!(changes_by_id[id].previous_version.is_none());
+            assert_eq!(changes_by_id[id].new_version, "1");
+        }
+
+        let page = backend
+            .get_entry_results_page(&tenant, &submission, &manifest.manifest_id, None, 10, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            page.entries
+                .iter()
+                .map(|entry| (
+                    entry.result.line_number,
+                    entry.result.resource_id.as_deref().unwrap()
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (1, "mixed-same"),
+                (2, "mixed-fresh-a"),
+                (3, "mixed-changed"),
+                (4, "mixed-fresh-b"),
+            ]
+        );
+        let progress = client
+            .query_one(
+                "SELECT max_line, total_entries, processed_entries, failed_entries, skipped_entries
+                 FROM bulk_manifest_file_progress
+                 WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3
+                   AND manifest_id = $4 AND file_url = $5",
+                &[
+                    &tenant_id,
+                    &submission.submitter,
+                    &submission.submission_id,
+                    &manifest.manifest_id,
+                    &file_url,
+                ],
+            )
+            .await
+            .unwrap();
+        let progress: (i64, i64, i64, i64, i64) = (
+            progress.get(0),
+            progress.get(1),
+            progress.get(2),
+            progress.get(3),
+            progress.get(4),
+        );
+        assert_eq!(progress, (4, 4, 4, 0, 0));
     }
 
-    /// Soft-deleted rows are candidates too. Finding the row before the grouped
-    /// attempt leaves exactly one failed individual INSERT; filtering deleted
-    /// rows from the candidate query would add an earlier grouped attempt.
     #[tokio::test]
-    async fn postgres_bulk_submit_deleted_candidate_routes_before_grouped_insert() {
-        use helios_persistence::core::{BulkEntryOutcome, BulkSubmitProvider, NdjsonEntry};
+    async fn postgres_bulk_submit_all_existing_uses_the_legacy_path() {
+        use helios_persistence::core::{
+            BulkEntryOutcome, BulkSubmitProvider, BulkSubmitRollbackProvider, NdjsonEntry,
+        };
 
         for allow_updates in [false, true] {
             let (backend, dbname) = isolated_reindex_backend().await;
             let tenant = create_tenant(if allow_updates {
-                "grouped-deleted-update"
+                "grouped-all-existing-update"
             } else {
-                "grouped-deleted-skip"
+                "grouped-all-existing-skip"
             });
-            backend
-                .create(
-                    &tenant,
-                    "Patient",
-                    json!({"resourceType":"Patient","id":"deleted"}),
-                    FhirVersion::default(),
-                )
-                .await
-                .unwrap();
-            backend.delete(&tenant, "Patient", "deleted").await.unwrap();
-            let (submission, manifest) =
-                new_bulk_submit_manifest(&backend, &tenant, "grouped-deleted").await;
+            let tenant_id = tenant.tenant_id().as_str().to_string();
+            for position in 0..100 {
+                let id = format!("all-existing-{position:03}");
+                backend
+                    .create(
+                        &tenant,
+                        "Patient",
+                        json!({
+                            "resourceType":"Patient",
+                            "id":id,
+                            "name":[{"family":"Stored"}]
+                        }),
+                        FhirVersion::default(),
+                    )
+                    .await
+                    .unwrap();
+            }
             let client = reindex_test_client_for(&dbname).await;
             install_resource_insert_statement_counter(&client).await;
+            let (submission, manifest) =
+                new_bulk_submit_manifest(&backend, &tenant, "grouped-all-existing").await;
             let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-            let options =
-                grouped_create_options(observer.clone()).with_allow_updates(allow_updates);
-
+            let entries = (0..100)
+                .map(|position| {
+                    let id = format!("all-existing-{position:03}");
+                    NdjsonEntry::new(
+                        (position + 1) as u64,
+                        "Patient",
+                        json!({
+                            "resourceType":"Patient",
+                            "id":id,
+                            "name":[{"family":"Submitted"}]
+                        }),
+                    )
+                })
+                .collect();
             let results = backend
                 .process_entries(
                     &tenant,
                     &submission,
                     &manifest.manifest_id,
-                    vec![NdjsonEntry::new(
-                        1,
-                        "Patient",
-                        json!({"resourceType":"Patient","id":"deleted"}),
-                    )],
-                    &options,
+                    entries,
+                    &grouped_create_options(observer.clone()).with_allow_updates(allow_updates),
                 )
                 .await
                 .unwrap();
 
-            assert_eq!(results.len(), 1);
-            assert_eq!(results[0].outcome, BulkEntryOutcome::ProcessingError);
-            assert_eq!(resource_insert_statements(&client).await, 1);
+            assert_eq!(results.len(), 100);
+            assert!(results.iter().enumerate().all(|(position, result)| {
+                result.line_number == (position + 1) as u64
+                    && !result.created
+                    && result.outcome
+                        == if allow_updates {
+                            BulkEntryOutcome::Success
+                        } else {
+                            BulkEntryOutcome::Skipped
+                        }
+            }));
+            assert_eq!(resource_insert_statements(&client).await, 0);
             assert_eq!(observer.0.lock().unwrap().len(), 1);
-            assert!(matches!(
-                backend.read(&tenant, "Patient", "deleted").await,
-                Err(StorageError::Resource(ResourceError::Gone { .. }))
-            ));
-            let counts = backend
-                .get_entry_counts(&tenant, &submission, &manifest.manifest_id)
+            let rows = resource_versions_and_families(&client, &tenant_id).await;
+            let histories = resource_history_counts(&client, &tenant_id).await;
+            assert_eq!(rows.len(), 100);
+            assert_eq!(histories.len(), 100);
+            assert!(rows.values().all(|(version, family)| {
+                version == if allow_updates { "2" } else { "1" }
+                    && family == if allow_updates { "Submitted" } else { "Stored" }
+            }));
+            assert!(
+                histories
+                    .values()
+                    .all(|count| *count == if allow_updates { 2 } else { 1 })
+            );
+            let page = backend
+                .get_entry_results_page(
+                    &tenant,
+                    &submission,
+                    &manifest.manifest_id,
+                    None,
+                    101,
+                    None,
+                )
                 .await
                 .unwrap();
+            assert_eq!(page.entries.len(), 100);
+            assert!(page.entries.iter().enumerate().all(|(position, entry)| {
+                let id = format!("all-existing-{position:03}");
+                entry.result.line_number == (position + 1) as u64
+                    && entry.result.resource_id.as_deref()
+                        == if allow_updates {
+                            Some(id.as_str())
+                        } else {
+                            None
+                        }
+                    && !entry.result.created
+                    && entry.result.outcome
+                        == if allow_updates {
+                            BulkEntryOutcome::Success
+                        } else {
+                            BulkEntryOutcome::Skipped
+                        }
+            }));
+            let changes = backend
+                .list_changes(&tenant, &submission, 101, 0)
+                .await
+                .unwrap();
+            assert_eq!(changes.len(), if allow_updates { 100 } else { 0 });
+        }
+    }
+
+    #[tokio::test]
+    async fn postgres_bulk_submit_duplicate_and_oversized_batches_use_legacy_path() {
+        use helios_persistence::core::{
+            BulkSubmitProvider, BulkSubmitRollbackProvider, NdjsonEntry,
+        };
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let client = reindex_test_client_for(&dbname).await;
+        let tenant = create_tenant("grouped-duplicate-fallback");
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"duplicate","name":[{"family":"Stored"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        install_resource_insert_statement_counter(&client).await;
+        let (submission, manifest) =
+            new_bulk_submit_manifest(&backend, &tenant, "grouped-duplicate-fallback").await;
+        let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+        let duplicate_results = backend
+            .process_entries(
+                &tenant,
+                &submission,
+                &manifest.manifest_id,
+                vec![
+                    NdjsonEntry::new(
+                        1,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"duplicate","name":[{"family":"First"}]}),
+                    ),
+                    NdjsonEntry::new(
+                        2,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"between-duplicates"}),
+                    ),
+                    NdjsonEntry::new(
+                        3,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"duplicate","name":[{"family":"Second"}]}),
+                    ),
+                ],
+                &grouped_create_options(observer.clone()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            duplicate_results
+                .iter()
+                .map(|result| (result.line_number, result.created))
+                .collect::<Vec<_>>(),
+            vec![(1, false), (2, true), (3, false)]
+        );
+        assert_eq!(resource_insert_statements(&client).await, 1);
+        let duplicate = backend
+            .read(&tenant, "Patient", "duplicate")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(duplicate.version_id(), "3");
+        assert_eq!(duplicate.content()["name"][0]["family"], "Second");
+        assert_eq!(
+            backend
+                .history_instance(&tenant, "Patient", "duplicate", &HistoryParams::default(),)
+                .await
+                .unwrap()
+                .items
+                .len(),
+            3
+        );
+        let page = backend
+            .get_entry_results_page(&tenant, &submission, &manifest.manifest_id, None, 10, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            page.entries
+                .iter()
+                .map(|entry| entry.result.line_number)
+                .collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            backend
+                .list_changes(&tenant, &submission, 10, 0)
+                .await
+                .unwrap()
+                .len(),
+            3
+        );
+
+        let oversized_tenant = create_tenant("grouped-oversized-fallback");
+        let oversized_tenant_id = oversized_tenant.tenant_id().as_str().to_string();
+        let (oversized_submission, oversized_manifest) =
+            new_bulk_submit_manifest(&backend, &oversized_tenant, "grouped-oversized-fallback")
+                .await;
+        let oversized_observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+        reset_resource_insert_statement_counter(&client).await;
+        let oversized_results = backend
+            .process_entries(
+                &oversized_tenant,
+                &oversized_submission,
+                &oversized_manifest.manifest_id,
+                (1..=101)
+                    .map(|line| {
+                        NdjsonEntry::new(
+                            line,
+                            "Patient",
+                            json!({"resourceType":"Patient","id":format!("oversized-{line:03}")}),
+                        )
+                    })
+                    .collect(),
+                &grouped_create_options(oversized_observer.clone()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(oversized_results.len(), 101);
+        assert!(
+            oversized_results
+                .iter()
+                .enumerate()
+                .all(|(position, result)| {
+                    result.line_number == (position + 1) as u64
+                        && result.created
+                        && result.is_success()
+                })
+        );
+        assert_eq!(resource_insert_statements(&client).await, 101);
+        assert_eq!(oversized_observer.0.lock().unwrap().len(), 1);
+        let oversized_page = backend
+            .get_entry_results_page(
+                &oversized_tenant,
+                &oversized_submission,
+                &oversized_manifest.manifest_id,
+                None,
+                102,
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(oversized_page.entries.len(), 101);
+        assert!(
+            oversized_page
+                .entries
+                .iter()
+                .enumerate()
+                .all(|(position, entry)| {
+                    let id = format!("oversized-{:03}", position + 1);
+                    entry.result.line_number == (position + 1) as u64
+                        && entry.result.resource_id.as_deref() == Some(id.as_str())
+                        && entry.result.created
+                        && entry.result.is_success()
+                })
+        );
+        let oversized_histories = resource_history_counts(&client, &oversized_tenant_id).await;
+        assert_eq!(oversized_histories.len(), 101);
+        for id in ["oversized-001", "oversized-051", "oversized-101"] {
+            assert_eq!(oversized_histories.get(id), Some(&1));
+            let stored = backend
+                .read(&oversized_tenant, "Patient", id)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(stored.version_id(), "1");
+            assert_eq!(stored.content()["id"], id);
+        }
+    }
+
+    #[tokio::test]
+    async fn postgres_bulk_submit_search_offload_keeps_the_individual_path() {
+        use helios_persistence::core::{BulkEntryOutcome, BulkSubmitProvider, NdjsonEntry};
+
+        let (mut backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("grouped-search-offloaded");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"offloaded-050"}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        backend.set_search_offloaded(true);
+        let client = reindex_test_client_for(&dbname).await;
+        install_resource_insert_statement_counter(&client).await;
+        let (submission, manifest) =
+            new_bulk_submit_manifest(&backend, &tenant, "grouped-search-offloaded").await;
+        let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
+        let results = backend
+            .process_entries(
+                &tenant,
+                &submission,
+                &manifest.manifest_id,
+                (0..100)
+                    .map(|position| {
+                        let id = format!("offloaded-{position:03}");
+                        NdjsonEntry::new(
+                            (position + 1) as u64,
+                            "Patient",
+                            json!({"resourceType":"Patient","id":id}),
+                        )
+                    })
+                    .collect(),
+                &grouped_create_options(observer.clone()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(results.len(), 100);
+        assert_eq!(resource_insert_statements(&client).await, 99);
+        assert_eq!(observer.0.lock().unwrap().len(), 1);
+        let page = backend
+            .get_entry_results_page(&tenant, &submission, &manifest.manifest_id, None, 101, None)
+            .await
+            .unwrap();
+        assert_eq!(page.entries.len(), 100);
+        assert!(page.entries.iter().enumerate().all(|(position, entry)| {
+            let id = format!("offloaded-{position:03}");
+            entry.result.line_number == (position + 1) as u64
+                && entry.result.resource_id.as_deref() == Some(id.as_str())
+                && entry.result.created == (position != 50)
+                && entry.result.outcome == BulkEntryOutcome::Success
+        }));
+        let rows = resource_versions_and_families(&client, &tenant_id).await;
+        let histories = resource_history_counts(&client, &tenant_id).await;
+        assert_eq!(rows.len(), 100);
+        assert_eq!(histories.len(), 100);
+        assert_eq!(rows.get("offloaded-000").unwrap().0, "1");
+        assert_eq!(rows.get("offloaded-050").unwrap().0, "2");
+        assert_eq!(rows.get("offloaded-099").unwrap().0, "1");
+        assert_eq!(histories.get("offloaded-000"), Some(&1));
+        assert_eq!(histories.get("offloaded-050"), Some(&2));
+        assert_eq!(histories.get("offloaded-099"), Some(&1));
+    }
+
+    #[tokio::test]
+    async fn postgres_bulk_submit_resource_observer_keeps_the_individual_path() {
+        use helios_persistence::core::{
+            BulkEntryOutcome, BulkProcessingOptions, BulkSubmitProvider, NdjsonEntry,
+        };
+        use std::sync::Arc;
+
+        let (backend, dbname) = isolated_reindex_backend().await;
+        let tenant = create_tenant("grouped-resource-observer");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        for (id, family) in [("observer-changed", "Before"), ("observer-same", "Same")] {
+            backend
+                .create(
+                    &tenant,
+                    "Patient",
+                    json!({"resourceType":"Patient","id":id,"name":[{"family":family}]}),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+        }
+        let (submission, manifest) =
+            new_bulk_submit_manifest(&backend, &tenant, "grouped-resource-observer").await;
+        let observer = Arc::new(RecordingCommittedResources::default());
+        let results = backend
+            .process_entries(
+                &tenant,
+                &submission,
+                &manifest.manifest_id,
+                vec![
+                    NdjsonEntry::new(
+                        1,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"observer-changed","name":[{"family":"After"}]}),
+                    ),
+                    NdjsonEntry::new(
+                        2,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"observer-fresh-a"}),
+                    ),
+                    NdjsonEntry::new(
+                        3,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"observer-same","name":[{"family":"Same"}]}),
+                    ),
+                    NdjsonEntry::new(
+                        4,
+                        "Patient",
+                        json!({"resourceType":"Patient","id":"observer-fresh-b"}),
+                    ),
+                ],
+                &BulkProcessingOptions::new()
+                    .with_defer_indexing(true)
+                    .with_skip_unchanged(true)
+                    .with_batch_observer(observer.clone()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(results.len(), 4);
+        assert!(results[2].unchanged);
+        {
+            let observed = observer.batches.lock().unwrap();
+            assert_eq!(observed.len(), 1);
             assert_eq!(
-                (counts.total, counts.success, counts.processing_error),
-                (1, 0, 1)
+                observed[0].0,
+                vec![
+                    "observer-changed".to_string(),
+                    "observer-fresh-a".to_string(),
+                    "observer-same".to_string(),
+                    "observer-fresh-b".to_string(),
+                ]
             );
+            assert_eq!(
+                observed[0].1,
+                vec![
+                    "observer-changed".to_string(),
+                    "observer-fresh-a".to_string(),
+                    "observer-fresh-b".to_string(),
+                ]
+            );
+        }
+
+        let page = backend
+            .get_entry_results_page(&tenant, &submission, &manifest.manifest_id, None, 10, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            page.entries
+                .iter()
+                .map(|entry| (
+                    entry.result.line_number,
+                    entry.result.resource_id.as_deref(),
+                    entry.result.created,
+                    entry.result.outcome,
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (
+                    1,
+                    Some("observer-changed"),
+                    false,
+                    BulkEntryOutcome::Success
+                ),
+                (2, Some("observer-fresh-a"), true, BulkEntryOutcome::Success),
+                (3, Some("observer-same"), false, BulkEntryOutcome::Success),
+                (4, Some("observer-fresh-b"), true, BulkEntryOutcome::Success),
+            ]
+        );
+        let client = reindex_test_client_for(&dbname).await;
+        let rows = resource_versions_and_families(&client, &tenant_id).await;
+        let histories = resource_history_counts(&client, &tenant_id).await;
+        assert_eq!(rows.len(), 4);
+        assert_eq!(histories.len(), 4);
+        assert_eq!(
+            rows.get("observer-changed"),
+            Some(&("2".to_string(), "After".to_string()))
+        );
+        assert_eq!(histories.get("observer-changed"), Some(&2));
+        assert_eq!(
+            rows.get("observer-same"),
+            Some(&("1".to_string(), "Same".to_string()))
+        );
+        assert_eq!(histories.get("observer-same"), Some(&1));
+        for id in ["observer-fresh-a", "observer-fresh-b"] {
+            assert_eq!(rows.get(id).unwrap().0, "1");
+            assert_eq!(histories.get(id), Some(&1));
         }
     }
 
@@ -15801,7 +17925,7 @@ mod postgres_integration {
     /// boundary case remains eligible for one grouped resource INSERT statement.
     #[tokio::test]
     async fn postgres_bulk_submit_candidate_matching_uses_tenant_and_resource_type() {
-        use helios_persistence::core::{BulkSubmitProvider, NdjsonEntry};
+        use helios_persistence::core::{BulkEntryOutcome, BulkSubmitProvider, NdjsonEntry};
 
         for allow_updates in [false, true] {
             for same_tenant_different_type in [false, true] {
@@ -15873,20 +17997,51 @@ mod postgres_integration {
                 );
                 assert_eq!(resource_insert_statements(&client).await, 1);
                 assert_eq!(observer.0.lock().unwrap().len(), 1);
-                assert!(
-                    backend
-                        .read(&tenant, "Patient", collision_id)
-                        .await
-                        .unwrap()
-                        .is_some()
+                let target = backend
+                    .read(&tenant, "Patient", collision_id)
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(target.version_id(), "1");
+                assert_eq!(target.content()["resourceType"], "Patient");
+                assert_eq!(target.content()["id"], collision_id);
+                let fixture = backend
+                    .read(fixture_tenant, fixture_type, collision_id)
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(fixture.version_id(), "1");
+                assert_eq!(fixture.content()["resourceType"], fixture_type);
+                let page = backend
+                    .get_entry_results_page(
+                        &tenant,
+                        &submission,
+                        &manifest.manifest_id,
+                        None,
+                        10,
+                        None,
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    page.entries
+                        .iter()
+                        .map(|entry| (
+                            entry.result.line_number,
+                            entry.result.resource_id.as_deref(),
+                            entry.result.created,
+                            entry.result.outcome,
+                        ))
+                        .collect::<Vec<_>>(),
+                    vec![
+                        (1, Some(collision_id), true, BulkEntryOutcome::Success),
+                        (2, Some("fresh-companion"), true, BulkEntryOutcome::Success,),
+                    ]
                 );
-                assert!(
-                    backend
-                        .read(fixture_tenant, fixture_type, collision_id)
-                        .await
-                        .unwrap()
-                        .is_some()
-                );
+                let histories = resource_history_counts(&client, tenant.tenant_id().as_str()).await;
+                assert_eq!(histories.len(), 2);
+                assert_eq!(histories.get(collision_id), Some(&1));
+                assert_eq!(histories.get("fresh-companion"), Some(&1));
                 let counts = backend
                     .get_entry_counts(&tenant, &submission, &manifest.manifest_id)
                     .await
@@ -16101,6 +18256,332 @@ mod postgres_integration {
         }
     }
 
+    #[tokio::test]
+    async fn postgres_bulk_submit_mixed_late_conflict_replays_updates_once() {
+        use helios_persistence::core::{
+            BulkEntryOutcome, BulkSubmitProvider, BulkSubmitRollbackProvider, ChangeType,
+            NdjsonEntry,
+        };
+        use std::sync::Arc;
+
+        for allow_updates in [false, true] {
+            let (backend, dbname) = isolated_reindex_backend().await;
+            let backend = Arc::new(backend);
+            let tenant = create_tenant(if allow_updates {
+                "mixed-late-race-update"
+            } else {
+                "mixed-late-race-skip"
+            });
+            let tenant_id = tenant.tenant_id().as_str().to_string();
+            backend
+                .create(
+                    &tenant,
+                    "Patient",
+                    json!({"resourceType":"Patient","id":"early-existing","name":[{"family":"Before"}]}),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+            let (submission, manifest) =
+                new_bulk_submit_manifest(&backend, &tenant, "mixed-late-race").await;
+            let client = reindex_test_client_for(&dbname).await;
+            client
+                .batch_execute(&format!(
+                    "CREATE FUNCTION block_mixed_late_race() RETURNS trigger LANGUAGE plpgsql AS $$
+                     BEGIN
+                       IF NEW.tenant_id = '{tenant_id}' AND NEW.id = 'late-race' THEN
+                         PERFORM pg_advisory_xact_lock(hashtext(NEW.tenant_id), hashtext(NEW.id));
+                       END IF;
+                       RETURN NEW;
+                     END $$;
+                     CREATE TRIGGER block_mixed_late_race
+                     BEFORE INSERT ON resources
+                     FOR EACH ROW EXECUTE FUNCTION block_mixed_late_race();"
+                ))
+                .await
+                .unwrap();
+            client.batch_execute("BEGIN").await.unwrap();
+            let owner_pid: i32 = client
+                .query_one("SELECT pg_backend_pid()", &[])
+                .await
+                .unwrap()
+                .get(0);
+            client
+                .query_one(
+                    "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+                    &[&tenant_id, &"late-race"],
+                )
+                .await
+                .unwrap();
+
+            let observer = Arc::new(RecordingBulkSubmitBatches::default());
+            let task_backend = backend.clone();
+            let task_tenant = tenant.clone();
+            let task_submission = submission.clone();
+            let task_manifest_id = manifest.manifest_id.clone();
+            let task_observer = observer.clone();
+            let ingest = tokio::spawn(async move {
+                task_backend
+                    .process_entries(
+                        &task_tenant,
+                        &task_submission,
+                        &task_manifest_id,
+                        vec![
+                            NdjsonEntry::new(
+                                1,
+                                "Patient",
+                                json!({"resourceType":"Patient","id":"early-fresh"}),
+                            ),
+                            NdjsonEntry::new(
+                                2,
+                                "Patient",
+                                json!({"resourceType":"Patient","id":"early-existing","name":[{"family":"Submitted"}]}),
+                            ),
+                            NdjsonEntry::new(
+                                3,
+                                "Patient",
+                                json!({"resourceType":"Patient","id":"late-fresh"}),
+                            ),
+                            NdjsonEntry::new(
+                                4,
+                                "Patient",
+                                json!({"resourceType":"Patient","id":"late-race","name":[{"family":"Submitted"}]}),
+                            ),
+                        ],
+                        &grouped_create_options(task_observer)
+                            .with_allow_updates(allow_updates),
+                    )
+                    .await
+            });
+
+            let mut waiter_seen = false;
+            for _ in 0..200 {
+                waiter_seen = client
+                    .query_one(
+                        "SELECT EXISTS (
+                           SELECT 1 FROM pg_stat_activity AS activity
+                           WHERE $1 = ANY(pg_blocking_pids(activity.pid))
+                             AND activity.datname = current_database()
+                             AND activity.pid <> $1
+                         )",
+                        &[&owner_pid],
+                    )
+                    .await
+                    .unwrap()
+                    .get(0);
+                if waiter_seen {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+            assert!(
+                waiter_seen,
+                "the last fresh run never reached the advisory lock"
+            );
+
+            let competitor = json!({
+                "resourceType": "Patient",
+                "id": "late-race",
+                "name": [{"family": "Competitor"}]
+            });
+            client
+                .execute(
+                    "WITH ins AS (
+                       INSERT INTO resources
+                         (tenant_id, resource_type, id, version_id, data, last_updated,
+                          is_deleted, fhir_version)
+                       VALUES ($1, 'Patient', 'late-race', '1', $2, NOW(), FALSE, '4.0')
+                       RETURNING tenant_id, resource_type, id, version_id, data, last_updated,
+                                 is_deleted, fhir_version
+                     )
+                     INSERT INTO resource_history
+                       (tenant_id, resource_type, id, version_id, data, last_updated,
+                        is_deleted, fhir_version)
+                     SELECT tenant_id, resource_type, id, version_id, data, last_updated,
+                            is_deleted, fhir_version FROM ins",
+                    &[&tenant_id, &competitor],
+                )
+                .await
+                .unwrap();
+            client.batch_execute("COMMIT").await.unwrap();
+
+            let results = tokio::time::timeout(std::time::Duration::from_secs(10), ingest)
+                .await
+                .expect("mixed late-conflict replay remained blocked")
+                .unwrap()
+                .unwrap();
+            assert_eq!(results.len(), 4);
+            assert!(results[0].is_success() && results[0].created);
+            assert_eq!(
+                results[1].outcome,
+                if allow_updates {
+                    BulkEntryOutcome::Success
+                } else {
+                    BulkEntryOutcome::Skipped
+                }
+            );
+            assert!(results[2].is_success() && results[2].created);
+            assert_eq!(
+                results[3].outcome,
+                if allow_updates {
+                    BulkEntryOutcome::Success
+                } else {
+                    BulkEntryOutcome::Skipped
+                }
+            );
+            let observed = observer.0.lock().unwrap().clone();
+            assert_eq!(observed.len(), 1, "replay must notify once");
+            assert_eq!(observed[0].len(), 4);
+            assert_eq!(
+                observed[0]
+                    .iter()
+                    .filter(|entry| entry.outcome == "success" && entry.created)
+                    .count(),
+                2
+            );
+            assert_eq!(
+                observed[0]
+                    .iter()
+                    .filter(|entry| entry.outcome == "success" && !entry.created)
+                    .count(),
+                if allow_updates { 2 } else { 0 }
+            );
+
+            let histories = resource_history_counts(&client, &tenant_id).await;
+            assert_eq!(histories.get("early-fresh"), Some(&1));
+            assert_eq!(histories.get("late-fresh"), Some(&1));
+            assert_eq!(
+                histories.get("early-existing"),
+                Some(&if allow_updates { 2 } else { 1 })
+            );
+            assert_eq!(
+                histories.get("late-race"),
+                Some(&if allow_updates { 2 } else { 1 })
+            );
+            let existing = backend
+                .read(&tenant, "Patient", "early-existing")
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(existing.version_id(), if allow_updates { "2" } else { "1" });
+            assert_eq!(
+                existing.content()["name"][0]["family"],
+                if allow_updates { "Submitted" } else { "Before" }
+            );
+            let race = backend
+                .read(&tenant, "Patient", "late-race")
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(race.version_id(), if allow_updates { "2" } else { "1" });
+            assert_eq!(
+                race.content()["name"][0]["family"],
+                if allow_updates {
+                    "Submitted"
+                } else {
+                    "Competitor"
+                }
+            );
+
+            let page = backend
+                .get_entry_results_page(&tenant, &submission, &manifest.manifest_id, None, 10, None)
+                .await
+                .unwrap();
+            assert_eq!(
+                page.entries
+                    .iter()
+                    .map(|entry| (
+                        entry.result.line_number,
+                        entry.result.resource_id.as_deref(),
+                        entry.result.created,
+                        entry.result.outcome,
+                    ))
+                    .collect::<Vec<_>>(),
+                if allow_updates {
+                    vec![
+                        (1, Some("early-fresh"), true, BulkEntryOutcome::Success),
+                        (2, Some("early-existing"), false, BulkEntryOutcome::Success),
+                        (3, Some("late-fresh"), true, BulkEntryOutcome::Success),
+                        (4, Some("late-race"), false, BulkEntryOutcome::Success),
+                    ]
+                } else {
+                    vec![
+                        (1, Some("early-fresh"), true, BulkEntryOutcome::Success),
+                        (2, None, false, BulkEntryOutcome::Skipped),
+                        (3, Some("late-fresh"), true, BulkEntryOutcome::Success),
+                        (4, None, false, BulkEntryOutcome::Skipped),
+                    ]
+                }
+            );
+            let changes = backend
+                .list_changes(&tenant, &submission, 10, 0)
+                .await
+                .unwrap();
+            assert_eq!(changes.len(), if allow_updates { 4 } else { 2 });
+            let changes_by_id: std::collections::HashMap<_, _> = changes
+                .iter()
+                .map(|change| (change.resource_id.as_str(), change))
+                .collect();
+            assert_eq!(
+                changes_by_id.len(),
+                changes.len(),
+                "replay must not duplicate rollback changes"
+            );
+            for id in ["early-fresh", "late-fresh"] {
+                let change = changes_by_id[id];
+                assert_eq!(change.change_type, ChangeType::Create);
+                assert!(change.previous_version.is_none());
+                assert_eq!(change.new_version, "1");
+                assert!(change.previous_content.is_none());
+            }
+            if allow_updates {
+                for (id, previous_family) in
+                    [("early-existing", "Before"), ("late-race", "Competitor")]
+                {
+                    let change = changes_by_id[id];
+                    assert_eq!(change.change_type, ChangeType::Update);
+                    assert_eq!(change.previous_version.as_deref(), Some("1"));
+                    assert_eq!(change.new_version, "2");
+                    let previous = change.previous_content.as_ref().unwrap();
+                    assert_eq!(previous["resourceType"], "Patient");
+                    assert_eq!(previous["id"], id);
+                    assert_eq!(previous["name"][0]["family"], previous_family);
+                }
+            }
+            let progress = client
+                .query_one(
+                    "SELECT max_line, total_entries, processed_entries, failed_entries, skipped_entries
+                     FROM bulk_manifest_file_progress
+                     WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3
+                       AND manifest_id = $4 AND file_url = $5",
+                    &[
+                        &tenant_id,
+                        &submission.submitter,
+                        &submission.submission_id,
+                        &manifest.manifest_id,
+                        &"https://provider.example/fresh.ndjson",
+                    ],
+                )
+                .await
+                .unwrap();
+            let progress: (i64, i64, i64, i64, i64) = (
+                progress.get(0),
+                progress.get(1),
+                progress.get(2),
+                progress.get(3),
+                progress.get(4),
+            );
+            assert_eq!(
+                progress,
+                if allow_updates {
+                    (4, 4, 4, 0, 0)
+                } else {
+                    (4, 4, 2, 0, 2)
+                }
+            );
+        }
+    }
+
     async fn install_resource_attempt_counter(client: &tokio_postgres::Client, tenant_id: &str) {
         client
             .batch_execute(&format!(
@@ -16141,6 +18622,20 @@ mod postgres_integration {
             let (backend, dbname) = isolated_reindex_backend().await;
             let tenant = create_tenant(&format!("grouped-{label}-failure"));
             let tenant_id = tenant.tenant_id().as_str().to_string();
+            let existing_id = format!("{label}-existing");
+            backend
+                .create(
+                    &tenant,
+                    "Patient",
+                    json!({
+                        "resourceType":"Patient",
+                        "id":existing_id,
+                        "name":[{"family":"Before"}]
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
             let (submission, manifest) =
                 new_bulk_submit_manifest(&backend, &tenant, &format!("grouped-{label}-failure"))
                     .await;
@@ -16162,17 +18657,27 @@ mod postgres_integration {
                 .await
                 .unwrap();
             let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-            let entries = [format!("{label}-a"), format!("{label}-b")]
-                .into_iter()
-                .enumerate()
-                .map(|(index, id)| {
-                    NdjsonEntry::new(
-                        (index + 1) as u64,
-                        "Patient",
-                        json!({"resourceType":"Patient","id":id}),
-                    )
-                })
-                .collect();
+            let entries = vec![
+                NdjsonEntry::new(
+                    1,
+                    "Patient",
+                    json!({"resourceType":"Patient","id":format!("{label}-a")}),
+                ),
+                NdjsonEntry::new(
+                    2,
+                    "Patient",
+                    json!({
+                        "resourceType":"Patient",
+                        "id":existing_id,
+                        "name":[{"family":"After"}]
+                    }),
+                ),
+                NdjsonEntry::new(
+                    3,
+                    "Patient",
+                    json!({"resourceType":"Patient","id":format!("{label}-b")}),
+                ),
+            ];
 
             assert!(
                 backend
@@ -16188,14 +18693,17 @@ mod postgres_integration {
             );
             assert!(observer.0.lock().unwrap().is_empty());
             assert_eq!(grouped_resource_attempts(&client).await, 2);
-            for table in [
-                "resources",
-                "resource_history",
-                "bulk_entry_results",
-                "bulk_submission_changes",
-            ] {
-                assert_bulk_submit_table_count(&client, table, &tenant_id, 0).await;
-            }
+            assert_bulk_submit_table_count(&client, "resources", &tenant_id, 1).await;
+            assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 1).await;
+            assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 0).await;
+            assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 0).await;
+            let existing = backend
+                .read(&tenant, "Patient", &existing_id)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(existing.version_id(), "1");
+            assert_eq!(existing.content()["name"][0]["family"], "Before");
             let current = backend
                 .get_manifest(&tenant, &submission, &manifest.manifest_id)
                 .await
@@ -16222,6 +18730,15 @@ mod postgres_integration {
         let (backend, dbname) = isolated_reindex_backend().await;
         let tenant = create_tenant("grouped-commit-failure");
         let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"commit-existing","name":[{"family":"Before"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
         let (submission, manifest) =
             new_bulk_submit_manifest(&backend, &tenant, "grouped-commit-failure").await;
         let client = reindex_test_client_for(&dbname).await;
@@ -16243,17 +18760,23 @@ mod postgres_integration {
             .await
             .unwrap();
         let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-        let entries = ["commit-a", "commit-b"]
-            .into_iter()
-            .enumerate()
-            .map(|(index, id)| {
-                NdjsonEntry::new(
-                    (index + 1) as u64,
-                    "Patient",
-                    json!({"resourceType":"Patient","id":id}),
-                )
-            })
-            .collect();
+        let entries = vec![
+            NdjsonEntry::new(
+                1,
+                "Patient",
+                json!({"resourceType":"Patient","id":"commit-a"}),
+            ),
+            NdjsonEntry::new(
+                2,
+                "Patient",
+                json!({"resourceType":"Patient","id":"commit-existing","name":[{"family":"After"}]}),
+            ),
+            NdjsonEntry::new(
+                3,
+                "Patient",
+                json!({"resourceType":"Patient","id":"commit-b"}),
+            ),
+        ];
 
         assert!(
             backend
@@ -16269,14 +18792,17 @@ mod postgres_integration {
         );
         assert!(observer.0.lock().unwrap().is_empty());
         assert_eq!(grouped_resource_attempts(&client).await, 2);
-        for table in [
-            "resources",
-            "resource_history",
-            "bulk_entry_results",
-            "bulk_submission_changes",
-        ] {
-            assert_bulk_submit_table_count(&client, table, &tenant_id, 0).await;
-        }
+        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 0).await;
+        assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 0).await;
+        let existing = backend
+            .read(&tenant, "Patient", "commit-existing")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(existing.version_id(), "1");
+        assert_eq!(existing.content()["name"][0]["family"], "Before");
         let current = backend
             .get_manifest(&tenant, &submission, &manifest.manifest_id)
             .await
@@ -16305,6 +18831,15 @@ mod postgres_integration {
         let (backend, dbname) = isolated_reindex_backend().await;
         let tenant = create_tenant("grouped-tail-failure");
         let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"tail-existing","name":[{"family":"Before"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
         let (submission, manifest) =
             new_bulk_submit_manifest(&backend, &tenant, "grouped-tail-failure").await;
         let client = reindex_test_client_for(&dbname).await;
@@ -16325,17 +18860,23 @@ mod postgres_integration {
             .await
             .unwrap();
         let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-        let entries = ["tail-a", "tail-b"]
-            .into_iter()
-            .enumerate()
-            .map(|(index, id)| {
-                NdjsonEntry::new(
-                    (index + 1) as u64,
-                    "Patient",
-                    json!({"resourceType":"Patient","id":id}),
-                )
-            })
-            .collect();
+        let entries = vec![
+            NdjsonEntry::new(
+                1,
+                "Patient",
+                json!({"resourceType":"Patient","id":"tail-a"}),
+            ),
+            NdjsonEntry::new(
+                2,
+                "Patient",
+                json!({"resourceType":"Patient","id":"tail-existing","name":[{"family":"After"}]}),
+            ),
+            NdjsonEntry::new(
+                3,
+                "Patient",
+                json!({"resourceType":"Patient","id":"tail-b"}),
+            ),
+        ];
 
         assert!(
             backend
@@ -16352,17 +18893,20 @@ mod postgres_integration {
         // Nothing committed, so the observer is told about nothing: it must
         // never see work the transaction rolled back.
         assert_eq!(observer.0.lock().unwrap().len(), 0);
-        // The attempt counter is a sequence, so it survives the rollback and
-        // still proves both creates were flushed as one grouped statement.
+        // The row-trigger attempt counter survives the rollback. Two means
+        // each fresh neighbor was attempted once; a replay would raise it to four.
         assert_eq!(grouped_resource_attempts(&client).await, 2);
-        for table in [
-            "resources",
-            "resource_history",
-            "bulk_entry_results",
-            "bulk_submission_changes",
-        ] {
-            assert_bulk_submit_table_count(&client, table, &tenant_id, 0).await;
-        }
+        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 0).await;
+        assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 0).await;
+        let existing = backend
+            .read(&tenant, "Patient", "tail-existing")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(existing.version_id(), "1");
+        assert_eq!(existing.content()["name"][0]["family"], "Before");
         let current = backend
             .get_manifest(&tenant, &submission, &manifest.manifest_id)
             .await
@@ -16388,6 +18932,15 @@ mod postgres_integration {
         let (backend, dbname) = isolated_reindex_backend().await;
         let tenant = create_tenant("grouped-rollback-failure");
         let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"terminate-existing","name":[{"family":"Before"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
         let (submission, manifest) =
             new_bulk_submit_manifest(&backend, &tenant, "grouped-rollback-failure").await;
         let client = reindex_test_client_for(&dbname).await;
@@ -16409,17 +18962,23 @@ mod postgres_integration {
             .await
             .unwrap();
         let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-        let entries = ["terminate-a", "terminate-b"]
-            .into_iter()
-            .enumerate()
-            .map(|(index, id)| {
-                NdjsonEntry::new(
-                    (index + 1) as u64,
-                    "Patient",
-                    json!({"resourceType":"Patient","id":id}),
-                )
-            })
-            .collect();
+        let entries = vec![
+            NdjsonEntry::new(
+                1,
+                "Patient",
+                json!({"resourceType":"Patient","id":"terminate-existing","name":[{"family":"After"}]}),
+            ),
+            NdjsonEntry::new(
+                2,
+                "Patient",
+                json!({"resourceType":"Patient","id":"terminate-a"}),
+            ),
+            NdjsonEntry::new(
+                3,
+                "Patient",
+                json!({"resourceType":"Patient","id":"terminate-b"}),
+            ),
+        ];
 
         let error = tokio::time::timeout(
             std::time::Duration::from_secs(10),
@@ -16445,14 +19004,17 @@ mod postgres_integration {
             .unwrap()
             .get(0);
         assert_eq!(attempts, 1, "a second connection replayed the batch");
-        for table in [
-            "resources",
-            "resource_history",
-            "bulk_entry_results",
-            "bulk_submission_changes",
-        ] {
-            assert_bulk_submit_table_count(&client, table, &tenant_id, 0).await;
-        }
+        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 0).await;
+        assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 0).await;
+        let existing = backend
+            .read(&tenant, "Patient", "terminate-existing")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(existing.version_id(), "1");
+        assert_eq!(existing.content()["name"][0]["family"], "Before");
         let current = backend
             .get_manifest(&tenant, &submission, &manifest.manifest_id)
             .await
@@ -16481,6 +19043,15 @@ mod postgres_integration {
         let backend = Arc::new(backend);
         let tenant = create_tenant("grouped-candidate-query-failure");
         let tenant_id = tenant.tenant_id().as_str().to_string();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({"resourceType":"Patient","id":"query-existing","name":[{"family":"Before"}]}),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
         let (submission, manifest) =
             new_bulk_submit_manifest(&backend, &tenant, "candidate-query-failure").await;
         let pooled = backend.get_client().await.unwrap();
@@ -16501,17 +19072,18 @@ mod postgres_integration {
             .unwrap()
             .get(0);
         let observer = std::sync::Arc::new(RecordingBulkSubmitBatches::default());
-        let entries = ["query-a", "query-b"]
-            .into_iter()
-            .enumerate()
-            .map(|(index, id)| {
-                NdjsonEntry::new(
-                    (index + 1) as u64,
-                    "Patient",
-                    json!({"resourceType":"Patient","id":id}),
-                )
-            })
-            .collect();
+        let entries = vec![
+            NdjsonEntry::new(
+                1,
+                "Patient",
+                json!({"resourceType":"Patient","id":"query-existing","name":[{"family":"After"}]}),
+            ),
+            NdjsonEntry::new(
+                2,
+                "Patient",
+                json!({"resourceType":"Patient","id":"query-fresh"}),
+            ),
+        ];
         let task_backend = backend.clone();
         let task_tenant = tenant.clone();
         let task_submission = submission.clone();
@@ -16631,10 +19203,17 @@ mod postgres_integration {
         );
         assert_eq!(observer.0.lock().unwrap().len(), 1);
         let client = reindex_test_client_for(&dbname).await;
-        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 0).await;
-        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 0).await;
+        assert_bulk_submit_table_count(&client, "resources", &tenant_id, 1).await;
+        assert_bulk_submit_table_count(&client, "resource_history", &tenant_id, 1).await;
         assert_bulk_submit_table_count(&client, "bulk_entry_results", &tenant_id, 2).await;
         assert_bulk_submit_table_count(&client, "bulk_submission_changes", &tenant_id, 0).await;
+        let existing = backend
+            .read(&tenant, "Patient", "query-existing")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(existing.version_id(), "1");
+        assert_eq!(existing.content()["name"][0]["family"], "Before");
         let counts = backend
             .get_entry_counts(&tenant, &submission, &manifest.manifest_id)
             .await
@@ -18553,7 +21132,7 @@ mod postgres_integration {
     async fn postgres_integration_comma_list_is_or_and_repeated_param_is_and() {
         use helios_persistence::core::SearchProvider;
         use helios_persistence::types::{
-            SearchParamType, SearchParameter, SearchPrefix, SearchQuery, SearchValue,
+            SearchParamType, SearchParameter, SearchPrefix, SearchQuery, SearchValue, TotalMode,
         };
 
         let backend = create_backend().await;
@@ -18861,6 +21440,202 @@ mod postgres_integration {
             sorted(&risk_ids),
             "probability=0.2,0.8"
         );
+
+        // A boundary pair naming one day is the same window from both sides: both
+        // arms are satisfied by the one indexed value, and the next day stays out.
+        let mut birth_dates = Vec::new();
+        for birth in ["1990-06-06", "1990-06-07"] {
+            let stored = backend
+                .create(
+                    &tenant,
+                    "Patient",
+                    json!({"resourceType": "Patient", "birthDate": birth}),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+            birth_dates.push(stored.id().to_string());
+        }
+        assert_eq!(
+            search(
+                "Patient",
+                vec![
+                    param(
+                        "birthdate",
+                        date,
+                        vec![SearchValue::new(SearchPrefix::Ge, "1990-06-06")]
+                    ),
+                    param(
+                        "birthdate",
+                        date,
+                        vec![SearchValue::new(SearchPrefix::Le, "1990-06-06")]
+                    ),
+                ]
+            )
+            .await,
+            vec![birth_dates[0].clone()],
+            "birthdate=ge1990-06-06&birthdate=le1990-06-06"
+        );
+
+        // The repeat is an intersection of *resources*, not of ranges. An
+        // Encounter period carries two date values, so its start can satisfy one
+        // arm and its end the other; the second and third Encounters fail one arm
+        // each, so a fold that read the two occurrences as one window — or that
+        // matched both arms against the same value — would return them.
+        let mut encounters = Vec::new();
+        for (label, start, end) in [
+            ("one arm each", "2019-01-01", "2021-06-01"),
+            ("the first arm only", "2022-01-01", "2022-12-31"),
+            ("the second arm only", "2010-01-01", "2010-12-31"),
+        ] {
+            let stored = backend
+                .create(
+                    &tenant,
+                    "Encounter",
+                    json!({
+                        "resourceType": "Encounter",
+                        "status": "finished",
+                        "subject": {"reference": "Patient/or-list"},
+                        "period": {"start": start, "end": end}
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+            encounters.push((label, stored.id().to_string()));
+        }
+        let repeated_dates = || {
+            vec![
+                param(
+                    "date",
+                    date,
+                    vec![SearchValue::new(SearchPrefix::Ge, "2019-01-01")],
+                ),
+                param(
+                    "date",
+                    date,
+                    vec![SearchValue::new(SearchPrefix::Le, "2021-12-31")],
+                ),
+            ]
+        };
+        assert_eq!(
+            search("Encounter", repeated_dates()).await,
+            vec![encounters[0].1.clone()],
+            "date=ge2019-01-01&date=le2021-12-31 over Encounter.period"
+        );
+
+        // The count and `_total` run the same builder as the page, so all three
+        // must agree — `search_count` at the plain offset, a page behind a
+        // cursor at the keyset one.
+        let window = || {
+            let mut query = SearchQuery::new("Procedure");
+            for p in [
+                param(
+                    "date",
+                    date,
+                    vec![SearchValue::new(SearchPrefix::Ge, "2013-01-01")],
+                ),
+                param(
+                    "date",
+                    date,
+                    vec![SearchValue::new(SearchPrefix::Le, "2020-12-31")],
+                ),
+            ] {
+                query = query.with_parameter(p);
+            }
+            query
+        };
+        assert_eq!(
+            backend.search_count(&tenant, &window()).await.unwrap(),
+            2,
+            "search_count must see the set the page returns"
+        );
+        for mode in [TotalMode::Accurate, TotalMode::Estimate] {
+            let mut query = window();
+            query.total = Some(mode);
+            let result = backend.search(&tenant, &query).await.unwrap();
+            let ids: Vec<String> = result
+                .resources
+                .items
+                .iter()
+                .map(|r| r.id().to_string())
+                .collect();
+            assert_eq!(result.total, Some(2), "{mode:?}");
+            assert_eq!(sorted(&ids), sorted(&procedure_ids), "{mode:?}");
+        }
+
+        // Paging over the same criteria, both ways round: `_offset` takes the
+        // plain path and the keyset cursor the fast path's `$4` layout, and the
+        // two pages must be the two Procedures with nothing lost or repeated.
+        let mut paged = window();
+        paged.count = Some(1);
+        let first = backend.search(&tenant, &paged).await.unwrap();
+        assert_eq!(first.resources.items.len(), 1);
+        let cursor = first
+            .resources
+            .page_info
+            .next_cursor
+            .clone()
+            .expect("a first page of two has a next cursor");
+        let second = backend
+            .search(&tenant, &paged.clone().with_cursor(cursor))
+            .await
+            .unwrap();
+
+        let mut offset_page = window();
+        offset_page.count = Some(1);
+        offset_page.offset = Some(1);
+        let offset_second = backend.search(&tenant, &offset_page).await.unwrap();
+
+        let via_cursor: Vec<String> = first
+            .resources
+            .items
+            .iter()
+            .chain(second.resources.items.iter())
+            .map(|r| r.id().to_string())
+            .collect();
+        let via_offset: Vec<String> = first
+            .resources
+            .items
+            .iter()
+            .chain(offset_second.resources.items.iter())
+            .map(|r| r.id().to_string())
+            .collect();
+        assert_eq!(via_cursor.len(), 2, "cursor: {via_cursor:?}");
+        assert_eq!(sorted(&via_cursor), sorted(&procedure_ids));
+        assert_eq!(sorted(&via_offset), sorted(&procedure_ids));
+
+        // …and the fold's arms stay inside the caller's tenant: a look-alike in
+        // another tenant satisfies the same criteria there, and only there.
+        let other_tenant = create_tenant("or_list_other");
+        let look_alike = backend
+            .create(
+                &other_tenant,
+                "Procedure",
+                json!({
+                    "resourceType": "Procedure",
+                    "status": "completed",
+                    "subject": {"reference": "Patient/or-list"},
+                    "performedDateTime": "2013-04-05"
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        let other_ids: Vec<String> = backend
+            .search(&other_tenant, &window())
+            .await
+            .unwrap()
+            .resources
+            .items
+            .iter()
+            .map(|r| r.id().to_string())
+            .collect();
+        assert_eq!(
+            other_ids,
+            vec![look_alike.id().to_string()],
+            "another tenant's look-alike is not this tenant's match"
+        );
     }
 
     /// What makes the OR fold (#1300) safe: under OR a value that is not a date
@@ -18979,6 +21754,43 @@ mod postgres_integration {
         .await;
     }
 
+    /// #1383: `_contained` alone is every contained resource of the type;
+    /// `_total`, `search_count` and paging agree; compartment membership is
+    /// applied; `_has`, `_list` and chains are refused by name.
+    #[tokio::test]
+    async fn postgres_integration_contained_unconstrained_and_out_of_band_constraints() {
+        let backend = create_backend().await;
+        super::contained_suite::unconstrained_and_out_of_band_constraints(
+            &backend,
+            &unique_base("contained_gaps"),
+        )
+        .await;
+    }
+
+    /// #1407: `_sort` under `_contained` is applied or refused by name, and a
+    /// contained resource with nothing indexed but its id is still found.
+    #[tokio::test]
+    async fn postgres_integration_contained_sort_and_id_only_contained() {
+        let backend = create_backend().await;
+        super::contained_suite::sort_and_id_only_contained(
+            &backend,
+            &unique_base("contained_sort"),
+        )
+        .await;
+    }
+
+    /// #1407: `reference:identifier` under `_contained` resolves the
+    /// reference's top-level target.
+    #[tokio::test]
+    async fn postgres_integration_contained_reference_identifier_resolves_the_target() {
+        let backend = create_backend().await;
+        super::contained_suite::reference_identifier_resolves_the_target(
+            &backend,
+            &unique_base("contained_ident"),
+        )
+        .await;
+    }
+
     /// #1337: `1e2` is one significant figure, `[50, 150)`.
     #[tokio::test]
     async fn postgres_integration_exponent_values_use_significant_figures() {
@@ -19034,6 +21846,104 @@ mod postgres_integration {
         super::token_code_system_suite::system_qualified_tokens_in_chains(
             &backend,
             &unique_base("token_code_system_chain"),
+        )
+        .await;
+    }
+
+    /// #1381: `If-Match` is evaluated against the resource the criteria
+    /// resolve to, on conditional update, delete and patch.
+    #[tokio::test]
+    async fn postgres_integration_conditional_writes_honour_if_match() {
+        let backend = create_backend().await;
+        super::conditional_if_match_suite::if_match_is_evaluated_against_the_resolved_match(
+            &backend,
+            &unique_base("cond_if_match_1381"),
+            true,
+        )
+        .await;
+    }
+
+    /// #1381: of several writers holding the same `If-Match`, one writes —
+    /// the precondition and the write share `update`'s compare-and-swap.
+    #[tokio::test]
+    async fn postgres_integration_conditional_writers_with_the_same_if_match_admit_one() {
+        let backend = create_backend().await;
+        super::conditional_if_match_suite::concurrent_writers_with_the_same_if_match_admit_one(
+            &backend,
+            &unique_base("cond_if_match_race_1381"),
+        )
+        .await;
+    }
+
+    /// #1380: `family=Zzz,` is a prefix match on `""`, which is every family
+    /// name; an empty value or alternative is an error on every search path.
+    #[tokio::test]
+    async fn postgres_integration_empty_values_are_rejected_on_every_path() {
+        let backend = create_backend().await;
+        super::empty_value_suite::empty_values_are_rejected_on_every_path(
+            &backend,
+            &unique_base("empty_value"),
+        )
+        .await;
+    }
+
+    /// #1408: every modifier `SearchModifier::is_valid_for` allows, on every
+    /// parameter type.
+    #[tokio::test]
+    async fn postgres_integration_modifier_parity() {
+        use super::modifier_parity_suite::{Divergence, Expect};
+
+        let backend = create_backend().await;
+        super::modifier_parity_suite::every_valid_modifier_agrees_across_backends(
+            &backend,
+            &unique_base("modifier_parity"),
+            &[
+                // A short `:of-type` value adds no condition at all: every Patient.
+                Divergence {
+                    label: "Patient?identifier:ofType=MR|12345",
+                    expect: Expect::Ids(&["p1", "p2", "p3", "p4"]),
+                },
+                Divergence {
+                    label: "Patient?identifier:ofType=12345",
+                    expect: Expect::Ids(&["p1", "p2", "p3", "p4"]),
+                },
+                // Terminology-backed token modifiers are not refused but degraded:
+                // `:in` / `:not-in` match nothing, `:above` / `:below` match the code
+                // itself. Unreachable over REST, which expands them or answers 501 first.
+                Divergence {
+                    label: "Observation?code:in=http://example.org/fhir/ValueSet/a",
+                    expect: Expect::Ids(&[]),
+                },
+                Divergence {
+                    label: "Observation?code:not-in=http://example.org/fhir/ValueSet/a",
+                    expect: Expect::Ids(&[]),
+                },
+                Divergence {
+                    label: "Observation?code:above=http://loinc.org|1234-5",
+                    expect: Expect::Ids(&["ob-pat"]),
+                },
+                Divergence {
+                    label: "Observation?code:below=http://loinc.org|1234-5",
+                    expect: Expect::Ids(&["ob-pat"]),
+                },
+                // A value naming another type wins over the `:[type]` modifier.
+                Divergence {
+                    label: "Observation?subject:Patient=Group/p1",
+                    expect: Expect::Ids(&["ob-grp"]),
+                },
+            ],
+        )
+        .await;
+    }
+
+    /// #1406: conditional patch is the trait's provided implementation over
+    /// the backend's criteria resolver and the shared patch applier.
+    #[tokio::test]
+    async fn postgres_integration_conditional_patch() {
+        let backend = create_backend().await;
+        super::conditional_patch_suite::conditional_patch_resolves_gates_applies_and_swaps(
+            &backend,
+            &unique_base("cond_patch_1406"),
         )
         .await;
     }
@@ -19126,5 +22036,64 @@ mod postgres_integration {
             .unwrap();
 
         assert!(included.is_empty());
+    }
+
+    /// #1404: of several writers holding the same version, one `update` writes.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+    async fn postgres_integration_concurrent_updates_from_the_same_version_admit_one() {
+        let backend = create_backend().await;
+        super::versioned_write_race_suite::concurrent_updates_from_the_same_version_admit_one(
+            std::sync::Arc::new(backend),
+            &unique_base("update_race_1404"),
+            10,
+        )
+        .await;
+    }
+
+    /// #1404: an update and a versioned delete of the same version: one wins.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+    async fn postgres_integration_concurrent_update_and_versioned_delete_admit_one() {
+        let backend = create_backend().await;
+        super::versioned_write_race_suite::concurrent_update_and_versioned_delete_admit_one(
+            std::sync::Arc::new(backend),
+            &unique_base("delete_race_1404"),
+            10,
+        )
+        .await;
+    }
+
+    /// #1404: an update racing an unconditional delete leaves a contiguous
+    /// history.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+    async fn postgres_integration_concurrent_update_and_plain_delete_stay_consistent() {
+        let backend = create_backend().await;
+        super::versioned_write_race_suite::concurrent_update_and_plain_delete_stay_consistent(
+            std::sync::Arc::new(backend),
+            &unique_base("plain_delete_race_1404"),
+            10,
+        )
+        .await;
+    }
+
+    /// #1404: `delete_versioned` compares and deletes in one step.
+    #[tokio::test]
+    async fn postgres_integration_versioned_delete_is_a_compare_and_swap() {
+        let backend = create_backend().await;
+        super::versioned_write_race_suite::versioned_delete_is_a_compare_and_swap(
+            &backend,
+            &unique_base("delete_cas_1404"),
+        )
+        .await;
+    }
+
+    /// #1334: the "needs reindex" ledger a composite keeps in this primary.
+    #[tokio::test]
+    async fn postgres_integration_sync_failure_ledger_contract() {
+        let backend = create_backend().await;
+        super::sync_failure_ledger_suite::ledger_folds_orders_clears_and_counts(
+            &backend,
+            &format!("ledger-1334-{}", uuid::Uuid::new_v4()),
+        )
+        .await;
     }
 }

@@ -3,7 +3,10 @@
 //! Implements the FHIR [search interaction](https://hl7.org/fhir/http.html#search):
 //! - `GET [base]/[type]?params` - Type-level search
 //! - `POST [base]/[type]/_search` - Type-level search (POST)
-//! - `GET [base]?params` - System-level search (all types)
+//!
+//! System-level search (`GET [base]?params`, `POST [base]/_search`) is not
+//! served: both forms are routed to [`search_system_not_supported_handler`],
+//! which answers `501` + OperationOutcome (#1338).
 //!
 //! The search handler connects to the persistence layer's SearchProvider trait
 //! to execute searches against the storage backend.
@@ -127,9 +130,44 @@ where
     .await
 }
 
-/// Handler for system-level search.
+/// What a client is told when it attempts a system-level search (#1338).
+/// Worded to sit inside [`RestError::NotImplemented`]'s "Feature '…' is not
+/// implemented." sentence.
+const SYSTEM_SEARCH_NOT_SUPPORTED: &str = "system-level search (GET [base]?[parameters] or POST \
+     [base]/_search, with or without _type); search one resource type at a time instead, with \
+     GET [base]/[type]?[parameters] or POST [base]/[type]/_search";
+
+/// Handler that refuses system-level search.
 ///
-/// Searches across all resource types.
+/// # HTTP Request
+///
+/// `GET [base]?params`, `POST [base]/_search` (and `GET [base]/_search`)
+///
+/// # Response
+///
+/// `501 Not Implemented` with an OperationOutcome (`not-supported`) naming the
+/// type-level search to use instead. The CapabilityStatement does not list
+/// `search-system`. Before #1338 these requests fell through the router: a
+/// bare `405` with no body for `GET [base]`, and "`_search` is not a resource
+/// type" for `[base]/_search`.
+///
+/// The tenant is still resolved first, so a request that names a bad tenant is
+/// refused exactly as it is on every other FHIR route.
+pub async fn search_system_not_supported_handler(_tenant: TenantExtractor) -> RestError {
+    RestError::NotImplemented {
+        feature: SYSTEM_SEARCH_NOT_SUPPORTED.to_string(),
+    }
+}
+
+/// Handler for system-level search — **not routed** (#1338).
+///
+/// Kept as the starting point for the deferred implementation. It is not
+/// mounted because it is not ready to be: it needs
+/// [`MultiTypeSearchProvider`], which only the SQLite and PostgreSQL backends
+/// implement (the router is generic over every backend), and it skips what the
+/// type-level path does around the query — unknown-parameter handling,
+/// terminology expansion, `_include`/`_revinclude`, paging links.
+/// `[base]?params` is answered by [`search_system_not_supported_handler`].
 ///
 /// # HTTP Request
 ///
@@ -219,6 +257,10 @@ where
     // spec's placeholder `Resource.id` expression: an identity test on
     // PostgreSQL, an unfiltered result set on SQLite. Use `_list` for List
     // membership.
+    // A parameter with no value (`family=`) is ignored, per FHIR; from here on
+    // it is as if the client had not sent it (#1380).
+    let pairs = crate::extractors::drop_empty_parameters(pairs);
+
     const UNSUPPORTED_PARAMS: [&str; 2] = ["_query", "_in"];
     if let Some((key, _)) = pairs
         .iter()
@@ -436,6 +478,35 @@ where
         return Err(RestError::NotImplemented {
             feature: "'_contained' search is not supported by this storage backend".to_string(),
         });
+    }
+
+    // `_list`, `_has` and chained parameters select top-level resources and are
+    // resolved below into an `_id` filter — but under `_contained`, `_id` names
+    // a contained resource by its *local* id, so the resolved ids would select
+    // unrelated contained resources that happen to share one (#1383). Nothing
+    // outside its container can reference a contained resource, so there is
+    // nothing to apply: refuse, before any resolution.
+    if query.contained != helios_persistence::types::ContainedMode::Off {
+        let chained = query.parameters.iter().find(|p| !p.chain.is_empty());
+        let refused = if !query.list.is_empty() {
+            Some("_list".to_string())
+        } else if !query.reverse_chains.is_empty() {
+            Some("_has".to_string())
+        } else {
+            chained.map(|p| {
+                let path: Vec<&str> = p.chain.iter().map(|c| c.target_param.as_str()).collect();
+                format!("{}.{}", p.name, path.join("."))
+            })
+        };
+        if let Some(param) = refused {
+            return Err(RestError::InvalidParameter {
+                message: format!(
+                    "'{param}' cannot be combined with _contained=true or both: it selects \
+                     top-level resources, which a contained resource is not"
+                ),
+                param,
+            });
+        }
     }
 
     // Clamp page size to the configured default/maximum.
@@ -781,7 +852,8 @@ async fn execute_system_search<S>(
 where
     S: ResourceStorage + MultiTypeSearchProvider + Send + Sync,
 {
-    let search_params = SearchParams::from_pairs(pairs);
+    // A parameter with no value is ignored, as in a type-level search (#1380).
+    let search_params = SearchParams::from_pairs(crate::extractors::drop_empty_parameters(pairs));
 
     // Get resource types from _type parameter (if specified)
     let type_param = search_params.get("_type").cloned();
