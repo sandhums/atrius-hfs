@@ -573,7 +573,8 @@ where
         // so what passes here is what executes (#1366).
         crate::extractors::build_search_query_from_pairs(
             &search_type,
-            &pairs,
+            // As `execute_search_bundle` will (#1380).
+            &crate::extractors::drop_empty_parameters(pairs),
             &registry,
             state.config().default_fhir_version,
         )
@@ -1094,9 +1095,13 @@ where
         }
     }
 
-    // `ifMatch` names a version of one instance; a conditional entry names no
-    // instance until the server resolves it. FHIR gives the pairing no meaning.
-    if if_match.is_some() && (criteria.is_some() || if_none_exist.is_some()) {
+    // `ifMatch` on a conditional update or delete is honoured below, against
+    // the resource the criteria resolve to (#1381). What is left to refuse is
+    // the pairing FHIR gives no meaning: a precondition on a version beside
+    // `ifNoneExist`, or beside criteria on a method with no conditional write.
+    let conditional_write =
+        criteria.is_some() && matches!(method, BundleMethod::Put | BundleMethod::Delete);
+    if if_match.is_some() && !conditional_write && (criteria.is_some() || if_none_exist.is_some()) {
         // `invalid` — the parent — rather than either child: both elements are
         // individually well-formed, so neither "a required element is missing"
         // nor one unusable value names the fault. It is the combination (#504).
@@ -1205,6 +1210,9 @@ where
             // query string by definition, which the shared criteria builder
             // decodes (#1322).
             if let Some(criteria) = if_none_exist {
+                if let Err(e) = super::conditional_support::require_create(state.storage()) {
+                    return entry_failure(e);
+                }
                 return match state
                     .storage()
                     .conditional_create(
@@ -1293,6 +1301,17 @@ where
             // Conditional update, mirroring `conditional_update_handler`:
             // upsert, so no match creates (201) and one match updates (200).
             if let Some(criteria) = criteria {
+                if let Err(e) = super::conditional_support::require_update(state.storage()) {
+                    return entry_failure(e);
+                }
+
+                // Ahead of validation, as on the unconditional PUT below: a
+                // malformed precondition is a 412, not a 422.
+                let if_match = match conditional_entry_if_match(if_match) {
+                    Ok(if_match) => if_match,
+                    Err(failure) => return *failure,
+                };
+
                 if let Err(e) = state
                     .validation()
                     .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
@@ -1312,6 +1331,7 @@ where
                         criteria,
                         true,
                         fhir_version,
+                        &if_match,
                     )
                     .await
                 {
@@ -1355,7 +1375,9 @@ where
                             count,
                         })
                     }
-                    Err(e) => entry_storage_failure(e),
+                    Err(e) => {
+                        entry_failure(super::update::conditional_write_error(e, &resource_type))
+                    }
                 };
             }
 
@@ -1442,9 +1464,18 @@ where
             // match is a success (R4 §3.1.0.7.1), several matches are 412
             // because `/metadata` elects `conditionalDelete: "single"`.
             if let Some(criteria) = criteria {
+                if let Err(e) = super::conditional_support::require_delete(state.storage()) {
+                    return entry_failure(e);
+                }
+
+                let if_match = match conditional_entry_if_match(if_match) {
+                    Ok(if_match) => if_match,
+                    Err(failure) => return *failure,
+                };
+
                 return match state
                     .storage()
-                    .conditional_delete(tenant.context(), &resource_type, criteria)
+                    .conditional_delete(tenant.context(), &resource_type, criteria, &if_match)
                     .await
                 {
                     Ok(ConditionalDeleteResult::Deleted(deleted)) => {
@@ -1467,7 +1498,9 @@ where
                             count,
                         })
                     }
-                    Err(e) => entry_storage_failure(e),
+                    Err(e) => {
+                        entry_failure(super::update::conditional_write_error(e, &resource_type))
+                    }
                 };
             }
 
@@ -1555,9 +1588,19 @@ where
                                     return entry_storage_failure(e);
                                 }
                             };
+                        let if_match = match conditional_entry_if_match(if_match) {
+                            Ok(if_match) => if_match,
+                            Err(failure) => return *failure,
+                        };
                         return match state
                             .storage()
-                            .conditional_patch(tenant.context(), &resource_type, criteria, &format)
+                            .conditional_patch(
+                                tenant.context(),
+                                &resource_type,
+                                criteria,
+                                &format,
+                                &if_match,
+                            )
                             .await
                         {
                             Ok(ConditionalPatchResult::Patched(stored)) => {
@@ -2304,6 +2347,23 @@ fn searchset_result(bundle: Value) -> BundleEntryResult {
 fn entry_failure(err: RestError) -> BundleEntryResult {
     let (status, outcome) = err.client_outcome();
     BundleEntryResult::error(status.as_u16(), outcome)
+}
+
+/// Parses the `ifMatch` of a conditional entry (`PUT`/`DELETE [type]?[criteria]`)
+/// into the precondition [`ConditionalStorage`] evaluates against the resource
+/// the criteria resolve to (#1381).
+///
+/// A malformed value is the entry's `412`, worded as
+/// [`bundle_if_match_gate`] words it for an instance entry — never an absent
+/// precondition.
+fn conditional_entry_if_match(
+    if_match: Option<&str>,
+) -> Result<helios_persistence::core::EntityTagPrecondition, Box<BundleEntryResult>> {
+    helios_persistence::core::EntityTagPrecondition::parse(if_match).map_err(|e| {
+        Box::new(helios_persistence::core::precondition_failed_entry(
+            &format!("If-Match precondition failed: {e}"),
+        ))
+    })
 }
 
 /// Renders a storage error as a failed Bundle entry.
@@ -3456,6 +3516,10 @@ mod tests {
         Patched,
         MultipleMatches(usize),
         Unsupported,
+        /// The storage declares no conditional interaction at all
+        /// (`supports_conditional` is `false`), as S3 does. Its methods are
+        /// unscripted: reaching one panics.
+        Undeclared,
     }
 
     impl DelayStorage {
@@ -3676,6 +3740,13 @@ mod tests {
     // to, without a search index.
     #[async_trait]
     impl ConditionalStorage for DelayStorage {
+        fn supports_conditional(
+            &self,
+            _interaction: helios_persistence::core::ConditionalInteraction,
+        ) -> bool {
+            !matches!(self.conditional_reply, ConditionalReply::Undeclared)
+        }
+
         async fn conditional_create(
             &self,
             tenant: &TenantContext,
@@ -3707,6 +3778,7 @@ mod tests {
             }
         }
 
+        #[allow(clippy::too_many_arguments)]
         async fn conditional_update(
             &self,
             tenant: &TenantContext,
@@ -3715,6 +3787,7 @@ mod tests {
             search_params: &str,
             upsert: bool,
             fhir_version: FhirVersion,
+            _if_match: &helios_persistence::core::EntityTagPrecondition,
         ) -> StorageResult<ConditionalUpdateResult> {
             assert!(
                 upsert,
@@ -3749,6 +3822,7 @@ mod tests {
             tenant: &TenantContext,
             resource_type: &str,
             search_params: &str,
+            _if_match: &helios_persistence::core::EntityTagPrecondition,
         ) -> StorageResult<ConditionalDeleteResult> {
             self.record_conditional("delete", resource_type, search_params);
             match self.conditional_reply {
@@ -3771,6 +3845,7 @@ mod tests {
             resource_type: &str,
             search_params: &str,
             _patch: &helios_persistence::core::PatchFormat,
+            _if_match: &helios_persistence::core::EntityTagPrecondition,
         ) -> StorageResult<ConditionalPatchResult> {
             self.record_conditional("patch", resource_type, search_params);
             match self.conditional_reply {
@@ -4510,8 +4585,9 @@ mod tests {
     /// A conditional write is refused per-entry and never reaches storage.
     ///
     /// What is still refused after #511: criteria on a POST (FHIR expresses a
-    /// conditional create through `ifNoneExist`), and `ifMatch` paired with any
-    /// conditional interaction. `DelayStorage`'s conditional reply is
+    /// conditional create through `ifNoneExist`), and `ifMatch` paired with
+    /// `ifNoneExist` — beside URL criteria on PUT and DELETE it is honoured
+    /// (#1381; `tests/conditional_if_match.rs`). `DelayStorage`'s conditional reply is
     /// unscripted, so this panics rather than merely failing if a refusal is
     /// ever moved after dispatch.
     #[tokio::test]
@@ -4525,21 +4601,6 @@ mod tests {
                 {
                     "request": { "method": "POST", "url": "Patient?identifier=x" },
                     "resource": { "resourceType": "Patient" }
-                },
-                {
-                    "request": {
-                        "method": "PUT",
-                        "url": "Patient?identifier=x",
-                        "ifMatch": "W/\"1\""
-                    },
-                    "resource": { "resourceType": "Patient" }
-                },
-                {
-                    "request": {
-                        "method": "DELETE",
-                        "url": "Patient?identifier=x",
-                        "ifMatch": "W/\"1\""
-                    }
                 },
                 {
                     "request": {
@@ -4559,17 +4620,17 @@ mod tests {
 
         let response = run_batch(&state, &bundle, None).await;
         let entries = response["entry"].as_array().unwrap();
-        assert_eq!(entries.len(), 5);
+        assert_eq!(entries.len(), 3);
         for (index, entry) in entries.iter().enumerate() {
             assert_eq!(
                 entry["response"]["status"], "400 Bad Request",
                 "entry {index}: {entry}"
             );
         }
-        // The five refusals were indistinguishable below the status line until
+        // The refusals were indistinguishable below the status line until
         // #504 — every one carried `processing`. Two are a url whose value FHIR
         // gives no meaning (`POST` criteria, criteria decoding to nothing); the
-        // other three are pairings in which both elements are individually
+        // other is a pairing in which both elements are individually
         // well-formed, so `invalid` — the parent of `value` — is as precise as
         // the fault allows.
         let codes: Vec<&str> = entries
@@ -4580,10 +4641,7 @@ mod tests {
                     .unwrap()
             })
             .collect();
-        assert_eq!(
-            codes,
-            vec!["value", "invalid", "invalid", "invalid", "value"]
-        );
+        assert_eq!(codes, vec!["value", "invalid", "value"]);
         assert_eq!(state.storage().peak(), 0, "no entry may reach storage");
         assert!(state.storage().conditional_calls().is_empty());
     }
@@ -4815,6 +4873,54 @@ mod tests {
         assert!(
             !create_text.contains("'search'") && !create_text.contains("'conditional_create'"),
             "must not surface the raw missing capability: {create_text}"
+        );
+    }
+
+    /// A storage that *declares* it serves no conditional interaction is
+    /// refused from that declaration — the source `/metadata` reads — before
+    /// storage is reached, each entry naming the interaction the client asked
+    /// for (#1384).
+    #[tokio::test]
+    async fn undeclared_conditional_interactions_are_501_per_entry_without_reaching_storage() {
+        let state = state_with(DelayStorage::conditional(ConditionalReply::Undeclared));
+        let bundle = serde_json::json!({
+            "resourceType": "Bundle",
+            "type": "batch",
+            "entry": [
+                {
+                    "request": { "method": "PUT", "url": "Patient?identifier=x" },
+                    "resource": { "resourceType": "Patient" }
+                },
+                { "request": { "method": "DELETE", "url": "Patient?identifier=x" } },
+                {
+                    "request": { "method": "POST", "url": "Patient", "ifNoneExist": "identifier=x" },
+                    "resource": { "resourceType": "Patient" }
+                },
+            ]
+        });
+
+        let response = run_batch(&state, &bundle, None).await;
+        for (index, wording) in [
+            "conditional update (PUT [type]?criteria)",
+            "conditional delete (DELETE [type]?criteria)",
+            "conditional create (If-None-Exist)",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let entry = &response["entry"][index];
+            assert_eq!(
+                entry["response"]["status"], "501 Not Implemented",
+                "entry {index}: {entry}"
+            );
+            let issue = &entry["response"]["outcome"]["issue"][0];
+            assert_eq!(issue["code"], "not-supported", "entry {index}: {entry}");
+            let text = issue["details"]["text"].as_str().unwrap_or_default();
+            assert!(text.contains(wording), "entry {index}: {text}");
+        }
+        assert!(
+            state.storage().conditional_calls().is_empty(),
+            "an undeclared interaction must be refused before storage is asked"
         );
     }
 

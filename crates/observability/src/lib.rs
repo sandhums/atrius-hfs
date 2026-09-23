@@ -21,6 +21,9 @@
 //!   dashboard's background counter reconcile (pass timing, storage query
 //!   latency and errors, seed queue depth, corrections). No tenant or
 //!   resource-type labels.
+//! - [`composite_metrics`] — process-level Prometheus metrics for composite
+//!   storage's secondary sync: final failures by backend and operation, and
+//!   the number of resources recorded as needing a reindex (#1334).
 //!
 //! ## Typical wiring
 //!
@@ -45,6 +48,7 @@
 //! - OTLP *metrics* are expected to be produced by an OpenTelemetry Collector
 //!   scraping `/metrics`; the app itself only pushes OTLP *traces*.
 
+pub mod composite_metrics;
 pub mod dashboard;
 pub mod dashboard_counters;
 pub mod dashboard_metrics;

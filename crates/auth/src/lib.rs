@@ -38,6 +38,7 @@ pub mod policy;
 pub mod principal;
 pub mod provider;
 pub mod scope;
+pub mod session;
 
 // Re-export commonly used types
 pub use config::{AuthConfig, DEFAULT_JTI_REVOCATION_TIMEOUT_MS};
@@ -56,3 +57,7 @@ pub use scope::{ScopeSet, SmartPermissions};
 
 #[cfg(feature = "redis")]
 pub use jti::RedisJtiRevocation;
+pub use session::{
+    AccessOutcome, LoginConfig, PENDING_COOKIE, SESSION_COOKIE, Session, SessionPrincipal,
+    SessionStore, cookie_value, discover_endpoints, is_cross_site,
+};

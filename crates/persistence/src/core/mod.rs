@@ -164,12 +164,14 @@ pub use history::{
     InstanceHistoryProvider, SystemHistoryProvider, TypeHistoryProvider,
 };
 pub use patch::{
-    apply_resource_patch, patch_format_from_bundle_resource, patched_from_bundle_entry,
+    PatchError, apply_patch, apply_resource_patch, patch_format_from_bundle_resource,
+    patched_from_bundle_entry,
 };
 pub use preconditions::{
     EntityTag, EntityTagPrecondition, MalformedPrecondition, bundle_if_match_gate,
-    bundle_if_none_exist_gate, if_match_field_satisfied, multiple_matches_entry,
-    not_supported_entry, precondition_failed_entry,
+    bundle_if_none_exist_gate, conditional_if_match_gate, delete_under_precondition,
+    if_match_field_satisfied, multiple_matches_entry, not_supported_entry,
+    precondition_failed_entry,
 };
 pub use schema_ledger::{BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, SCHEMA_FLAVOUR};
 pub use search::{
@@ -181,9 +183,10 @@ pub use search::{
 };
 pub use sof_runner::{RowStream, SofError, SofRunner, ViewFilters, ViewRow};
 pub use storage::{
-    ActivityCell, ConditionalCreateResult, ConditionalDeleteResult, ConditionalPatchResult,
-    ConditionalStorage, ConditionalUpdateResult, DailyResourceCount, PatchFormat, PurgableStorage,
-    ResourceCountDelta, ResourceStorage, TenantRecord, WriteMarker, bucket_floor,
+    ActivityCell, ConditionalCreateResult, ConditionalDeleteResult, ConditionalInteraction,
+    ConditionalPatchResult, ConditionalStorage, ConditionalUpdateResult, DailyResourceCount,
+    PatchFormat, PurgableStorage, ResourceCountDelta, ResourceStorage, TenantRecord, WriteMarker,
+    bucket_floor,
 };
 pub use subscription_outbox::{
     CLOUDEVENTS_SPEC_VERSION, DynSubscriptionOutboxStore, InMemorySubscriptionOutbox,

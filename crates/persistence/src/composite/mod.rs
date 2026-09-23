@@ -81,6 +81,7 @@
 //! - [`storage`] - CompositeStorage implementation (Phase 2)
 //! - [`merger`] - Result merging strategies (Phase 2)
 //! - [`sync`] - Secondary synchronization (Phase 2)
+//! - [`sync_failures`] - Metric, event and durable record for failed syncs
 //! - [`cost`] - Cost-based optimization (Phase 3)
 //! - [`health`] - Health monitoring (Phase 3)
 
@@ -95,6 +96,7 @@ pub mod merger;
 pub mod router;
 pub mod storage;
 pub mod sync;
+pub mod sync_failures;
 
 // Re-export main types
 pub use analyzer::{
@@ -115,6 +117,11 @@ pub use router::{
 pub use storage::{BackendHealth, CompositeStorage, DynSearchProvider, DynStorage};
 pub use sync::{
     BackendSyncStatus, ReconciliationResult, SyncEvent, SyncManager, SyncReconciler, SyncStatus,
+};
+
+pub use sync_failures::{
+    SecondarySyncFailure, SecondarySyncFailureLedger, SecondarySyncObserver, SyncFailureKey,
+    SyncFailureRecorder, SyncFailureReport, SyncOperation, SyncRepairReport,
 };
 
 // Phase 3: Cost estimation and health monitoring

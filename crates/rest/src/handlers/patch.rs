@@ -118,17 +118,10 @@ where
         });
     }
 
-    // Apply the patch
-    let patched_content = apply_patch(existing.content(), &patch_format)?;
-
-    // Validate that resourceType wasn't changed
-    if let Some(body_type) = patched_content.get("resourceType").and_then(|v| v.as_str())
-        && body_type != resource_type
-    {
-        return Err(RestError::BadRequest {
-            message: "Cannot change resourceType via patch".to_string(),
-        });
-    }
+    // Apply the patch: the applier `PATCH [type]?criteria` uses inside the
+    // storage layer (#1406). It refuses a patch that changes `resourceType` or
+    // `id`, and FHIRPath Patch (`501`).
+    let patched_content = helios_persistence::core::apply_patch(existing.content(), &patch_format)?;
 
     // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
     state
@@ -201,25 +194,26 @@ where
 /// a 412 Precondition Failed error".
 ///
 /// - `200 OK` - the single match was patched
-/// - `400 Bad Request` - no criteria, criteria that cannot be evaluated, an
-///   invalid patch document, or an `If-Match` header (see below)
+/// - `400 Bad Request` - no criteria, criteria that cannot be evaluated, or an
+///   invalid patch document
 /// - `404 Not Found` - nothing matched; nothing is created
 /// - `405 Method Not Allowed` - `AuditEvent` resources are immutable
-/// - `412 Precondition Failed` - more than one resource matched
+/// - `412 Precondition Failed` - more than one resource matched, or `If-Match`
+///   was supplied and is not satisfied
 /// - `415 Unsupported Media Type` - unknown patch format
 /// - `501 Not Implemented` - FHIRPath Patch, as for [`patch_handler`]; or a
-///   backend without conditional patch (MongoDB)
+///   storage without conditional patch (S3 on its own)
 ///
 /// # `If-Match`
 ///
-/// [`ConditionalStorage::conditional_patch`] searches and writes inside the
-/// backend and never surfaces the version it is about to replace, so the header
-/// cannot be honoured here (the same limit [`conditional_delete_handler`]
-/// documents). A version precondition that is silently discarded is worse than
-/// one that is refused, so the request is refused; a client that wants both
-/// resolves the id first and sends `PATCH [type]/[id]` with `If-Match`.
-///
-/// [`conditional_delete_handler`]: super::delete::conditional_delete_handler
+/// Honoured, as on conditional update and delete (#1381; it was refused with
+/// `400` before). [`ConditionalStorage::conditional_patch`] evaluates it
+/// against the one resource the criteria resolve to and hands that same row to
+/// the compare-and-swap that writes the patched content, so a writer landing in
+/// between ends in `409`, never in a patch over a version the client did not
+/// name. A malformed value fails the precondition. With no match the answer
+/// stays `404` — what `PATCH [type]/[id]` answers for a missing resource,
+/// `If-Match` or not — and nothing is written.
 #[allow(clippy::too_many_arguments)]
 pub async fn conditional_patch_handler<S>(
     State(state): State<AppState<S>>,
@@ -234,6 +228,8 @@ pub async fn conditional_patch_handler<S>(
 where
     S: ResourceStorage + ConditionalStorage + Send + Sync,
 {
+    super::conditional_support::require_patch(state.storage())?;
+
     // AuditEvent resources are immutable — block write operations
     if resource_type == "AuditEvent" {
         return Err(RestError::MethodNotAllowed {
@@ -265,16 +261,7 @@ where
         });
     }
 
-    if conditional.has_if_match() {
-        return Err(RestError::BadRequest {
-            message: format!(
-                "If-Match is not supported on a conditional patch (PATCH {resource_type}?…): \
-                 the version precondition cannot be checked against a resource selected by \
-                 criteria. Nothing was written; resolve the id and send PATCH \
-                 {resource_type}/[id] with If-Match instead"
-            ),
-        });
-    }
+    let if_match = super::update::conditional_if_match(&conditional)?;
 
     let content_type = headers
         .get(header::CONTENT_TYPE)
@@ -283,11 +270,14 @@ where
 
     let patch_format = parse_patch_format(content_type, &body)?;
 
-    // Hold the patch to what `patch_handler` accepts *before* the backend sees
-    // it: the backend applies the document itself, and its FHIRPath Patch is a
-    // stub that ignores every path but `Type.element` and still writes a new
-    // version.
-    check_conditional_patch(&resource_type, &patch_format)?;
+    // FHIRPath Patch is not implemented. The storage layer's applier says so
+    // too, but only once the criteria have resolved to one resource; refused
+    // here, the answer does not depend on what the criteria match.
+    if matches!(patch_format, PatchFormat::FhirPathPatch(_)) {
+        return Err(RestError::NotImplemented {
+            feature: "FHIRPath Patch".to_string(),
+        });
+    }
 
     let result = state
         .storage()
@@ -296,8 +286,10 @@ where
             &resource_type,
             &search_params,
             &patch_format,
+            if_match,
         )
-        .await?;
+        .await
+        .map_err(|e| super::update::conditional_write_error(e, &resource_type))?;
 
     use helios_persistence::core::ConditionalPatchResult;
     match result {
@@ -337,45 +329,6 @@ where
     }
 }
 
-/// The refusals [`patch_handler`] makes while or after applying a patch, made
-/// up front for a conditional patch, where the backend does the applying.
-///
-/// * FHIRPath Patch is not implemented (`501`), exactly as on the instance
-///   endpoint.
-/// * `resourceType` cannot be patched (`400`). Backends re-assert the stored
-///   type and id on every update, so a patch naming them could not corrupt the
-///   row — it would be silently undone, and answered with a `200`.
-fn check_conditional_patch(resource_type: &str, patch: &PatchFormat) -> RestResult<()> {
-    let changes_type = match patch {
-        PatchFormat::FhirPathPatch(_) => {
-            return Err(RestError::NotImplemented {
-                feature: "FHIRPath Patch".to_string(),
-            });
-        }
-        PatchFormat::JsonPatch(operations) => operations.as_array().is_some_and(|ops| {
-            ops.iter().any(|op| {
-                // `test` and the source of a `copy` only read the element.
-                let writes =
-                    |key: &str| op.get(key).and_then(Value::as_str) == Some("/resourceType");
-                match op.get("op").and_then(Value::as_str) {
-                    Some("test") => false,
-                    Some("move") => writes("path") || writes("from"),
-                    _ => writes("path"),
-                }
-            })
-        }),
-        PatchFormat::MergePatch(merge_doc) => merge_doc
-            .get("resourceType")
-            .is_some_and(|t| t.as_str() != Some(resource_type)),
-    };
-    if changes_type {
-        return Err(RestError::BadRequest {
-            message: "Cannot change resourceType via patch".to_string(),
-        });
-    }
-    Ok(())
-}
-
 /// Parses the patch format from Content-Type and body.
 fn parse_patch_format(content_type: &str, body: &Bytes) -> RestResult<PatchFormat> {
     let patch_value: Value = serde_json::from_slice(body).map_err(|e| RestError::BadRequest {
@@ -400,22 +353,6 @@ fn parse_patch_format(content_type: &str, body: &Bytes) -> RestResult<PatchForma
             content_type: content_type.to_string(),
         })
     }
-}
-
-/// Applies a patch to a resource.
-///
-/// FHIRPath Patch is recognised and answered `501`, matching Helios and
-/// [`check_conditional_patch`]. Persistence's `apply_resource_patch` stub
-/// would otherwise write a new version for paths it does not understand
-/// (`Patient.name[0].family`). JSON Patch and merge-patch still go through
-/// the shared helper used by Bundle PATCH.
-fn apply_patch(resource: &Value, patch: &PatchFormat) -> RestResult<Value> {
-    if matches!(patch, PatchFormat::FhirPathPatch(_)) {
-        return Err(RestError::NotImplemented {
-            feature: "FHIRPath Patch".to_string(),
-        });
-    }
-    helios_persistence::core::apply_resource_patch(resource, patch).map_err(RestError::from)
 }
 
 /// Builds the response for a successful patch.

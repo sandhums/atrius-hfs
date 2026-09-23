@@ -55,6 +55,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use helios_fhir::FhirVersion;
+use helios_persistence::core::PatchError;
 use helios_persistence::error::{
     BackendError, ConcurrencyError, ResourceError, SearchError, StorageError, TenantError,
     TransactionError, ValidationError,
@@ -973,6 +974,31 @@ impl From<ValidationError> for RestError {
             ValidationError::InvalidReference { reference, message } => RestError::BadRequest {
                 message: format!("The reference '{}' is invalid: {}.", reference, message),
             },
+            ValidationError::Patch(e) => e.into(),
+        }
+    }
+}
+
+/// One mapping for both patch endpoints: `PATCH [type]/[id]` applies the patch
+/// in the handler, `PATCH [type]?criteria` inside the storage layer, and both
+/// get their [`PatchError`] from the same applier.
+impl From<PatchError> for RestError {
+    fn from(err: PatchError) -> Self {
+        match err {
+            PatchError::UnsupportedFormat { format } => RestError::NotImplemented {
+                feature: format.to_string(),
+            },
+            // #1393 asks for `422` here: the document is well-formed and
+            // applies, the resource is just not in the state it tested for.
+            // This arm is the only place that decides it.
+            PatchError::TestFailed { .. } => RestError::BadRequest {
+                message: err.to_string(),
+            },
+            PatchError::MalformedDocument { .. }
+            | PatchError::OperationFailed { .. }
+            | PatchError::ImmutableElement { .. } => RestError::BadRequest {
+                message: err.to_string(),
+            },
         }
     }
 }
@@ -988,6 +1014,10 @@ impl From<SearchError> for RestError {
             SearchError::InvalidNumberValue { param, reason, .. } => RestError::InvalidParameter {
                 param,
                 message: reason,
+            },
+            SearchError::EmptyValue { param } => RestError::InvalidParameter {
+                param,
+                message: helios_persistence::search::EMPTY_VALUE_REASON.to_string(),
             },
             SearchError::UnsupportedParameterType { .. }
             | SearchError::UnsupportedModifier { .. }

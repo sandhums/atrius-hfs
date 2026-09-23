@@ -570,6 +570,30 @@ async fn mongodb_contained_criteria_are_applied_or_rejected() {
     contained_suite::criteria_are_applied_or_rejected(&backend, "contained-criteria-1363").await;
 }
 
+/// #1383: `_contained` alone is every contained resource of the type;
+/// `_total`, `search_count` and paging agree; compartment membership is
+/// applied; `_has`, `_list` and chains are refused by name.
+#[tokio::test]
+async fn mongodb_contained_unconstrained_and_out_of_band_constraints() {
+    let Some(backend) = create_backend_with_full_registry("contained_gaps").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    contained_suite::unconstrained_and_out_of_band_constraints(&backend, "contained-gaps-1383")
+        .await;
+}
+
+/// #1407: `_sort` under `_contained` is applied or refused by name, and a
+/// contained resource with nothing indexed but its id is still found.
+#[tokio::test]
+async fn mongodb_contained_sort_and_id_only_contained() {
+    let Some(backend) = create_backend_with_full_registry("contained_sort").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    contained_suite::sort_and_id_only_contained(&backend, "contained-sort-1407").await;
+}
+
 /// The backend-agnostic suite for exponent-form number and quantity search
 /// values (#1337). Same `#[path]` arrangement.
 #[path = "search/number_exponent_suite.rs"]
@@ -633,6 +657,11 @@ async fn mongodb_invalid_numbers_are_rejected_in_conditional_criteria() {
 #[path = "search/token_code_system_suite.rs"]
 mod token_code_system_suite;
 
+/// The backend-agnostic empty search value suite (#1380). Same `#[path]`
+/// arrangement.
+#[path = "search/empty_value_suite.rs"]
+mod empty_value_suite;
+
 /// #1379: `gender=<system>|female` never matched a `code` element. Needs the
 /// full registry so `gender`, `status` and `code` extract into the search
 /// index — the suite's positive controls fail loudly if they did not.
@@ -690,6 +719,161 @@ async fn mongodb_system_qualified_tokens_in_chains() {
         "token-code-system-chain-1379",
     )
     .await;
+}
+
+/// The backend-agnostic conditional `If-Match` suite (#1381). Same `#[path]`
+/// arrangement.
+#[path = "search/conditional_if_match_suite.rs"]
+mod conditional_if_match_suite;
+
+/// #1381: `If-Match` is evaluated against the resource the criteria resolve
+/// to, on conditional update, delete and patch (#1406). Needs the full
+/// registry: `identifier` is not embedded.
+#[tokio::test]
+async fn mongodb_conditional_writes_honour_if_match() {
+    let Some(backend) = create_backend_with_full_registry("cond_if_match_1381").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    conditional_if_match_suite::if_match_is_evaluated_against_the_resolved_match(
+        &backend,
+        "cond-if-match-1381",
+        true,
+    )
+    .await;
+}
+
+/// #1381: of several writers holding the same `If-Match`, one writes.
+#[tokio::test]
+async fn mongodb_conditional_writers_with_the_same_if_match_admit_one() {
+    let Some(backend) = create_backend_with_full_registry("cond_if_match_race_1381").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    conditional_if_match_suite::concurrent_writers_with_the_same_if_match_admit_one(
+        &backend,
+        "cond-if-match-race-1381",
+    )
+    .await;
+}
+
+/// #1380: `family=Zzz,` is a prefix match on `""`, which is every family name;
+/// an empty value or alternative is an error on every search path. Needs the
+/// spec search parameters.
+#[tokio::test]
+async fn mongodb_empty_values_are_rejected_on_every_path() {
+    let Some(backend) = create_backend_with_full_registry("empty_value").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    empty_value_suite::empty_values_are_rejected_on_every_path(&backend, "empty-value-1380").await;
+}
+
+/// The backend-agnostic modifier parity suite (#1408). Same `#[path]`
+/// arrangement.
+#[path = "search/modifier_parity_suite.rs"]
+mod modifier_parity_suite;
+
+/// #1408: `:of-type`, reference `:identifier` and reference `:[type]` were
+/// refused as unsupported modifiers. Needs the full registry.
+#[tokio::test]
+async fn mongodb_modifier_parity() {
+    let Some(backend) = create_backend_with_full_registry("modifier_parity").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    modifier_parity_suite::every_valid_modifier_agrees_across_backends(
+        &backend,
+        "modifier-parity-1408",
+        &[],
+    )
+    .await;
+}
+
+/// The backend-agnostic conditional patch suite (#1406). Same `#[path]`
+/// arrangement.
+#[path = "search/conditional_patch_suite.rs"]
+mod conditional_patch_suite;
+
+/// #1406: MongoDB had no `conditional_patch`; it now serves the trait's
+/// provided implementation. Needs the full registry: `identifier` is not
+/// embedded.
+#[tokio::test]
+async fn mongodb_conditional_patch() {
+    let Some(backend) = create_backend_with_full_registry("cond_patch_1406").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    conditional_patch_suite::conditional_patch_resolves_gates_applies_and_swaps(
+        &backend,
+        "cond-patch-1406",
+    )
+    .await;
+}
+
+/// The backend-agnostic race suite for version-aware writes (#1404, #1405).
+/// Same `#[path]` arrangement.
+#[path = "search/versioned_write_race_suite.rs"]
+mod versioned_write_race_suite;
+
+/// #1405: of several writers holding the same version, one `update` writes and
+/// every loser is a `ConcurrencyError` — the server's `WriteConflict` used to
+/// reach them as `BackendError::Internal`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn mongodb_concurrent_updates_from_the_same_version_admit_one() {
+    let Some(backend) = create_backend("update_race_1405").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    versioned_write_race_suite::concurrent_updates_from_the_same_version_admit_one(
+        std::sync::Arc::new(backend),
+        "update-race-1405",
+        10,
+    )
+    .await;
+}
+
+/// #1404: an update and a versioned delete of the same version: one wins.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn mongodb_concurrent_update_and_versioned_delete_admit_one() {
+    let Some(backend) = create_backend("delete_race_1404").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    versioned_write_race_suite::concurrent_update_and_versioned_delete_admit_one(
+        std::sync::Arc::new(backend),
+        "delete-race-1404",
+        10,
+    )
+    .await;
+}
+
+/// #1405: an update racing an unconditional delete — the one write that is
+/// retried after a `WriteConflict` — leaves a contiguous history and no
+/// `Internal` error.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+async fn mongodb_concurrent_update_and_plain_delete_stay_consistent() {
+    let Some(backend) = create_backend("plain_delete_race_1405").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    versioned_write_race_suite::concurrent_update_and_plain_delete_stay_consistent(
+        std::sync::Arc::new(backend),
+        "plain-delete-race-1405",
+        10,
+    )
+    .await;
+}
+
+/// #1404: `delete_versioned` compares and deletes in one step.
+#[tokio::test]
+async fn mongodb_versioned_delete_is_a_compare_and_swap() {
+    let Some(backend) = create_backend("delete_cas_1404").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    versioned_write_race_suite::versioned_delete_is_a_compare_and_swap(&backend, "delete-cas-1404")
+        .await;
 }
 
 /// #1062: a comma-separated value list on one `SearchParameter` is OR per
@@ -7055,6 +7239,327 @@ async fn mongodb_integration_sof_runner_compartment_filters_fall_back_in_process
     );
 }
 
+/// Exercises the streaming scan path introduced in issue #1060.
+///
+/// Seeds CHUNK_SIZE + 100 Observations split across two patients, then runs the
+/// SOF in-process runner with a patient compartment filter. The corpus forces the
+/// cursor to be read in more than one CHUNK_SIZE batch, verifying that batching
+/// across the streaming path produces a correct, complete result set without
+/// materialising the full Observation collection into memory.
+#[tokio::test]
+async fn mongodb_integration_sof_scan_streams_across_multiple_batches() {
+    use helios_persistence::core::sof_runner::{SofRunner, ViewFilters};
+    use tokio_stream::StreamExt;
+
+    // CHUNK_SIZE inside in_process.rs is 1024.  We seed 1_124 Observations
+    // (1_024 + 100) so the cursor must produce at least two batches.
+    const CHUNK_SIZE: usize = 1024;
+    const P1_COUNT: usize = CHUNK_SIZE + 50;
+    const P2_COUNT: usize = 50;
+
+    let Some(backend) = create_backend("sof_scan_multi_batch").await else {
+        eprintln!(
+            "Skipping mongodb_integration_sof_scan_streams_across_multiple_batches \
+             (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-sof-multi-batch");
+
+    for resource in [
+        json!({ "resourceType": "Patient", "id": "mb-p1" }),
+        json!({ "resourceType": "Patient", "id": "mb-p2" }),
+    ] {
+        let rt = resource["resourceType"].as_str().unwrap().to_string();
+        backend
+            .create(&tenant, &rt, resource, FhirVersion::default())
+            .await
+            .unwrap();
+    }
+
+    for i in 0..P1_COUNT {
+        backend
+            .create(
+                &tenant,
+                "Observation",
+                json!({
+                    "resourceType": "Observation",
+                    "status": "final",
+                    "code": { "text": "x" },
+                    "subject": { "reference": "Patient/mb-p1" }
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap_or_else(|e| panic!("p1 obs {i}: {e}"));
+    }
+
+    for i in 0..P2_COUNT {
+        backend
+            .create(
+                &tenant,
+                "Observation",
+                json!({
+                    "resourceType": "Observation",
+                    "status": "final",
+                    "code": { "text": "x" },
+                    "subject": { "reference": "Patient/mb-p2" }
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap_or_else(|e| panic!("p2 obs {i}: {e}"));
+    }
+
+    let view = json!({
+        "resourceType": "ViewDefinition",
+        "resource": "Observation",
+        "status": "active",
+        "select": [{ "column": [{ "path": "id", "name": "obs_id" }] }]
+    });
+
+    async fn collect_ids(
+        runner: &dyn SofRunner,
+        tenant: &TenantContext,
+        view: serde_json::Value,
+        filters: ViewFilters,
+    ) -> Vec<String> {
+        let mut stream = runner
+            .run_view(tenant, view, filters)
+            .await
+            .expect("run_view");
+        let mut ids = Vec::new();
+        while let Some(row) = stream.next().await {
+            ids.push(row.expect("row")["obs_id"].as_str().unwrap().to_string());
+        }
+        ids
+    }
+
+    let runner = backend
+        .sof_runner()
+        .expect("MongoDB backend must provide a SOF runner");
+
+    // Unfiltered: all observations are returned.
+    let all = collect_ids(
+        runner.as_ref(),
+        &tenant,
+        view.clone(),
+        ViewFilters::default(),
+    )
+    .await;
+    assert_eq!(
+        all.len(),
+        P1_COUNT + P2_COUNT,
+        "unfiltered run must return all {} observations",
+        P1_COUNT + P2_COUNT
+    );
+
+    // Patient filter on mb-p1: only P1_COUNT rows, spanning more than one CHUNK_SIZE batch.
+    let p1_rows = collect_ids(
+        runner.as_ref(),
+        &tenant,
+        view.clone(),
+        ViewFilters {
+            patient: vec!["Patient/mb-p1".to_string()],
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(
+        p1_rows.len(),
+        P1_COUNT,
+        "patient filter on mb-p1 must return exactly {} observations",
+        P1_COUNT
+    );
+
+    // Patient filter on mb-p2: only P2_COUNT rows.
+    let p2_rows = collect_ids(
+        runner.as_ref(),
+        &tenant,
+        view,
+        ViewFilters {
+            patient: vec!["Patient/mb-p2".to_string()],
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(
+        p2_rows.len(),
+        P2_COUNT,
+        "patient filter on mb-p2 must return exactly {} observations",
+        P2_COUNT
+    );
+
+    // p1 and p2 row sets must be disjoint — no observation can belong to both.
+    let p1_set: std::collections::HashSet<_> = p1_rows.iter().collect();
+    let p2_set: std::collections::HashSet<_> = p2_rows.iter().collect();
+    assert!(
+        p1_set.is_disjoint(&p2_set),
+        "patient filters must return non-overlapping observations"
+    );
+}
+
+#[tokio::test]
+async fn mongodb_integration_sof_since_filter() {
+    use helios_persistence::core::sof_runner::{SofRunner, ViewFilters};
+    use tokio_stream::StreamExt;
+
+    // MongoDB uses a native in-DB aggregation runner for unfiltered queries.
+    // The in-process streaming runner (where our `since` filter lives) is
+    // activated only when a patient/group compartment filter forces the fallback.
+    // Both observations belong to the same patient so the patient filter does not
+    // change the expected result set — it just ensures the in-process path is taken.
+
+    let Some(backend) = create_backend("sof_since_filter").await else {
+        eprintln!(
+            "Skipping mongodb_integration_sof_since_filter \
+             (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-sof-since");
+
+    backend
+        .create(
+            &tenant,
+            "Patient",
+            json!({ "resourceType": "Patient", "id": "since-pt-1" }),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+
+    backend
+        .create(
+            &tenant,
+            "Observation",
+            json!({
+                "resourceType": "Observation",
+                "id": "since-obs-before",
+                "status": "final",
+                "code": { "text": "x" },
+                "subject": { "reference": "Patient/since-pt-1" }
+            }),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+
+    let stored_before = backend
+        .read(&tenant, "Observation", "since-obs-before")
+        .await
+        .unwrap()
+        .unwrap();
+    let cutoff = stored_before.last_modified();
+
+    // Ensure the second resource gets a strictly later timestamp.
+    tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+
+    backend
+        .create(
+            &tenant,
+            "Observation",
+            json!({
+                "resourceType": "Observation",
+                "id": "since-obs-after",
+                "status": "final",
+                "code": { "text": "x" },
+                "subject": { "reference": "Patient/since-pt-1" }
+            }),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+
+    let view = json!({
+        "resourceType": "ViewDefinition",
+        "resource": "Observation",
+        "status": "active",
+        "select": [{ "column": [{ "path": "id", "name": "obs_id" }] }]
+    });
+
+    async fn collect_ids_since(
+        runner: &dyn SofRunner,
+        tenant: &TenantContext,
+        view: serde_json::Value,
+        filters: ViewFilters,
+    ) -> Vec<String> {
+        let mut stream = runner
+            .run_view(tenant, view, filters)
+            .await
+            .expect("run_view");
+        let mut ids = Vec::new();
+        while let Some(row) = stream.next().await {
+            ids.push(row.expect("row")["obs_id"].as_str().unwrap().to_string());
+        }
+        ids.sort();
+        ids
+    }
+
+    let runner = backend
+        .sof_runner()
+        .expect("MongoDB must provide a SOF runner");
+
+    // Patient filter forces the in-process runner. Without `since`, both
+    // observations are returned.
+    let patient_filter = ViewFilters {
+        patient: vec!["Patient/since-pt-1".to_string()],
+        ..Default::default()
+    };
+
+    let all = collect_ids_since(
+        runner.as_ref(),
+        &tenant,
+        view.clone(),
+        patient_filter.clone(),
+    )
+    .await;
+    assert!(
+        all.contains(&"since-obs-before".to_string()),
+        "in-process run without since must include before-cutoff observation: {all:?}"
+    );
+    assert!(
+        all.contains(&"since-obs-after".to_string()),
+        "in-process run without since must include after-cutoff observation: {all:?}"
+    );
+
+    // Patient filter + since: only the after-cutoff observation.
+    let filtered = collect_ids_since(
+        runner.as_ref(),
+        &tenant,
+        view.clone(),
+        ViewFilters {
+            patient: vec!["Patient/since-pt-1".to_string()],
+            since: Some(cutoff),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(
+        filtered,
+        vec!["since-obs-after"],
+        "since={cutoff:?} must exclude before-cutoff and return only after-cutoff: {filtered:?}"
+    );
+
+    // Patient filter + future cutoff: nothing.
+    let future_cutoff = cutoff + chrono::Duration::hours(1);
+    let empty = collect_ids_since(
+        runner.as_ref(),
+        &tenant,
+        view,
+        ViewFilters {
+            patient: vec!["Patient/since-pt-1".to_string()],
+            since: Some(future_cutoff),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert!(
+        empty.is_empty(),
+        "since set in the future must return no observations: {empty:?}"
+    );
+}
+
 #[tokio::test]
 async fn mongodb_integration_conditional_create_exists() {
     let Some(backend) = create_backend_with_full_registry("conditional_create").await else {
@@ -7146,6 +7651,7 @@ async fn mongodb_integration_conditional_update_delete_and_no_match() {
             "identifier=http://hospital.org/mrn|MRN-COND-UPDATE",
             false,
             FhirVersion::default(),
+            &helios_persistence::core::EntityTagPrecondition::Absent,
         )
         .await
         .unwrap();
@@ -7163,6 +7669,7 @@ async fn mongodb_integration_conditional_update_delete_and_no_match() {
             &tenant,
             "Patient",
             "identifier=http://hospital.org/mrn|MRN-COND-UPDATE",
+            &helios_persistence::core::EntityTagPrecondition::Absent,
         )
         .await
         .unwrap();
@@ -7173,6 +7680,7 @@ async fn mongodb_integration_conditional_update_delete_and_no_match() {
             &tenant,
             "Patient",
             "identifier=http://hospital.org/mrn|MRN-COND-UPDATE",
+            &helios_persistence::core::EntityTagPrecondition::Absent,
         )
         .await
         .unwrap();
@@ -7236,32 +7744,49 @@ async fn mongodb_integration_conditional_create_multiple_matches() {
     }
 }
 
+/// Was `..._not_supported`, asserting `UnsupportedCapability`: MongoDB had no
+/// `conditional_patch` until #1406. `_id` is one of the embedded parameters,
+/// so this needs no spec registry; `mongodb_conditional_patch` is the full
+/// suite.
 #[tokio::test]
-async fn mongodb_integration_conditional_patch_not_supported() {
-    let Some(backend) = create_backend("conditional_patch_not_supported").await else {
+async fn mongodb_integration_conditional_patch_is_supported() {
+    let Some(backend) = create_backend("conditional_patch_supported").await else {
         eprintln!(
-            "Skipping mongodb_integration_conditional_patch_not_supported (requires Docker or HFS_TEST_MONGODB_URL)"
+            "Skipping mongodb_integration_conditional_patch_is_supported (requires Docker or HFS_TEST_MONGODB_URL)"
         );
         return;
     };
 
     let tenant = create_tenant("tenant-conditional-patch");
+    backend
+        .create(
+            &tenant,
+            "Patient",
+            json!({"resourceType": "Patient", "id": "cond-patch-1", "active": false}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
 
     let result = backend
         .conditional_patch(
             &tenant,
             "Patient",
-            "identifier=http://hospital.org/mrn|MRN-COND-PATCH",
+            "_id=cond-patch-1",
             &PatchFormat::MergePatch(json!({ "active": true })),
+            &helios_persistence::core::EntityTagPrecondition::Absent,
         )
-        .await;
+        .await
+        .unwrap();
 
-    assert!(matches!(
-        result,
-        Err(StorageError::Backend(
-            BackendError::UnsupportedCapability { .. }
-        ))
-    ));
+    match result {
+        helios_persistence::core::ConditionalPatchResult::Patched(stored) => {
+            assert_eq!(stored.id(), "cond-patch-1");
+            assert_eq!(stored.version_id(), "2");
+            assert_eq!(stored.content()["active"], json!(true));
+        }
+        other => panic!("expected Patched, got {:?}", other),
+    }
 }
 
 #[tokio::test]
@@ -15320,4 +15845,23 @@ async fn mongodb_integration_composite_multi_batch_driver_paging() {
         .await
         .expect("search_count must agree with search on the same multi-batch query");
     assert_eq!(count as usize, MATCHING);
+}
+
+/// The backend-agnostic contract of the secondary sync failure ledger
+/// (#1334). Same `#[path]` arrangement as the search suites.
+#[path = "common/sync_failure_ledger_suite.rs"]
+mod sync_failure_ledger_suite;
+
+/// #1334: the "needs reindex" ledger a composite keeps in this primary.
+#[tokio::test]
+async fn mongodb_sync_failure_ledger_contract() {
+    let Some(backend) = create_backend("sync_failure_ledger_1334").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    sync_failure_ledger_suite::ledger_folds_orders_clears_and_counts(
+        &backend,
+        &format!("ledger-1334-{}", uuid::Uuid::new_v4()),
+    )
+    .await;
 }

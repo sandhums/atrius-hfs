@@ -684,6 +684,16 @@ mod numeric_validation_suite;
 #[path = "search/token_code_system_suite.rs"]
 mod token_code_system_suite;
 
+/// The backend-agnostic empty search value suite (#1380). Same `#[path]`
+/// arrangement.
+#[path = "search/empty_value_suite.rs"]
+mod empty_value_suite;
+
+/// The backend-agnostic modifier parity suite (#1408). Same `#[path]`
+/// arrangement.
+#[path = "search/modifier_parity_suite.rs"]
+mod modifier_parity_suite;
+
 #[path = "common/container_cleanup.rs"]
 mod container_cleanup;
 
@@ -709,6 +719,8 @@ mod es_integration {
     use testcontainers::ImageExt;
     use testcontainers::runners::AsyncRunner;
     use testcontainers_modules::elastic_search::ElasticSearch;
+    #[cfg(feature = "postgres")]
+    use testcontainers_modules::postgres::Postgres;
     use tokio::sync::OnceCell;
 
     /// Shared Elasticsearch container reused across all tests in this module.
@@ -720,6 +732,40 @@ mod es_integration {
     }
 
     static SHARED_ES: OnceCell<SharedEs> = OnceCell::const_new();
+
+    #[cfg(feature = "postgres")]
+    struct SharedPg {
+        host: String,
+        port: u16,
+        _container: testcontainers::ContainerAsync<Postgres>,
+    }
+
+    #[cfg(feature = "postgres")]
+    static SHARED_PG: OnceCell<SharedPg> = OnceCell::const_new();
+
+    #[cfg(feature = "postgres")]
+    async fn shared_pg() -> &'static SharedPg {
+        SHARED_PG
+            .get_or_init(|| async {
+                let run_id = std::env::var("GITHUB_RUN_ID").unwrap_or_default();
+                let container = super::container_cleanup::with_cleanup_label(
+                    Postgres::default()
+                        .with_tag("16-alpine")
+                        .with_label("github.run_id", &run_id),
+                )
+                .start()
+                .await
+                .expect("start PostgreSQL for pg-es reindex");
+                let host = container.get_host().await.unwrap().to_string();
+                let port = container.get_host_port_ipv4(5432).await.unwrap();
+                SharedPg {
+                    host,
+                    port,
+                    _container: container,
+                }
+            })
+            .await
+    }
 
     /// Startup budget for one Elasticsearch container start attempt. See the
     /// matching constant in `s3_es_tests.rs`: 120s was not enough on the
@@ -990,6 +1036,27 @@ mod es_integration {
         .await;
     }
 
+    /// #1383: `_contained` alone is every contained resource of the type;
+    /// `_total`, `search_count` and paging agree; compartment membership is
+    /// applied; `_has`, `_list` and chains are refused by name.
+    #[tokio::test]
+    async fn es_contained_unconstrained_and_out_of_band_constraints() {
+        let backend = create_backend().await;
+        super::contained_suite::unconstrained_and_out_of_band_constraints(
+            &backend,
+            "contained-gaps-1383",
+        )
+        .await;
+    }
+
+    /// #1407: `_sort` under `_contained` is applied or refused by name, and a
+    /// contained resource with nothing indexed but its id is still found.
+    #[tokio::test]
+    async fn es_contained_sort_and_id_only_contained() {
+        let backend = create_backend().await;
+        super::contained_suite::sort_and_id_only_contained(&backend, "contained-sort-1407").await;
+    }
+
     /// #1337: `1e2` is one significant figure, `[50, 150)`.
     #[tokio::test]
     async fn es_exponent_values_use_significant_figures() {
@@ -1034,6 +1101,108 @@ mod es_integration {
         super::token_code_system_suite::system_qualified_tokens_in_chains(
             &backend,
             "token-code-system-chain-1379",
+        )
+        .await;
+    }
+
+    /// #1380: `family=Zzz,` is a prefix match on `""`, which is every family
+    /// name; an empty value or alternative is an error on every search path.
+    #[tokio::test]
+    async fn es_empty_values_are_rejected_on_every_path() {
+        let backend = create_backend().await;
+        super::empty_value_suite::empty_values_are_rejected_on_every_path(
+            &backend,
+            "empty-value-1380",
+        )
+        .await;
+    }
+
+    /// #1408: every modifier `SearchModifier::is_valid_for` allows, on every
+    /// parameter type.
+    #[tokio::test]
+    async fn es_modifier_parity() {
+        use super::modifier_parity_suite::{Divergence, Expect};
+
+        let backend = create_backend().await;
+        super::modifier_parity_suite::every_valid_modifier_agrees_across_backends(
+            &backend,
+            "modifier-parity-1408",
+            &[
+                // A short `:of-type` value adds no condition at all: every Patient.
+                Divergence {
+                    label: "Patient?identifier:ofType=MR|12345",
+                    expect: Expect::Ids(&["p1", "p2", "p3", "p4"]),
+                },
+                Divergence {
+                    label: "Patient?identifier:ofType=12345",
+                    expect: Expect::Ids(&["p1", "p2", "p3", "p4"]),
+                },
+                // `:code-text` is a word-prefix match (`match_phrase_prefix`), not a
+                // starts-with on the whole display.
+                Divergence {
+                    label: "Observation?code:code-text=rate",
+                    expect: Expect::Ids(&["ob-pat"]),
+                },
+                // Terminology-backed token modifiers are not refused but degraded:
+                // `:in` / `:not-in` match nothing, `:above` / `:below` match the code
+                // itself. Unreachable over REST, which expands them or answers 501 first.
+                Divergence {
+                    label: "Observation?code:in=http://example.org/fhir/ValueSet/a",
+                    expect: Expect::Ids(&[]),
+                },
+                Divergence {
+                    label: "Observation?code:not-in=http://example.org/fhir/ValueSet/a",
+                    expect: Expect::Ids(&[]),
+                },
+                Divergence {
+                    label: "Observation?code:above=http://loinc.org|1234-5",
+                    expect: Expect::Ids(&["ob-pat"]),
+                },
+                Divergence {
+                    label: "Observation?code:below=http://loinc.org|1234-5",
+                    expect: Expect::Ids(&["ob-pat"]),
+                },
+                // `:[type]` filters on the indexed `resource_type`, which a versioned
+                // reference does not carry, and a bare id also matches an absolute URL.
+                Divergence {
+                    label: "Observation?subject:Patient=p1",
+                    expect: Expect::Ids(&["ob-abs", "ob-pat"]),
+                },
+                Divergence {
+                    label: "Observation?subject:Patient=Patient/p1",
+                    expect: Expect::Ids(&["ob-pat"]),
+                },
+                Divergence {
+                    label: "Observation?subject:Patient=Patient/p1/_history/2",
+                    expect: Expect::Ids(&["ob-pat"]),
+                },
+                Divergence {
+                    label: "Observation?subject:Patient=p1,nobody",
+                    expect: Expect::Ids(&["ob-abs", "ob-pat"]),
+                },
+                Divergence {
+                    label: "Observation?subject:Patient=p1&code=9999-9",
+                    expect: Expect::Ids(&["ob-abs"]),
+                },
+                // `:identifier` looks for token rows under the reference parameter's own
+                // name, which nothing writes: it never matches.
+                Divergence {
+                    label: "Observation?subject:identifier=http://example.org/mrn|12345",
+                    expect: Expect::Ids(&[]),
+                },
+                Divergence {
+                    label: "Observation?subject:identifier=http://example.org/mrn|",
+                    expect: Expect::Ids(&[]),
+                },
+                Divergence {
+                    label: "Observation?subject:identifier=12345",
+                    expect: Expect::Ids(&[]),
+                },
+                Divergence {
+                    label: "Observation?subject:identifier=http://example.org/mrn|12345&code=1234-5",
+                    expect: Expect::Ids(&[]),
+                },
+            ],
         )
         .await;
     }
@@ -2181,6 +2350,426 @@ mod es_integration {
                 .unwrap()
                 .is_some()
         );
+    }
+
+    #[cfg(feature = "postgres")]
+    #[tokio::test]
+    async fn es_integration_pg_source_capped_reindex_coverage() {
+        use helios_persistence::backends::postgres::{PostgresBackend, PostgresConfig};
+        use helios_persistence::search::{ReindexOperation, ReindexRequest, ReindexStatus};
+        use helios_persistence::types::SearchParamType;
+
+        let pg_fixture = shared_pg().await;
+        let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|path| path.parent())
+            .unwrap()
+            .join("data");
+        let mut pg = PostgresBackend::new(PostgresConfig {
+            host: pg_fixture.host.clone(),
+            port: pg_fixture.port,
+            user: "postgres".to_string(),
+            password: Some("postgres".to_string()),
+            dbname: "postgres".to_string(),
+            data_dir: Some(data_dir),
+            search_offloaded: true,
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+        pg.init_schema().await.unwrap();
+        pg.set_search_offloaded(true);
+        let pg = Arc::new(pg);
+
+        let es_fixture = shared_es().await;
+        let make_es = || {
+            ElasticsearchBackend::with_shared_registry(
+                ElasticsearchConfig {
+                    nodes: vec![format!("http://{}:{}", es_fixture.host, es_fixture.port)],
+                    index_prefix: format!("hfs_{}", uuid::Uuid::new_v4().simple()),
+                    number_of_replicas: 0,
+                    refresh_interval: "1ms".to_string(),
+                    write_refresh: WriteRefreshPolicy::WaitFor,
+                    ..Default::default()
+                },
+                pg.tenant_registries().clone(),
+            )
+            .unwrap()
+        };
+        let capped_es = Arc::new(make_es());
+        let uncapped_es = Arc::new(make_es());
+        capped_es.initialize().await.unwrap();
+        uncapped_es.initialize().await.unwrap();
+        let capped_tenant = create_tenant(&format!("pg-es-cap-{}", uuid::Uuid::new_v4()));
+        let uncapped_tenant = create_tenant(&format!("pg-es-base-{}", uuid::Uuid::new_v4()));
+        for tenant in [&capped_tenant, &uncapped_tenant] {
+            for n in 0..5 {
+                let id = format!("pg-es-{n}");
+                pg.create(
+                    tenant,
+                    "Patient",
+                    json!({
+                        "resourceType":"Patient",
+                        "id":id,
+                        "name":[{"family":format!("Family{n}")}],
+                        "text":{"status":"generated","div":format!("<div>{}</div>", "x".repeat(if n == 2 { 4000 } else { 10 }))}
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .unwrap();
+            }
+        }
+        let client = pg.get_client().await.unwrap();
+        let sizes: Vec<i64> = client
+            .query(
+                "SELECT octet_length(data::text)::bigint FROM resources
+                 WHERE tenant_id = $1 AND resource_type = 'Patient'
+                 ORDER BY last_updated, id",
+                &[&capped_tenant.tenant_id().as_str()],
+            )
+            .await
+            .unwrap()
+            .iter()
+            .map(|row| row.get(0))
+            .collect();
+        assert_eq!(sizes.len(), 5);
+        let cap = (sizes[0] + sizes[1]) as u64;
+        assert!(sizes.iter().sum::<i64>() as u64 > cap);
+        assert!(sizes.iter().any(|size| *size as u64 > cap));
+        drop(client);
+
+        for (tenant, es, bytes) in [
+            (&capped_tenant, &capped_es, cap),
+            (&uncapped_tenant, &uncapped_es, 0),
+        ] {
+            let started = std::time::Instant::now();
+            let op = ReindexOperation::with_parts(
+                pg.clone(),
+                vec![pg.clone(), es.clone()],
+                pg.tenant_registries().clone(),
+            );
+            let job = op
+                .start(
+                    tenant.clone(),
+                    ReindexRequest::for_types(vec!["Patient"])
+                        .with_batch_size(5)
+                        .with_batch_bytes(bytes),
+                    None,
+                )
+                .await
+                .unwrap();
+            let mut completed = None;
+            for _ in 0..600 {
+                let progress = op.get_progress(&job).await.unwrap();
+                if progress.status.is_finished() {
+                    completed = Some(progress);
+                    break;
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+            }
+            let progress = completed.expect("pg-es reindex timed out");
+            assert_eq!(
+                progress.status,
+                ReindexStatus::Completed,
+                "{:?}",
+                progress.error_message
+            );
+            assert!(progress.errors.is_empty(), "{:?}", progress.errors);
+            assert_eq!(progress.processed_resources, 5);
+            let terminal_ms = started.elapsed().as_millis();
+            await_es_count(es, tenant, "Patient", 5).await;
+            for n in 0..5 {
+                let id = format!("pg-es-{n}");
+                assert!(es.read(tenant, "Patient", &id).await.unwrap().is_some());
+                let family = format!("Family{n}");
+                let found = found_ids(
+                    es.as_ref(),
+                    tenant,
+                    &param_query("Patient", &[("name", SearchParamType::String, &family)]),
+                )
+                .await;
+                assert!(found.contains(&id), "{family} did not find {id}");
+            }
+            if std::env::var_os("HFS_1459_MEASURE").is_some() {
+                println!(
+                    "pg-es measurement: byte_cap={bytes} terminal_ms={terminal_ms} search_ready_ms={}",
+                    started.elapsed().as_millis()
+                );
+            }
+        }
+        let client = pg.get_client().await.unwrap();
+        let mut snapshots = Vec::new();
+        for tenant in [&capped_tenant, &uncapped_tenant] {
+            let index: i64 = client
+                .query_one(
+                    "SELECT count(*) FROM search_index WHERE tenant_id = $1",
+                    &[&tenant.tenant_id().as_str()],
+                )
+                .await
+                .unwrap()
+                .get(0);
+            let fts: i64 = client
+                .query_one(
+                    "SELECT count(*) FROM resource_fts WHERE tenant_id = $1",
+                    &[&tenant.tenant_id().as_str()],
+                )
+                .await
+                .unwrap()
+                .get(0);
+            snapshots.push((index, fts));
+        }
+        assert!(
+            snapshots[0].0 > 0,
+            "PostgreSQL target wrote no search entries"
+        );
+        assert!(snapshots[0].1 > 0, "PostgreSQL target wrote no FTS entries");
+        assert_eq!(snapshots[0], snapshots[1]);
+    }
+
+    /// What the #1161 tests share: an offloaded SQLite primary and a real
+    /// Elasticsearch behind a composite, the `$bulk-submit` job store wired as
+    /// `hfs` wires it for deferred indexing — the composite wrapper with its
+    /// per-resource ingest sync off — and one manifest of `resources` Patients
+    /// ingested through that store and then indexed by the deferred rebuild.
+    #[cfg(feature = "sqlite")]
+    struct DeferredSubmit {
+        _dir: tempfile::TempDir,
+        sqlite: Arc<helios_persistence::backends::sqlite::SqliteBackend>,
+        es: Arc<ElasticsearchBackend>,
+        jobs: helios_persistence::composite::CompositeSubmitJobs,
+        tenant: TenantContext,
+        submission: helios_persistence::core::SubmissionId,
+    }
+
+    /// Builds [`DeferredSubmit`]: ingests `resources` Patients with indexing
+    /// deferred, asserts the ingest itself put nothing in Elasticsearch, runs
+    /// the per-type rebuild the worker fires after the manifest, and waits
+    /// until Elasticsearch holds every one of them.
+    #[cfg(feature = "sqlite")]
+    async fn deferred_submit_rebuilt(tenant_name: &str, resources: usize) -> DeferredSubmit {
+        use std::collections::HashMap;
+
+        use helios_persistence::backends::sqlite::{SqliteBackend, SqliteBackendConfig};
+        use helios_persistence::composite::{
+            CompositeConfig, CompositeStorage, CompositeSubmitJobs, DynStorage, SyncMode,
+        };
+        use helios_persistence::core::{
+            BulkProcessingOptions, BulkSubmitJobStore, BulkSubmitProvider, NdjsonEntry,
+            SubmissionId, SubmitClaimStrategy, SubmitWorkerStorage, WorkerId,
+        };
+        use helios_persistence::search::{ReindexOperation, ReindexRequest, ReindexStatus};
+
+        let dir = tempfile::tempdir().unwrap();
+        let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("data"))
+            .unwrap_or_else(|| PathBuf::from("data"));
+        let sqlite = SqliteBackend::with_config(
+            dir.path().join("fhir.db"),
+            SqliteBackendConfig {
+                data_dir: Some(data_dir),
+                search_offloaded: true,
+                ..Default::default()
+            },
+        )
+        .expect("Failed to create SQLite backend");
+        sqlite.init_schema().expect("Failed to initialize schema");
+        let sqlite = Arc::new(sqlite);
+        let es = Arc::new(create_backend().await);
+        let tenant = create_tenant(tenant_name);
+
+        let config = CompositeConfig::builder()
+            .primary("sqlite", BackendKind::Sqlite)
+            .search_backend("es", BackendKind::Elasticsearch)
+            .sync_mode(SyncMode::Synchronous)
+            .build()
+            .expect("composite config");
+        let mut backends: HashMap<String, DynStorage> = HashMap::new();
+        backends.insert("sqlite".to_string(), sqlite.clone() as DynStorage);
+        backends.insert("es".to_string(), es.clone() as DynStorage);
+        let composite = Arc::new(CompositeStorage::new(config, backends).expect("composite"));
+        let jobs =
+            CompositeSubmitJobs::new(sqlite.clone() as Arc<dyn BulkSubmitJobStore>, composite)
+                .with_ingest_sync(false);
+
+        let submission = SubmissionId::generate(tenant_name);
+        jobs.create_submission(&tenant, &submission, None)
+            .await
+            .unwrap();
+        jobs.add_manifest(&tenant, &submission, Some("http://provider/m.json"), None)
+            .await
+            .unwrap();
+        let lease = jobs
+            .claim_next_manifest(
+                &WorkerId::new(format!("w-{tenant_name}")),
+                std::time::Duration::from_secs(60),
+            )
+            .await
+            .unwrap()
+            .expect("claimable manifest");
+        let entries = (0..resources)
+            .map(|n| {
+                NdjsonEntry::new(
+                    n as u64 + 1,
+                    "Patient",
+                    json!({
+                        "resourceType": "Patient",
+                        "id": format!("{tenant_name}-{n}"),
+                        "name": [{"family": "Deferred"}]
+                    }),
+                )
+            })
+            .collect();
+        jobs.process_entries(
+            &tenant,
+            &submission,
+            &lease.manifest_id,
+            entries,
+            &BulkProcessingOptions::new(),
+        )
+        .await
+        .unwrap();
+        let report = jobs.sync_ingested(&lease).await.unwrap();
+        assert_eq!(
+            report.synced, 0,
+            "precondition: deferred ingest syncs nothing per resource"
+        );
+        jobs.finish_manifest(&lease).await.unwrap();
+        assert_eq!(
+            sqlite.count(&tenant, Some("Patient")).await.unwrap(),
+            resources as u64
+        );
+        await_es_count(&es, &tenant, "Patient", 0).await;
+
+        // The post-manifest rebuild, as `ReindexOnFinish` runs it.
+        let op = ReindexOperation::with_parts(
+            sqlite.clone(),
+            vec![sqlite.clone(), es.clone()],
+            sqlite.tenant_registries().clone(),
+        );
+        let job_id = op
+            .start(
+                tenant.clone(),
+                ReindexRequest::for_types(vec!["Patient"]).with_batch_size(10),
+                None,
+            )
+            .await
+            .unwrap();
+        let mut finished = None;
+        for _ in 0..600 {
+            let progress = op.get_progress(&job_id).await.unwrap();
+            if progress.status.is_finished() {
+                finished = Some(progress);
+                break;
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        }
+        let progress = finished.expect("the deferred rebuild timed out");
+        assert_eq!(
+            progress.status,
+            ReindexStatus::Completed,
+            "{:?}",
+            progress.error_message
+        );
+        await_es_count(&es, &tenant, "Patient", resources as u64).await;
+
+        DeferredSubmit {
+            _dir: dir,
+            sqlite,
+            es,
+            jobs,
+            tenant,
+            submission,
+        }
+    }
+
+    /// #1161: on `sqlite-es` with deferred indexing, a rolled-back submission
+    /// used to leave its documents in Elasticsearch — gone from the primary,
+    /// still matched by search. With the composite job store kept in the chain
+    /// (ingest sync off), every rolled-back create is mirrored as a delete, so
+    /// afterwards neither store holds any of them.
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn es_integration_sqlite_es_deferred_rollback_leaves_no_orphans() {
+        use helios_persistence::core::BulkSubmitRollbackProvider;
+
+        const RESOURCES: usize = 12;
+        let s = deferred_submit_rebuilt("deferred-rollback", RESOURCES).await;
+
+        let changes = s
+            .jobs
+            .list_changes(&s.tenant, &s.submission, 100, 0)
+            .await
+            .unwrap();
+        assert_eq!(changes.len(), RESOURCES, "one recorded create per entry");
+        for change in &changes {
+            assert!(
+                s.jobs
+                    .rollback_change(&s.tenant, &s.submission, change)
+                    .await
+                    .unwrap(),
+                "{change:?} was not rolled back"
+            );
+        }
+
+        assert_eq!(
+            s.sqlite.count(&s.tenant, Some("Patient")).await.unwrap(),
+            0,
+            "the primary reverted every create"
+        );
+        await_es_count(&s.es, &s.tenant, "Patient", 0).await;
+        assert!(
+            s.es.read(&s.tenant, "Patient", "deferred-rollback-0")
+                .await
+                .unwrap()
+                .is_none(),
+            "a rolled-back resource must not survive in Elasticsearch"
+        );
+    }
+
+    /// #1161: abort is not a rollback — no primary deletes what the aborted
+    /// submission already ingested (#968) — so Elasticsearch must not either,
+    /// or the resources become readable by id yet invisible to every search
+    /// (#882, #1021). After an abort on the deferred path both stores agree.
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn es_integration_sqlite_es_deferred_abort_keeps_search_consistent() {
+        use helios_persistence::core::{BulkSubmitProvider, SubmissionStatus};
+
+        const RESOURCES: usize = 8;
+        let s = deferred_submit_rebuilt("deferred-abort", RESOURCES).await;
+        s.jobs
+            .add_manifest(
+                &s.tenant,
+                &s.submission,
+                Some("http://provider/m2.json"),
+                None,
+            )
+            .await
+            .unwrap();
+
+        let cancelled = s
+            .jobs
+            .abort_submission(&s.tenant, &s.submission, "submissionStatus=stopped")
+            .await
+            .unwrap();
+        assert_eq!(cancelled, 1, "the still-pending manifest is cancelled");
+        let summary = s
+            .jobs
+            .get_submission(&s.tenant, &s.submission)
+            .await
+            .unwrap()
+            .expect("submission");
+        assert_eq!(summary.status, SubmissionStatus::Aborted);
+
+        let primary = s.sqlite.count(&s.tenant, Some("Patient")).await.unwrap();
+        assert_eq!(
+            primary, RESOURCES as u64,
+            "abort keeps what was ingested (#968)"
+        );
+        await_es_count(&s.es, &s.tenant, "Patient", primary).await;
     }
 
     #[tokio::test]
@@ -6353,6 +6942,121 @@ mod es_integration {
             ),
             "a malformed count query must be a QueryParseError, got: {err:?}"
         );
+    }
+
+    /// The write paths against a real cluster (#1382; the failure paths are in
+    /// `elasticsearch_storage_write_wiremock.rs`): what Elasticsearch really
+    /// answers for an absent document or index is still `NotFound`, `update`
+    /// keeps the contained documents in step, and `delete`/`purge_all` remove
+    /// them and report real counts.
+    #[tokio::test]
+    async fn es_integration_writes_keep_contained_documents_in_step() {
+        use helios_persistence::core::{PurgableStorage, SearchProvider};
+        use helios_persistence::error::ResourceError;
+        use helios_persistence::types::{
+            ContainedMode, ContainedReturn, SearchParamType, SearchParameter, SearchQuery,
+            SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("write-path-tenant");
+        let containers_of = |org_name: &str| {
+            let mut q = SearchQuery::new("Organization");
+            q.contained = ContainedMode::On;
+            q.contained_return = ContainedReturn::Container;
+            q.parameters.push(SearchParameter {
+                name: "name".to_string(),
+                param_type: SearchParamType::String,
+                modifier: None,
+                values: vec![SearchValue::eq(org_name)],
+                chain: vec![],
+                components: vec![],
+            });
+            q
+        };
+        let search_urls = |q: SearchQuery| {
+            let backend = &backend;
+            let tenant = &tenant;
+            async move {
+                backend
+                    .refresh_index("write-path-tenant", "Organization")
+                    .await
+                    .ok();
+                let found = backend.search(tenant, &q).await.unwrap();
+                let mut urls: Vec<String> = found.resources.items.iter().map(|r| r.url()).collect();
+                urls.sort();
+                urls
+            }
+        };
+        let is_not_found = |r: Result<(), StorageError>| {
+            matches!(
+                r,
+                Err(StorageError::Resource(ResourceError::NotFound { .. }))
+            )
+        };
+        let patient = |id: &str, org: &str| {
+            json!({
+                "resourceType": "Patient", "id": id,
+                "contained": [{ "resourceType": "Organization", "id": "org", "name": org }],
+                "managingOrganization": { "reference": "#org" }
+            })
+        };
+
+        // No index yet: Elasticsearch's `index_not_found_exception`.
+        assert!(is_not_found(backend.delete(&tenant, "Patient", "p1").await));
+
+        let created = backend
+            .create(
+                &tenant,
+                "Patient",
+                patient("p1", "Acme"),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                patient("p2", "Acme"),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            search_urls(containers_of("Acme")).await,
+            vec!["Patient/p1", "Patient/p2"],
+            "positive control: contained documents are indexed and found"
+        );
+
+        // The index exists now: Elasticsearch's `"result": "not_found"`.
+        assert!(is_not_found(
+            backend.delete(&tenant, "Patient", "absent").await
+        ));
+        backend
+            .purge(&tenant, "Patient", "absent")
+            .await
+            .expect("purging an absent document is idempotent");
+
+        // `update` replaces the contained documents (it used to leave them).
+        backend
+            .update(&tenant, &created, patient("p1", "Globex"))
+            .await
+            .unwrap();
+        assert_eq!(search_urls(containers_of("Acme")).await, vec!["Patient/p2"]);
+        assert_eq!(
+            search_urls(containers_of("Globex")).await,
+            vec!["Patient/p1"]
+        );
+
+        // `delete` sweeps them.
+        backend.delete(&tenant, "Patient", "p1").await.unwrap();
+        assert!(search_urls(containers_of("Globex")).await.is_empty());
+
+        // `purge_all` reports what it removed and sweeps the rest.
+        assert_eq!(backend.purge_all(&tenant, "Patient").await.unwrap(), 1);
+        assert!(search_urls(containers_of("Acme")).await.is_empty());
+        assert_eq!(backend.purge_all(&tenant, "Patient").await.unwrap(), 0);
     }
 }
 

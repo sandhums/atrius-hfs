@@ -488,6 +488,13 @@ impl ResourceStorage for SqliteBackend {
         let previous_resource = current.content().clone();
         let fhir_version = current.fhir_version();
 
+        // The expected version is `current`'s, and the UPDATE below only matches
+        // a row that still carries it — so the new version follows from what the
+        // caller already read.
+        let expected_version = current.version_id();
+        let new_version: u64 = expected_version.parse().unwrap_or(0) + 1;
+        let new_version_str = new_version.to_string();
+
         // Ensure the resource has correct type and id
         let mut resource = resource;
         if let Some(obj) = resource.as_object_mut() {
@@ -498,66 +505,88 @@ impl ResourceStorage for SqliteBackend {
             obj.insert("id".to_string(), Value::String(id.to_string()));
         }
 
+        // Serialize the resource data
         let data = serde_json::to_vec(&resource)
             .map_err(|e| serialization_error(format!("Failed to serialize resource: {}", e)))?;
 
+        // Extract the search values before taking the write lock: it is pure
+        // CPU, and SQLite has one writer.
+        let prepared = (!self.is_search_offloaded())
+            .then(|| self.prepare_index(tenant_id, resource_type, id, &resource));
+
         let now = Utc::now();
         let last_updated = now.to_rfc3339();
-        let fhir_version_str = fhir_version.as_mime_param();
+        let fhir_version_str = current.fhir_version().as_mime_param();
 
-        let tx = begin_immediate_tx(&mut conn, "write")?;
+        // Compare-and-swap, history row and search index in ONE transaction.
+        //
+        // This used to be a `SELECT version_id`, a comparison in Rust, and then
+        // an `UPDATE` with no version in its `WHERE`, each statement
+        // auto-committed on a pooled connection. Two writers holding the same
+        // version on two connections both passed the comparison; the second
+        // `UPDATE` then overwrote the first and committed, and only its history
+        // `INSERT` failed — on `PRIMARY KEY (…, version_id)` — so that writer got
+        // a 500 while its content was already the current row, under a version
+        // whose history entry holds the *winner's* content (#1404).
+        //
+        // The version now rides in the `UPDATE`'s predicate, so the comparison
+        // and the write are one statement; and everything that follows shares
+        // its transaction, so a writer that loses leaves nothing behind.
+        // IMMEDIATE takes the write lock up front, where the busy handler
+        // applies (see `purge_tenant_data`).
+        let tx = conn
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|e| internal_error(format!("Failed to begin update: {}", e)))?;
 
-        let actual_version: Result<String, _> = tx.query_row(
-            "SELECT version_id FROM resources
-             WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3 AND is_deleted = 0",
-            params![tenant_id, resource_type, id],
-            |row| row.get(0),
-        );
+        let updated = tx
+            .execute(
+                "UPDATE resources SET version_id = ?1, data = ?2, last_updated = ?3
+                 WHERE tenant_id = ?4 AND resource_type = ?5 AND id = ?6
+                   AND version_id = ?7 AND is_deleted = 0",
+                params![
+                    new_version_str,
+                    data,
+                    last_updated,
+                    tenant_id,
+                    resource_type,
+                    id,
+                    expected_version
+                ],
+            )
+            .map_err(|e| internal_error(format!("Failed to update resource: {}", e)))?;
 
-        let actual_version = match actual_version {
-            Ok(v) => v,
-            Err(rusqlite::Error::QueryReturnedNoRows) => {
-                return Err(StorageError::Resource(ResourceError::NotFound {
-                    resource_type: resource_type.to_string(),
-                    id: id.to_string(),
-                }));
-            }
-            Err(e) => {
-                return Err(internal_error(format!(
+        if updated == 0 {
+            // Matched nothing; which of the two reasons it was costs a query,
+            // but only on the path that is already failing.
+            let actual: Result<String, _> = tx.query_row(
+                "SELECT version_id FROM resources
+                 WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3 AND is_deleted = 0",
+                params![tenant_id, resource_type, id],
+                |row| row.get(0),
+            );
+            return match actual {
+                Ok(actual_version) => Err(StorageError::Concurrency(
+                    ConcurrencyError::VersionConflict {
+                        resource_type: resource_type.to_string(),
+                        id: id.to_string(),
+                        expected_version: expected_version.to_string(),
+                        actual_version,
+                    },
+                )),
+                Err(rusqlite::Error::QueryReturnedNoRows) => {
+                    Err(StorageError::Resource(ResourceError::NotFound {
+                        resource_type: resource_type.to_string(),
+                        id: id.to_string(),
+                    }))
+                }
+                Err(e) => Err(internal_error(format!(
                     "Failed to get current version: {}",
                     e
-                )));
-            }
-        };
-
-        if actual_version != current.version_id() {
-            return Err(StorageError::Concurrency(
-                ConcurrencyError::VersionConflict {
-                    resource_type: resource_type.to_string(),
-                    id: id.to_string(),
-                    expected_version: current.version_id().to_string(),
-                    actual_version,
-                },
-            ));
+                ))),
+            };
         }
 
-        let new_version: u64 = actual_version.parse().unwrap_or(0) + 1;
-        let new_version_str = new_version.to_string();
-
-        tx.execute(
-            "UPDATE resources SET version_id = ?1, data = ?2, last_updated = ?3
-             WHERE tenant_id = ?4 AND resource_type = ?5 AND id = ?6",
-            params![
-                new_version_str,
-                data,
-                last_updated,
-                tenant_id,
-                resource_type,
-                id
-            ],
-        )
-        .map_err(|e| internal_error(format!("Failed to update resource: {}", e)))?;
-
+        // Insert into history (preserve the original FHIR version)
         tx.execute(
             "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)",
@@ -565,8 +594,11 @@ impl ResourceStorage for SqliteBackend {
         )
         .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
 
-        self.delete_search_index(&tx, tenant_id, resource_type, id)?;
-        self.index_resource(&tx, tenant_id, resource_type, id, &resource)?;
+        // Re-index the resource (delete old entries, add new)
+        if let Some(prepared) = prepared {
+            self.delete_search_index(&tx, tenant_id, resource_type, id)?;
+            self.write_prepared_index(&tx, tenant_id, resource_type, id, &resource, prepared)?;
+        }
 
         super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
             &tx,
@@ -606,110 +638,17 @@ impl ResourceStorage for SqliteBackend {
         resource_type: &str,
         id: &str,
     ) -> StorageResult<()> {
-        tenant.check_permission(Operation::Delete, resource_type)?;
+        self.soft_delete(tenant, resource_type, id, None)
+    }
 
-        let mut conn = self.get_connection()?;
-        let tenant_id = tenant.tenant_id().as_str();
-        let now = Utc::now();
-        let deleted_at = now.to_rfc3339();
-
-        let tx = begin_immediate_tx(&mut conn, "write")?;
-
-        let result: Result<(String, Vec<u8>, String), _> = tx.query_row(
-            "SELECT version_id, data, fhir_version FROM resources
-             WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3 AND is_deleted = 0",
-            params![tenant_id, resource_type, id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        );
-
-        let (current_version, data_bytes, fhir_version_str) = match result {
-            Ok(v) => v,
-            Err(rusqlite::Error::QueryReturnedNoRows) => {
-                return Err(StorageError::Resource(ResourceError::NotFound {
-                    resource_type: resource_type.to_string(),
-                    id: id.to_string(),
-                }));
-            }
-            Err(e) => {
-                return Err(internal_error(format!("Failed to check resource: {}", e)));
-            }
-        };
-
-        let new_version: u64 = current_version.parse().unwrap_or(0) + 1;
-        let new_version_str = new_version.to_string();
-        let previous_resource: Value = serde_json::from_slice(&data_bytes).unwrap_or(Value::Null);
-        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
-            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
-
-        let updated = tx
-            .execute(
-                "UPDATE resources SET is_deleted = 1, deleted_at = ?1, version_id = ?2, last_updated = ?1
-                 WHERE tenant_id = ?3 AND resource_type = ?4 AND id = ?5
-                   AND version_id = ?6 AND is_deleted = 0",
-                params![
-                    deleted_at,
-                    new_version_str,
-                    tenant_id,
-                    resource_type,
-                    id,
-                    current_version
-                ],
-            )
-            .map_err(|e| internal_error(format!("Failed to delete resource: {}", e)))?;
-
-        if updated == 0 {
-            return Err(StorageError::Resource(ResourceError::NotFound {
-                resource_type: resource_type.to_string(),
-                id: id.to_string(),
-            }));
-        }
-
-        tx.execute(
-            "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7)",
-            params![tenant_id, resource_type, id, new_version_str, data_bytes, deleted_at, fhir_version_str],
-        )
-        .map_err(|e| internal_error(format!("Failed to insert deletion history: {}", e)))?;
-
-        // Delete search index entries (skip when search is offloaded). Keyed on
-        // resource_key. The tenant_id/resource_type prefix is required for the
-        // delete to seek idx_search_composite instead of full-scanning
-        // search_index (see delete_search_index, #1197); the soft-delete keeps
-        // the resources row, so the subquery resolves. Stay on `tx` so this
-        // delete and the outbox enqueue share one transaction.
-        if !self.is_search_offloaded() {
-            tx.execute(
-                "DELETE FROM search_index
-                  WHERE tenant_id = ?1 AND resource_type = ?2
-                    AND resource_key = (
-                     SELECT rowid FROM resources
-                      WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3
-                 )",
-                params![tenant_id, resource_type, id],
-            )
-            .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
-        }
-
-        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
-            &tx,
-            tenant.tenant_id(),
-            fhir_version,
-            resource_type,
-            id,
-            &new_version_str,
-            crate::core::OutboxEventType::Delete,
-            None,
-            Some(previous_resource),
-        )?;
-
-        tx.commit()
-            .map_err(|e| internal_error(format!("Failed to commit delete: {}", e)))?;
-
-        if resource_type == "SearchParameter" {
-            self.tenant_registries().invalidate(tenant_id);
-        }
-
-        Ok(())
+    async fn delete_versioned(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        id: &str,
+        expected_version: &str,
+    ) -> StorageResult<()> {
+        self.soft_delete(tenant, resource_type, id, Some(expected_version))
     }
 
     async fn count(
@@ -1309,6 +1248,153 @@ impl ResourceStorage for SqliteBackend {
 
 // Search Index Helpers
 impl SqliteBackend {
+    /// Soft-deletes a resource, optionally only at `expected_version`
+    /// ([`ResourceStorage::delete`] / [`ResourceStorage::delete_versioned`]).
+    ///
+    /// The read of the current row, the tombstone `UPDATE`, the deletion history
+    /// row and the search-index cleanup share one `IMMEDIATE` transaction. They
+    /// used to be auto-committed statements: a failure after the `UPDATE` left a
+    /// tombstone with no history entry, and a writer landing between the read
+    /// and the `UPDATE` turned a plain delete into a spurious `NotFound`. Inside
+    /// the write lock neither can happen, and `expected_version` is compared
+    /// against the very row the `UPDATE` then tombstones — the comparison and
+    /// the delete cannot be separated (#1404).
+    fn soft_delete(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        id: &str,
+        expected_version: Option<&str>,
+    ) -> StorageResult<()> {
+        tenant.check_permission(Operation::Delete, resource_type)?;
+
+        let mut conn = self.get_connection()?;
+        let tenant_id = tenant.tenant_id().as_str();
+
+        let tx = conn
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|e| internal_error(format!("Failed to begin delete: {}", e)))?;
+
+        // Check if resource exists and get its fhir_version
+        let result: Result<(String, Vec<u8>, String), _> = tx.query_row(
+            "SELECT version_id, data, fhir_version FROM resources
+             WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3 AND is_deleted = 0",
+            params![tenant_id, resource_type, id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        );
+
+        let (current_version, data, fhir_version_str) = match result {
+            Ok(v) => v,
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                return Err(StorageError::Resource(ResourceError::NotFound {
+                    resource_type: resource_type.to_string(),
+                    id: id.to_string(),
+                }));
+            }
+            Err(e) => {
+                return Err(internal_error(format!("Failed to check resource: {}", e)));
+            }
+        };
+
+        if let Some(expected) = expected_version
+            && expected != current_version
+        {
+            return Err(StorageError::Concurrency(
+                ConcurrencyError::VersionConflict {
+                    resource_type: resource_type.to_string(),
+                    id: id.to_string(),
+                    expected_version: expected.to_string(),
+                    actual_version: current_version,
+                },
+            ));
+        }
+
+        let now = Utc::now();
+        let deleted_at = now.to_rfc3339();
+
+        // Calculate new version for the deletion record
+        let new_version: u64 = current_version.parse().unwrap_or(0) + 1;
+        let new_version_str = new_version.to_string();
+
+        // Soft delete the resource. The `version_id`/`is_deleted` predicates
+        // keep the statement a compare-and-swap in its own right: the write
+        // lock already guarantees the row is the one read above, and the
+        // predicate is what would say so if that ever stopped being true.
+        let updated = tx
+            .execute(
+                "UPDATE resources SET is_deleted = 1, deleted_at = ?1, version_id = ?2, last_updated = ?1
+                 WHERE tenant_id = ?3 AND resource_type = ?4 AND id = ?5
+                   AND version_id = ?6 AND is_deleted = 0",
+                params![
+                    deleted_at,
+                    new_version_str,
+                    tenant_id,
+                    resource_type,
+                    id,
+                    current_version
+                ],
+            )
+            .map_err(|e| internal_error(format!("Failed to delete resource: {}", e)))?;
+
+        if updated == 0 {
+            return Err(StorageError::Resource(ResourceError::NotFound {
+                resource_type: resource_type.to_string(),
+                id: id.to_string(),
+            }));
+        }
+
+        // Insert deletion record into history (preserve fhir_version)
+        tx.execute(
+            "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, ?7)",
+            params![tenant_id, resource_type, id, new_version_str, data, deleted_at, fhir_version_str],
+        )
+        .map_err(|e| internal_error(format!("Failed to insert deletion history: {}", e)))?;
+
+        // Delete search index entries (skip when search is offloaded). Keyed on
+        // resource_key. The tenant_id/resource_type prefix is required for the
+        // delete to seek idx_search_composite instead of full-scanning
+        // search_index (see delete_search_index, #1197); the soft-delete keeps
+        // the resources row, so the subquery resolves.
+        if !self.is_search_offloaded() {
+            tx.execute(
+                "DELETE FROM search_index
+                  WHERE tenant_id = ?1 AND resource_type = ?2
+                    AND resource_key = (
+                     SELECT rowid FROM resources
+                      WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3
+                 )",
+                params![tenant_id, resource_type, id],
+            )
+            .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
+        }
+
+        let previous_resource: Value = serde_json::from_slice(&data).unwrap_or(Value::Null);
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Delete,
+            None,
+            Some(previous_resource),
+        )?;
+
+        tx.commit()
+            .map_err(|e| internal_error(format!("Failed to commit delete: {}", e)))?;
+
+        // A SearchParameter delete invalidates this tenant's cached registry.
+        if resource_type == "SearchParameter" {
+            self.tenant_registries().invalidate(tenant_id);
+        }
+
+        Ok(())
+    }
+
     /// Brings a soft-deleted resource back to life with new content.
     ///
     /// FHIR permits a deleted resource to be restored by a subsequent update
@@ -2202,9 +2288,14 @@ impl VersionedStorage for SqliteBackend {
                 },
             ));
         }
+        drop(conn);
 
-        // Perform delete
-        self.delete(tenant, resource_type, id).await
+        // Delete exactly the version the precondition was evaluated against.
+        // A plain `delete` here was check-then-act: a writer landing after the
+        // read above was deleted along with the version the client named
+        // (#1404).
+        self.delete_versioned(tenant, resource_type, id, &current_version)
+            .await
     }
 
     async fn list_versions(
@@ -3208,6 +3299,11 @@ impl DifferentialHistoryProvider for SqliteBackend {
 
 #[async_trait]
 impl ConditionalStorage for SqliteBackend {
+    fn supports_conditional(&self, interaction: crate::core::ConditionalInteraction) -> bool {
+        // One declaration: the capability list the contract test pins (#1384).
+        crate::core::Backend::supports(self, interaction.capability())
+    }
+
     async fn conditional_create(
         &self,
         tenant: &TenantContext,
@@ -3242,6 +3338,7 @@ impl ConditionalStorage for SqliteBackend {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn conditional_update(
         &self,
         tenant: &TenantContext,
@@ -3250,6 +3347,7 @@ impl ConditionalStorage for SqliteBackend {
         search_params: &str,
         upsert: bool,
         fhir_version: FhirVersion,
+        if_match: &crate::core::EntityTagPrecondition,
     ) -> StorageResult<ConditionalUpdateResult> {
         // Find matching resources based on search parameters
         let matches = self
@@ -3258,6 +3356,9 @@ impl ConditionalStorage for SqliteBackend {
 
         match matches.len() {
             0 => {
+                // `If-Match` names a version; nothing matched, so nothing
+                // can carry it and the create below must not run (#1381).
+                crate::core::conditional_if_match_gate(if_match, resource_type, None)?;
                 if upsert {
                     // No match, but upsert is true - create new resource
                     let created = self
@@ -3270,8 +3371,11 @@ impl ConditionalStorage for SqliteBackend {
                 }
             }
             1 => {
-                // Exactly one match - update it (preserves existing FHIR version)
+                // Exactly one match - update it (preserves existing FHIR version).
+                // `update` compares-and-swaps on `existing`'s version, the one
+                // `If-Match` is evaluated against here.
                 let existing = matches.into_iter().next().unwrap();
+                crate::core::conditional_if_match_gate(if_match, resource_type, Some(&existing))?;
                 let updated = self.update(tenant, &existing, resource).await?;
                 Ok(ConditionalUpdateResult::Updated(updated))
             }
@@ -3287,6 +3391,7 @@ impl ConditionalStorage for SqliteBackend {
         tenant: &TenantContext,
         resource_type: &str,
         search_params: &str,
+        if_match: &crate::core::EntityTagPrecondition,
     ) -> StorageResult<ConditionalDeleteResult> {
         // Find matching resources based on search parameters
         let matches = self
@@ -3295,13 +3400,16 @@ impl ConditionalStorage for SqliteBackend {
 
         match matches.len() {
             0 => {
-                // No match
+                // No match. A supplied `If-Match` fails against it, as it
+                // does on `DELETE [type]/[id]` for a missing resource.
+                crate::core::conditional_if_match_gate(if_match, resource_type, None)?;
                 Ok(ConditionalDeleteResult::NoMatch)
             }
             1 => {
                 // Exactly one match - delete it
                 let existing = matches.into_iter().next().unwrap();
-                self.delete(tenant, resource_type, existing.id()).await?;
+                crate::core::conditional_if_match_gate(if_match, resource_type, Some(&existing))?;
+                crate::core::delete_under_precondition(self, tenant, if_match, &existing).await?;
                 Ok(ConditionalDeleteResult::Deleted(existing))
             }
             n => {
@@ -3311,45 +3419,17 @@ impl ConditionalStorage for SqliteBackend {
         }
     }
 
-    /// Patches a resource based on search criteria.
-    ///
-    /// This implements conditional patch as defined in FHIR:
-    /// `PATCH [base]/[type]?[search-params]`
-    ///
-    /// Supports three patch formats:
-    /// - JSON Patch (RFC 6902)
-    /// - FHIRPath Patch (FHIR-specific)
-    /// - JSON Merge Patch (RFC 7386)
-    async fn conditional_patch(
+    /// The criteria resolver the provided
+    /// [`ConditionalStorage::conditional_patch`] is written in terms of: this
+    /// backend has no patch code of its own (#1406).
+    async fn resolve_conditional_matches(
         &self,
         tenant: &TenantContext,
         resource_type: &str,
         search_params: &str,
-        patch: &crate::core::PatchFormat,
-    ) -> StorageResult<crate::core::ConditionalPatchResult> {
-        use crate::core::ConditionalPatchResult;
-
-        // Find matching resources based on search parameters
-        let matches = self
-            .find_matching_resources(tenant, resource_type, search_params)
-            .await?;
-
-        match matches.len() {
-            0 => Ok(ConditionalPatchResult::NoMatch),
-            1 => {
-                // Exactly one match - apply the patch
-                let existing = matches.into_iter().next().unwrap();
-                let current_content = existing.content().clone();
-
-                // Apply the patch based on format
-                let patched_content = crate::core::apply_resource_patch(&current_content, patch)?;
-
-                // Update the resource with the patched content
-                let updated = self.update(tenant, &existing, patched_content).await?;
-                Ok(ConditionalPatchResult::Patched(updated))
-            }
-            n => Ok(ConditionalPatchResult::MultipleMatches(n)),
-        }
+    ) -> StorageResult<Vec<StoredResource>> {
+        self.find_matching_resources(tenant, resource_type, search_params)
+            .await
     }
 
     async fn conditional_matches(
@@ -7337,6 +7417,7 @@ mod tests {
                 "identifier=12345",
                 false,
                 FhirVersion::default(),
+                &crate::core::EntityTagPrecondition::Absent,
             )
             .await
             .unwrap();
@@ -7363,6 +7444,7 @@ mod tests {
                 "identifier=99999",
                 false,
                 FhirVersion::default(),
+                &crate::core::EntityTagPrecondition::Absent,
             )
             .await
             .unwrap();
@@ -7387,6 +7469,7 @@ mod tests {
                 "identifier=new-id",
                 true,
                 FhirVersion::default(),
+                &crate::core::EntityTagPrecondition::Absent,
             )
             .await
             .unwrap();
@@ -7417,7 +7500,12 @@ mod tests {
 
         // Conditional delete
         let result = backend
-            .conditional_delete(&tenant, "Patient", "_id=p1")
+            .conditional_delete(
+                &tenant,
+                "Patient",
+                "_id=p1",
+                &crate::core::EntityTagPrecondition::Absent,
+            )
             .await
             .unwrap();
 
@@ -7442,7 +7530,12 @@ mod tests {
 
         // Conditional delete with no match
         let result = backend
-            .conditional_delete(&tenant, "Patient", "_id=nonexistent")
+            .conditional_delete(
+                &tenant,
+                "Patient",
+                "_id=nonexistent",
+                &crate::core::EntityTagPrecondition::Absent,
+            )
             .await
             .unwrap();
 
@@ -7517,7 +7610,13 @@ mod tests {
         ]));
 
         let result = backend
-            .conditional_patch(&tenant, "Patient", "_id=p1", &patch)
+            .conditional_patch(
+                &tenant,
+                "Patient",
+                "_id=p1",
+                &patch,
+                &crate::core::EntityTagPrecondition::Absent,
+            )
             .await
             .unwrap();
 
@@ -7554,7 +7653,13 @@ mod tests {
         }));
 
         let result = backend
-            .conditional_patch(&tenant, "Patient", "_id=p1", &patch)
+            .conditional_patch(
+                &tenant,
+                "Patient",
+                "_id=p1",
+                &patch,
+                &crate::core::EntityTagPrecondition::Absent,
+            )
             .await
             .unwrap();
 
@@ -7579,7 +7684,13 @@ mod tests {
         ]));
 
         let result = backend
-            .conditional_patch(&tenant, "Patient", "_id=nonexistent", &patch)
+            .conditional_patch(
+                &tenant,
+                "Patient",
+                "_id=nonexistent",
+                &patch,
+                &crate::core::EntityTagPrecondition::Absent,
+            )
             .await
             .unwrap();
 

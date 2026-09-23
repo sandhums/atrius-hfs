@@ -76,6 +76,7 @@ pub mod search;
 mod search_impl;
 mod storage;
 mod subscription_outbox;
+mod sync_failures;
 mod transaction;
 mod user_settings;
 

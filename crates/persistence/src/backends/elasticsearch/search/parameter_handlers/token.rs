@@ -2,9 +2,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::search::{implicit_system_candidates, IMPLICIT_TOKEN_SYSTEM};
+use crate::search::{IMPLICIT_TOKEN_SYSTEM, implicit_system_candidates};
 use crate::types::{SearchModifier, SearchParameter};
 
 /// Builds one clause for every token value on `param`.
@@ -401,9 +401,11 @@ mod tests {
             must("|female")[2]["bool"]["should"][1],
             json!({ "term": { "search_params.token.system": IMPLICIT_TOKEN_SYSTEM } })
         );
-        assert!(!must("http://hl7.org/fhir/administrative-gender|")
-            .to_string()
-            .contains(IMPLICIT_TOKEN_SYSTEM));
+        assert!(
+            !must("http://hl7.org/fhir/administrative-gender|")
+                .to_string()
+                .contains(IMPLICIT_TOKEN_SYSTEM)
+        );
     }
 
     #[test]

@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 35;
+pub const SCHEMA_VERSION: i32 = 36;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -29,18 +29,20 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// Helios v29 (`idx_search_token_display` drop, `#945`), Helios v30
 /// (`bulk_manifests.index_pending`, `#1125`), Helios v31 (`search_index.resource_key`,
 /// `#945`), Helios v32 (`bulk_manifest_file_progress` / `skipped_entries`, `#1127`),
-/// Helios v33 (`bulk_export_jobs.attempts`, `#1041`), and
+/// Helios v33 (`bulk_export_jobs.attempts`, `#1041`), Helios v34
+/// (`secondary_sync_failures`, `#1334`), and
 /// [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at
 /// Helios v25 maps onto fork indices 16..=24 (through phase). Helios v27 maps
 /// through types (26). Helios v28 maps through the partial folded index (27)
 /// and still runs the token-display drop, index_pending, resource_key,
-/// file-progress, attempts, and `dead_at`. Helios v29 maps through the drop (28)
-/// and still runs the later five. Helios v30 maps through index_pending (29)
-/// and still runs resource_key, file-progress, attempts, and `dead_at`. Helios
+/// file-progress, attempts, secondary_sync, and `dead_at`. Helios v29 maps through the drop (28)
+/// and still runs the later six. Helios v30 maps through index_pending (29)
+/// and still runs resource_key, file-progress, attempts, secondary_sync, and `dead_at`. Helios
 /// v31 maps through resource_key (30) and still runs file-progress, attempts,
-/// and `dead_at`. Helios v32 maps through file-progress (31) and still runs
-/// attempts and `dead_at`. Helios v33 maps through attempts (32) and still
-/// runs `dead_at`.
+/// secondary_sync, and `dead_at`. Helios v32 maps through file-progress (31) and still runs
+/// attempts, secondary_sync, and `dead_at`. Helios v33 maps through attempts (32) and still
+/// runs secondary_sync and `dead_at`. Helios v34 maps through secondary_sync (33)
+/// and still runs `dead_at`.
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -75,6 +77,7 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_resource_key", migrate_v30_to_v31),
     ("bulk_manifest_file_progress", migrate_v31_to_v32),
     ("bulk_export_jobs_attempts", migrate_v32_to_v33),
+    ("secondary_sync_failures", migrate_v33_to_v34),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
@@ -1796,6 +1799,35 @@ fn migrate_v32_to_v33(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// Migrate from schema version 33 to version 34.
+///
+/// Adds `secondary_sync_failures`: the durable "needs reindex" ledger for a
+/// composite whose secondary refused a change the primary had already
+/// committed (#1334). One row per (tenant, resource, secondary), so a repeat
+/// failure folds into the existing row instead of growing the table.
+/// `last_failed_at` orders the repair queue; both timestamps are fixed-width
+/// RFC 3339 text, which sorts chronologically.
+fn migrate_v33_to_v34(conn: &Connection) -> StorageResult<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS secondary_sync_failures (
+            tenant_id TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            backend_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            first_failed_at TEXT NOT NULL,
+            last_failed_at TEXT NOT NULL,
+            last_error TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (tenant_id, resource_type, resource_id, backend_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_secondary_sync_failures_queue
+            ON secondary_sync_failures (last_failed_at);",
+    )
+    .map_err(|e| migration_err(format!("v34 create secondary_sync_failures: {e}")))?;
+    Ok(())
+}
+
 /// Migrate from schema version 10 to version 11.
 ///
 /// Adds columns supporting `_contained` search: index rows extracted from a
@@ -3143,14 +3175,20 @@ mod tests {
         assert!(applied.contains("search_index_resource_key"));
         assert!(applied.contains("bulk_manifest_file_progress"));
         assert!(applied.contains("bulk_export_jobs_attempts"));
+        assert!(applied.contains("secondary_sync_failures"));
         assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
         assert!(
             table_has_column(&conn, "bulk_export_jobs", "attempts").unwrap(),
             "v33 must add bulk_export_jobs.attempts"
         );
+        assert_eq!(
+            table_exists("secondary_sync_failures"),
+            1,
+            "v34 must create secondary_sync_failures"
+        );
         assert!(
             table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
-            "v35 must add subscription_outbox.dead_at"
+            "v36 must add subscription_outbox.dead_at"
         );
         assert_eq!(
             table_exists("resource_fts_map"),

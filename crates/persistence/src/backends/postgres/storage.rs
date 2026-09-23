@@ -33,7 +33,7 @@ use crate::types::SearchQuery;
 use crate::types::{CursorValue, Page, PageCursor, PageInfo, StoredResource};
 
 use super::PostgresBackend;
-use super::cached::{execute_cached, query_opt_cached};
+use super::cached::{execute_cached, query_cached, query_opt_cached};
 use super::search::writer::{IndexRow, PostgresSearchIndexWriter};
 
 /// Whether a resource being indexed can already have `search_index` rows.
@@ -641,196 +641,18 @@ impl ResourceStorage for PostgresBackend {
         resource_type: &str,
         id: &str,
     ) -> StorageResult<()> {
-        tenant.check_permission(Operation::Delete, resource_type)?;
+        self.soft_delete(tenant, resource_type, id, None).await
+    }
 
-        let tenant_id = tenant.tenant_id().as_str();
-        let now = Utc::now();
-        let overlay = resource_type == "SearchParameter";
-
-        let tx = super::write_tx::WriteTx::begin(self.get_client().await?).await?;
-        let result = async {
-            let client = tx.client();
-
-            // Soft delete the resource and write its deletion history row, in one
-            // statement, deriving the tombstone's version from the row itself.
-            //
-            // Three things used to be separate here: a `SELECT version_id`, an
-            // `UPDATE` compare-and-swapping against it, and an `INSERT` of the
-            // history row. The `INSERT` was folded into the `UPDATE` first; this
-            // folds in the `SELECT` too, so a delete is one round trip where it was
-            // three. On the crud suite that is 275,382 statements and 275,382
-            // occupied-connection round trips removed from a workload that already
-            // demands ~36 cores' worth of PostgreSQL execution on a 4-core host —
-            // the round trip, not the 0.06 ms of execution behind it, is what is
-            // being bought back.
-            //
-            // ## Why this is *more* atomic, not less
-            //
-            // The read-then-CAS it replaces was correct but pessimistic. Under READ
-            // COMMITTED, a writer landing between the `SELECT` and the `UPDATE`
-            // meant the `version_id = <stale>` predicate matched nothing, and this
-            // returned `NotFound` — a 404 for a resource that plainly existed and
-            // was live. Computing `version_id + 1` inside the `UPDATE`'s target list
-            // removes the window rather than detecting it: PostgreSQL takes the row
-            // lock, and if the row was concurrently updated it re-evaluates both the
-            // qualifier and the target list against the *committed new* version of
-            // the tuple (EvalPlanQual). So the tombstone's version is always exactly
-            // one more than whatever version is current at the instant the row is
-            // locked, never one more than a version that has since moved on.
-            //
-            // That is what preserves the primary-key fix the CAS was introduced for.
-            // `resource_history` is keyed `PRIMARY KEY (tenant_id, resource_type,
-            // id, version_id)` (schema.rs). The failure the CAS prevented was a
-            // history row computed from a stale read colliding with one a concurrent
-            // writer had already inserted. A version derived from the locked row
-            // cannot be stale, so it cannot collide — the invariant is enforced by
-            // construction instead of by a guard that has to lose a race to notice.
-            //
-            // A concurrent *delete* is still resolved correctly and still costs
-            // nothing extra: the loser re-evaluates `is_deleted = FALSE` against the
-            // committed tombstone, matches no row, and reports `NotFound`, which is
-            // exactly what it reported before.
-            //
-            // ## What changes, stated plainly
-            //
-            // An unconditional `DELETE` that races a concurrent `UPDATE` now
-            // succeeds — deleting the version that writer just committed — where it
-            // used to fail with `NotFound`. That is a deliberate correction: FHIR's
-            // delete interaction (https://hl7.org/fhir/http.html#delete) carries no
-            // precondition of its own, so "delete the current state" is the right
-            // reading and the 404 was spurious. Callers that *do* want a
-            // precondition use `If-Match`, which is evaluated above this layer.
-            //
-            // What this does NOT change: that `If-Match` on `DELETE` is evaluated by
-            // the REST handler (and by `delete_with_match`) against its own earlier
-            // read and is therefore still check-then-act. It was check-then-act
-            // before this change too — the CAS removed here guarded the version
-            // *this function* had read a microsecond earlier, never the version the
-            // caller's precondition was evaluated against — so no precondition
-            // guarantee moves in either direction. Making `If-Match` on `DELETE`
-            // atomic needs the expected version threaded into this statement, which
-            // is a signature change and a separate piece of work.
-            //
-            // ## The version arithmetic
-            //
-            // `version_id` is `TEXT`, so the increment is guarded rather than a bare
-            // cast: a non-numeric value would make `::bigint` raise 22P02 and turn a
-            // delete into a 500. The `CASE` reproduces the Rust it replaces —
-            // `current_version.parse::<u64>().unwrap_or(0) + 1` — for every value
-            // this server can have written (`'7'` -> 8, `'007'` -> 8, `''` and
-            // `'abc'` -> 1, matching `unwrap_or(0)`). `CASE` does not evaluate the
-            // branch it did not select, so the cast never runs on a value the regex
-            // rejected. Version ids are server-issued decimal integers on every
-            // write path in this backend, so the fallback is unreachable in
-            // practice and is here only so that it degrades the same way the Rust
-            // did rather than differently.
-            //
-            // `RETURNING` feeds the history row from the tuple just written, so the
-            // deletion entry carries the resource's own `fhir_version` without
-            // making a round trip through the client. As in `create` and `update`,
-            // no matching row means the CTE yields nothing, the insert selects
-            // nothing, and the statement reports zero rows affected — one signal for
-            // both writes.
-            //
-            // ## The tombstone stores `'null'::jsonb`, not the resource
-            //
-            // A deletion entry is the record that the resource was deleted, not a
-            // version of the resource: FHIR gives it `request.method = DELETE` and
-            // no `resource` in a history Bundle, and `410 Gone` on a vread of that
-            // version. `history_entry_to_json` has always omitted the body, and the
-            // vread handler now answers `410`, so nothing can ask for these bytes.
-            //
-            // Storing them was not free. `data` is a JSONB body of a few kilobytes;
-            // the `UPDATE` above does not touch that column, so `resources` keeps
-            // its existing TOAST datum untouched, but a TOAST pointer cannot be
-            // shared across tables — inserting it into `resource_history` detoasts
-            // the value, re-compresses it, writes it, and puts the whole body in the
-            // WAL a second time. That was 10.6% of the crud suite's Postgres
-            // execution time on run 33213565802 for a row no reader can reach.
-            //
-            // `'null'::jsonb` rather than `NULL` because `resource_history.data` is
-            // `NOT NULL` (schema v1) and both `vread` and the history readers deserialise
-            // the column into a `serde_json::Value` with a non-nullable `FromSql`;
-            // a SQL `NULL` would panic in `row.get`, and widening the column would
-            // put a migration and six read sites in the way of a write-path change.
-            // `Value::Null` reaches the same readers as a well-formed value that
-            // renders as `null`, and they already discard it for a deleted version.
-            //
-            // Rows written by an older build keep their bodies and are read back
-            // exactly as before; nothing needs backfilling, because the only reader
-            // was already dropping the value on the floor.
-            // History still stores `'null'::jsonb` (Helios #747). `RETURNING data`
-            // is only so the durable subscription outbox can stamp the pre-delete
-            // body without a second round trip; it is not written into history.
-            let deleted = query_opt_cached(
-                client,
-                "WITH del AS (
-                     UPDATE resources
-                     SET is_deleted = TRUE,
-                         deleted_at = $1,
-                         last_updated = $1,
-                         version_id = ((CASE WHEN version_id ~ '^[0-9]+$' THEN version_id::bigint ELSE 0 END) + 1)::text
-                     WHERE tenant_id = $2 AND resource_type = $3 AND id = $4
-                       AND is_deleted = FALSE
-                     RETURNING tenant_id, resource_type, id, version_id, last_updated, is_deleted, fhir_version, data
-                 ),
-                 hist AS (
-                     INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-                     SELECT tenant_id, resource_type, id, version_id, 'null'::jsonb, last_updated, is_deleted, fhir_version FROM del
-                 )
-                 SELECT version_id, fhir_version, data FROM del",
-                &[&now, &tenant_id, &resource_type, &id],
-            )
+    async fn delete_versioned(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        id: &str,
+        expected_version: &str,
+    ) -> StorageResult<()> {
+        self.soft_delete(tenant, resource_type, id, Some(expected_version))
             .await
-            .map_err(|e| internal_error(format!("Failed to delete resource: {}", e)))?;
-
-            let Some(deleted) = deleted else {
-                return Err(StorageError::Resource(ResourceError::NotFound {
-                    resource_type: resource_type.to_string(),
-                    id: id.to_string(),
-                }));
-            };
-
-            // Delete search index entries (skip when search is offloaded)
-            if !self.is_search_offloaded() {
-                execute_cached(
-                    client,
-                    "DELETE FROM search_index WHERE tenant_id = $1 AND resource_type = $2 AND resource_id = $3",
-                    &[&tenant_id, &resource_type, &id],
-                )
-                .await
-                .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
-            }
-
-            let new_version_str: String = deleted.get(0);
-            let fhir_version_str: String = deleted.get(1);
-            let previous_resource: Value = deleted.get(2);
-            let fhir_version = FhirVersion::from_storage(&fhir_version_str)
-                .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
-            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
-                client,
-                tenant.tenant_id(),
-                fhir_version,
-                resource_type,
-                id,
-                &new_version_str,
-                crate::core::OutboxEventType::Delete,
-                None,
-                Some(previous_resource),
-            )
-            .await?;
-            Ok(())
-        }
-        .await;
-        tx.finish(result).await?;
-
-        if overlay {
-            if let Err(e) = self.reload_stored_cache().await {
-                tracing::warn!("SearchParameter cache reload failed: {e}");
-            }
-        }
-
-        Ok(())
     }
 
     async fn count(
@@ -1345,6 +1167,236 @@ impl ResourceStorage for PostgresBackend {
 // ============================================================================
 
 impl PostgresBackend {
+    /// Soft-deletes a resource, optionally only at `expected_version`
+    /// ([`ResourceStorage::delete`] / [`ResourceStorage::delete_versioned`]).
+    async fn soft_delete(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        id: &str,
+        expected_version: Option<&str>,
+    ) -> StorageResult<()> {
+        tenant.check_permission(Operation::Delete, resource_type)?;
+
+        let overlay = resource_type == "SearchParameter";
+        let tenant_id = tenant.tenant_id().as_str();
+        let now = Utc::now();
+
+        let tx = super::write_tx::WriteTx::begin(self.get_client().await?).await?;
+        let result = async {
+            let client = tx.client();
+
+        // Soft delete the resource and write its deletion history row, in one
+        // statement, deriving the tombstone's version from the row itself.
+        //
+        // Three things used to be separate here: a `SELECT version_id`, an
+        // `UPDATE` compare-and-swapping against it, and an `INSERT` of the
+        // history row. The `INSERT` was folded into the `UPDATE` first; this
+        // folds in the `SELECT` too, so a delete is one round trip where it was
+        // three. On the crud suite that is 275,382 statements and 275,382
+        // occupied-connection round trips removed from a workload that already
+        // demands ~36 cores' worth of PostgreSQL execution on a 4-core host —
+        // the round trip, not the 0.06 ms of execution behind it, is what is
+        // being bought back.
+        //
+        // ## Why this is *more* atomic, not less
+        //
+        // The read-then-CAS it replaces was correct but pessimistic. Under READ
+        // COMMITTED, a writer landing between the `SELECT` and the `UPDATE`
+        // meant the `version_id = <stale>` predicate matched nothing, and this
+        // returned `NotFound` — a 404 for a resource that plainly existed and
+        // was live. Computing `version_id + 1` inside the `UPDATE`'s target list
+        // removes the window rather than detecting it: PostgreSQL takes the row
+        // lock, and if the row was concurrently updated it re-evaluates both the
+        // qualifier and the target list against the *committed new* version of
+        // the tuple (EvalPlanQual). So the tombstone's version is always exactly
+        // one more than whatever version is current at the instant the row is
+        // locked, never one more than a version that has since moved on.
+        //
+        // That is what preserves the primary-key fix the CAS was introduced for.
+        // `resource_history` is keyed `PRIMARY KEY (tenant_id, resource_type,
+        // id, version_id)` (schema.rs). The failure the CAS prevented was a
+        // history row computed from a stale read colliding with one a concurrent
+        // writer had already inserted. A version derived from the locked row
+        // cannot be stale, so it cannot collide — the invariant is enforced by
+        // construction instead of by a guard that has to lose a race to notice.
+        //
+        // A concurrent *delete* is still resolved correctly and still costs
+        // nothing extra: the loser re-evaluates `is_deleted = FALSE` against the
+        // committed tombstone, matches no row, and reports `NotFound`, which is
+        // exactly what it reported before.
+        //
+        // ## What changes, stated plainly
+        //
+        // An unconditional `DELETE` that races a concurrent `UPDATE` now
+        // succeeds — deleting the version that writer just committed — where it
+        // used to fail with `NotFound`. That is a deliberate correction: FHIR's
+        // delete interaction (https://hl7.org/fhir/http.html#delete) carries no
+        // precondition of its own, so "delete the current state" is the right
+        // reading and the 404 was spurious. Callers that *do* want a
+        // precondition use `If-Match`, which is evaluated above this layer.
+        //
+        // ## The versioned form (#1404)
+        //
+        // `If-Match` on `DELETE` used to be evaluated above this layer against
+        // an earlier read and followed by this unconditional statement —
+        // check-then-act, so a writer landing in between was deleted along with
+        // the version the client named. `expected_version` threads the
+        // precondition into the statement: `$5 IS NULL OR version_id = $5` is
+        // evaluated on the locked row, and re-evaluated by EvalPlanQual against
+        // the committed tuple if a writer got there first, so the comparison and
+        // the delete cannot be separated. With no expected version the
+        // predicate is constant-true and the statement is the one above.
+        //
+        // ## The version arithmetic
+        //
+        // `version_id` is `TEXT`, so the increment is guarded rather than a bare
+        // cast: a non-numeric value would make `::bigint` raise 22P02 and turn a
+        // delete into a 500. The `CASE` reproduces the Rust it replaces —
+        // `current_version.parse::<u64>().unwrap_or(0) + 1` — for every value
+        // this server can have written (`'7'` -> 8, `'007'` -> 8, `''` and
+        // `'abc'` -> 1, matching `unwrap_or(0)`). `CASE` does not evaluate the
+        // branch it did not select, so the cast never runs on a value the regex
+        // rejected. Version ids are server-issued decimal integers on every
+        // write path in this backend, so the fallback is unreachable in
+        // practice and is here only so that it degrades the same way the Rust
+        // did rather than differently.
+        //
+        // `RETURNING` feeds the history row from the tuple just written, so the
+        // deletion entry carries the resource's own `fhir_version` without
+        // making a round trip through the client. As in `create` and `update`,
+        // no matching row means the CTE yields nothing, the insert selects
+        // nothing, and the statement reports zero rows affected — one signal for
+        // both writes. One statement is also one implicit transaction: the
+        // tombstone lands with the delete or neither does.
+        //
+        // ## The tombstone stores `'null'::jsonb`, not the resource
+        //
+        // A deletion entry is the record that the resource was deleted, not a
+        // version of the resource: FHIR gives it `request.method = DELETE` and
+        // no `resource` in a history Bundle, and `410 Gone` on a vread of that
+        // version. `history_entry_to_json` has always omitted the body, and the
+        // vread handler now answers `410`, so nothing can ask for these bytes.
+        //
+        // Storing them was not free. `data` is a JSONB body of a few kilobytes;
+        // the `UPDATE` above does not touch that column, so `resources` keeps
+        // its existing TOAST datum untouched, but a TOAST pointer cannot be
+        // shared across tables — inserting it into `resource_history` detoasts
+        // the value, re-compresses it, writes it, and puts the whole body in the
+        // WAL a second time. That was 10.6% of the crud suite's Postgres
+        // execution time on run 33213565802 for a row no reader can reach.
+        //
+        // `'null'::jsonb` rather than `NULL` because `resource_history.data` is
+        // `NOT NULL` (schema v1) and both `vread` and the history readers deserialise
+        // the column into a `serde_json::Value` with a non-nullable `FromSql`;
+        // a SQL `NULL` would panic in `row.get`, and widening the column would
+        // put a migration and six read sites in the way of a write-path change.
+        // `Value::Null` reaches the same readers as a well-formed value that
+        // renders as `null`, and they already discard it for a deleted version.
+        //
+        // Rows written by an older build keep their bodies and are read back
+        // exactly as before; nothing needs backfilling, because the only reader
+        // was already dropping the value on the floor.
+        //
+        // History still stores `'null'::jsonb`. `RETURNING data` is only so the
+        // durable subscription outbox can stamp the pre-delete body without a
+        // second round trip; it is not written into history.
+            let deleted = query_opt_cached(
+                client,
+                "WITH del AS (
+                     UPDATE resources
+                     SET is_deleted = TRUE,
+                         deleted_at = $1,
+                         last_updated = $1,
+                         version_id = ((CASE WHEN version_id ~ '^[0-9]+$' THEN version_id::bigint ELSE 0 END) + 1)::text
+                     WHERE tenant_id = $2 AND resource_type = $3 AND id = $4
+                       AND is_deleted = FALSE
+                       AND ($5::text IS NULL OR version_id = $5::text)
+                     RETURNING tenant_id, resource_type, id, version_id, last_updated, is_deleted, fhir_version, data
+                 ),
+                 hist AS (
+                     INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                     SELECT tenant_id, resource_type, id, version_id, 'null'::jsonb, last_updated, is_deleted, fhir_version FROM del
+                 )
+                 SELECT version_id, fhir_version, data FROM del",
+                &[&now, &tenant_id, &resource_type, &id, &expected_version],
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to delete resource: {}", e)))?;
+
+            let Some(deleted) = deleted else {
+                // Matched nothing. For a versioned delete that is either "nothing
+                // live" or "live at another version"; telling them apart costs a
+                // query, but only on the path that is already failing.
+                if let Some(expected) = expected_version {
+                    let actual = client
+                        .query_opt(
+                            "SELECT version_id FROM resources
+                         WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = FALSE",
+                            &[&tenant_id, &resource_type, &id],
+                        )
+                        .await
+                        .map_err(|e| {
+                            internal_error(format!("Failed to get current version: {}", e))
+                        })?;
+                    if let Some(row) = actual {
+                        return Err(StorageError::Concurrency(
+                            ConcurrencyError::VersionConflict {
+                                resource_type: resource_type.to_string(),
+                                id: id.to_string(),
+                                expected_version: expected.to_string(),
+                                actual_version: row.get::<_, String>(0),
+                            },
+                        ));
+                    }
+                }
+                return Err(StorageError::Resource(ResourceError::NotFound {
+                    resource_type: resource_type.to_string(),
+                    id: id.to_string(),
+                }));
+            };
+
+            if !self.is_search_offloaded() {
+                execute_cached(
+                    client,
+                    "DELETE FROM search_index WHERE tenant_id = $1 AND resource_type = $2 AND resource_id = $3",
+                    &[&tenant_id, &resource_type, &id],
+                )
+                .await
+                .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
+            }
+
+            let new_version_str: String = deleted.get(0);
+            let fhir_version_str: String = deleted.get(1);
+            let previous_resource: Value = deleted.get(2);
+            let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+                .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                client,
+                tenant.tenant_id(),
+                fhir_version,
+                resource_type,
+                id,
+                &new_version_str,
+                crate::core::OutboxEventType::Delete,
+                None,
+                Some(previous_resource),
+            )
+            .await?;
+            Ok(())
+        }
+        .await;
+        tx.finish(result).await?;
+
+        if overlay {
+            if let Err(e) = self.reload_stored_cache().await {
+                tracing::warn!("SearchParameter cache reload failed: {e}");
+            }
+        }
+
+        Ok(())
+    }
+
     /// Brings a soft-deleted resource back to life with new content.
     ///
     /// FHIR permits a deleted resource to be restored by a subsequent update
@@ -2227,8 +2279,12 @@ impl VersionedStorage for PostgresBackend {
             ));
         }
 
-        // Perform delete
-        self.delete(tenant, resource_type, id).await
+        // Delete exactly the version the precondition was evaluated against.
+        // A plain `delete` here was check-then-act: a writer landing after the
+        // read above was deleted along with the version the client named
+        // (#1404).
+        self.delete_versioned(tenant, resource_type, id, &current_version)
+            .await
     }
 
     async fn list_versions(
@@ -3149,6 +3205,11 @@ impl PurgableStorage for PostgresBackend {
 
 #[async_trait]
 impl ConditionalStorage for PostgresBackend {
+    fn supports_conditional(&self, interaction: crate::core::ConditionalInteraction) -> bool {
+        // One declaration: the capability list the contract test pins (#1384).
+        crate::core::Backend::supports(self, interaction.capability())
+    }
+
     async fn conditional_create(
         &self,
         tenant: &TenantContext,
@@ -3183,6 +3244,7 @@ impl ConditionalStorage for PostgresBackend {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn conditional_update(
         &self,
         tenant: &TenantContext,
@@ -3191,6 +3253,7 @@ impl ConditionalStorage for PostgresBackend {
         search_params: &str,
         upsert: bool,
         fhir_version: FhirVersion,
+        if_match: &crate::core::EntityTagPrecondition,
     ) -> StorageResult<ConditionalUpdateResult> {
         // Find matching resources based on search parameters
         let matches = self
@@ -3199,6 +3262,9 @@ impl ConditionalStorage for PostgresBackend {
 
         match matches.len() {
             0 => {
+                // `If-Match` names a version; nothing matched, so nothing
+                // can carry it and the create below must not run (#1381).
+                crate::core::conditional_if_match_gate(if_match, resource_type, None)?;
                 if upsert {
                     // No match, but upsert is true - create new resource
                     let created = self
@@ -3211,8 +3277,11 @@ impl ConditionalStorage for PostgresBackend {
                 }
             }
             1 => {
-                // Exactly one match - update it (preserves existing FHIR version)
+                // Exactly one match - update it (preserves existing FHIR version).
+                // `update` compares-and-swaps on `existing`'s version, the one
+                // `If-Match` is evaluated against here.
                 let existing = matches.into_iter().next().unwrap();
+                crate::core::conditional_if_match_gate(if_match, resource_type, Some(&existing))?;
                 let updated = self.update(tenant, &existing, resource).await?;
                 Ok(ConditionalUpdateResult::Updated(updated))
             }
@@ -3228,6 +3297,7 @@ impl ConditionalStorage for PostgresBackend {
         tenant: &TenantContext,
         resource_type: &str,
         search_params: &str,
+        if_match: &crate::core::EntityTagPrecondition,
     ) -> StorageResult<ConditionalDeleteResult> {
         // Find matching resources based on search parameters
         let matches = self
@@ -3236,13 +3306,16 @@ impl ConditionalStorage for PostgresBackend {
 
         match matches.len() {
             0 => {
-                // No match
+                // No match. A supplied `If-Match` fails against it, as it
+                // does on `DELETE [type]/[id]` for a missing resource.
+                crate::core::conditional_if_match_gate(if_match, resource_type, None)?;
                 Ok(ConditionalDeleteResult::NoMatch)
             }
             1 => {
                 // Exactly one match - delete it
                 let existing = matches.into_iter().next().unwrap();
-                self.delete(tenant, resource_type, existing.id()).await?;
+                crate::core::conditional_if_match_gate(if_match, resource_type, Some(&existing))?;
+                crate::core::delete_under_precondition(self, tenant, if_match, &existing).await?;
                 Ok(ConditionalDeleteResult::Deleted(existing))
             }
             n => {
@@ -3252,36 +3325,17 @@ impl ConditionalStorage for PostgresBackend {
         }
     }
 
-    async fn conditional_patch(
+    /// The criteria resolver the provided
+    /// [`ConditionalStorage::conditional_patch`] is written in terms of: this
+    /// backend has no patch code of its own (#1406).
+    async fn resolve_conditional_matches(
         &self,
         tenant: &TenantContext,
         resource_type: &str,
         search_params: &str,
-        patch: &crate::core::PatchFormat,
-    ) -> StorageResult<crate::core::ConditionalPatchResult> {
-        use crate::core::ConditionalPatchResult;
-
-        // Find matching resources based on search parameters
-        let matches = self
-            .find_matching_resources(tenant, resource_type, search_params)
-            .await?;
-
-        match matches.len() {
-            0 => Ok(ConditionalPatchResult::NoMatch),
-            1 => {
-                // Exactly one match - apply the patch
-                let existing = matches.into_iter().next().unwrap();
-                let current_content = existing.content().clone();
-
-                // Apply the patch based on format
-                let patched_content = crate::core::apply_resource_patch(&current_content, patch)?;
-
-                // Update the resource with the patched content
-                let updated = self.update(tenant, &existing, patched_content).await?;
-                Ok(ConditionalPatchResult::Patched(updated))
-            }
-            n => Ok(ConditionalPatchResult::MultipleMatches(n)),
-        }
+    ) -> StorageResult<Vec<StoredResource>> {
+        self.find_matching_resources(tenant, resource_type, search_params)
+            .await
     }
 
     async fn conditional_matches(
@@ -3787,6 +3841,102 @@ fn resolve_bundle_references(
 // resources are read from during a reindex.
 // ============================================================================
 
+// Size only the count-limited keys, then fetch bodies only for the admitted
+// prefix. MATERIALIZED keeps the count-limited keys and the ranked window
+// result fixed before the byte filter; without the ranked fence PostgreSQL 16
+// can return a row whose ordinal exceeds the count limit. The lookahead key
+// makes end-of-type exact.
+const REINDEX_CAPPED_INITIAL_SQL: &str = r#"
+/* hfs_reindex_capped_initial */
+WITH keys AS MATERIALIZED (
+    SELECT id, last_updated FROM resources
+    WHERE tenant_id = $1 AND resource_type = $2 AND is_deleted = FALSE
+    ORDER BY last_updated ASC, id ASC LIMIT $3
+),
+sizes AS MATERIALIZED (
+    SELECT k.id, k.last_updated, octet_length(r.data::text)::bigint AS content_bytes
+    FROM keys k
+    JOIN resources r ON r.tenant_id = $1 AND r.resource_type = $2 AND r.id = k.id
+),
+ranked AS MATERIALIZED (
+    SELECT id, last_updated, content_bytes,
+           row_number() OVER (ORDER BY last_updated, id) AS ordinal,
+           sum(content_bytes) OVER (
+               ORDER BY last_updated, id ROWS UNBOUNDED PRECEDING
+           ) AS running_bytes
+    FROM sizes
+),
+admitted AS MATERIALIZED (
+    SELECT id, last_updated, content_bytes FROM ranked
+    WHERE ordinal <= $4 AND (ordinal = 1 OR running_bytes <= $5::text::numeric)
+)
+SELECT r.id, r.version_id, r.data, r.last_updated, r.fhir_version,
+       a.content_bytes,
+       (SELECT count(*) FROM sizes) > (SELECT count(*) FROM admitted) AS has_more
+FROM admitted a
+JOIN resources r ON r.tenant_id = $1 AND r.resource_type = $2 AND r.id = a.id
+ORDER BY a.last_updated ASC, a.id ASC
+"#;
+
+const REINDEX_CAPPED_CONTINUATION_SQL: &str = r#"
+/* hfs_reindex_capped_continuation */
+WITH keys AS MATERIALIZED (
+    SELECT id, last_updated FROM resources
+    WHERE tenant_id = $1 AND resource_type = $2 AND is_deleted = FALSE
+      AND (last_updated > $3 OR (last_updated = $3 AND id > $4))
+    ORDER BY last_updated ASC, id ASC LIMIT $5
+),
+sizes AS MATERIALIZED (
+    SELECT k.id, k.last_updated, octet_length(r.data::text)::bigint AS content_bytes
+    FROM keys k
+    JOIN resources r ON r.tenant_id = $1 AND r.resource_type = $2 AND r.id = k.id
+),
+ranked AS MATERIALIZED (
+    SELECT id, last_updated, content_bytes,
+           row_number() OVER (ORDER BY last_updated, id) AS ordinal,
+           sum(content_bytes) OVER (
+               ORDER BY last_updated, id ROWS UNBOUNDED PRECEDING
+           ) AS running_bytes
+    FROM sizes
+),
+admitted AS MATERIALIZED (
+    SELECT id, last_updated, content_bytes FROM ranked
+    WHERE ordinal <= $6 AND (ordinal = 1 OR running_bytes <= $7::text::numeric)
+)
+SELECT r.id, r.version_id, r.data, r.last_updated, r.fhir_version,
+       a.content_bytes,
+       (SELECT count(*) FROM sizes) > (SELECT count(*) FROM admitted) AS has_more
+FROM admitted a
+JOIN resources r ON r.tenant_id = $1 AND r.resource_type = $2 AND r.id = a.id
+ORDER BY a.last_updated ASC, a.id ASC
+"#;
+
+fn decode_reindex_page_row(
+    row: &tokio_postgres::Row,
+    tenant: &TenantContext,
+    resource_type: &str,
+) -> StoredResource {
+    let id: String = row.get(0);
+    let version_id: String = row.get(1);
+    let data: Value = row.get(2);
+    let last_updated: DateTime<Utc> = row.get(3);
+    let fhir_version_str: String = row.get(4);
+    let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+        .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+
+    StoredResource::from_storage(
+        resource_type,
+        id,
+        version_id,
+        tenant.tenant_id().clone(),
+        data,
+        last_updated,
+        last_updated,
+        None,
+        fhir_version,
+    )
+}
+
 #[async_trait]
 impl ReindexSource for PostgresBackend {
     async fn list_resource_types(&self, tenant: &TenantContext) -> StorageResult<Vec<String>> {
@@ -3869,27 +4019,7 @@ impl ReindexSource for PostgresBackend {
 
         let resources: Vec<StoredResource> = rows
             .iter()
-            .map(|row| {
-                let id: String = row.get(0);
-                let version_id: String = row.get(1);
-                let data: Value = row.get(2);
-                let last_updated: DateTime<Utc> = row.get(3);
-                let fhir_version_str: String = row.get(4);
-                let fhir_version = FhirVersion::from_storage(&fhir_version_str)
-                    .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
-
-                StoredResource::from_storage(
-                    resource_type,
-                    id,
-                    version_id,
-                    tenant.tenant_id().clone(),
-                    data,
-                    last_updated,
-                    last_updated,
-                    None,
-                    fhir_version,
-                )
-            })
+            .map(|row| decode_reindex_page_row(row, tenant, resource_type))
             .collect();
 
         // Determine next cursor
@@ -3901,6 +4031,98 @@ impl ReindexSource for PostgresBackend {
             None
         };
 
+        Ok(ResourcePage {
+            resources,
+            next_cursor,
+            skipped: Vec::new(),
+        })
+    }
+
+    async fn fetch_resources_page_capped(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        cursor: Option<&str>,
+        limit: u32,
+        max_bytes: u64,
+    ) -> StorageResult<ResourcePage> {
+        if limit == 0 {
+            return Ok(ResourcePage {
+                resources: Vec::new(),
+                next_cursor: None,
+                skipped: Vec::new(),
+            });
+        }
+        if max_bytes == 0 {
+            return self
+                .fetch_resources_page(tenant, resource_type, cursor, limit)
+                .await;
+        }
+
+        // Keep the uncapped PostgreSQL cursor parser's behavior, including
+        // restarting for a token with a component count other than two.
+        let (cursor_ts, cursor_id) = if let Some(c) = cursor {
+            let parts: Vec<&str> = c.split('|').collect();
+            if parts.len() == 2 {
+                let ts = DateTime::parse_from_rfc3339(parts[0])
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .map_err(|e| internal_error(format!("Invalid cursor timestamp: {}", e)))?;
+                (Some(ts), Some(parts[1].to_string()))
+            } else {
+                (None, None)
+            }
+        } else {
+            (None, None)
+        };
+
+        let client = self.get_client().await?;
+        let tenant_id = tenant.tenant_id().as_str();
+        let lookahead = i64::from(limit) + 1;
+        let count_limit = i64::from(limit);
+        let byte_cap = max_bytes.to_string();
+        let rows = if let (Some(ts), Some(id)) = (&cursor_ts, &cursor_id) {
+            query_cached(
+                &client,
+                REINDEX_CAPPED_CONTINUATION_SQL,
+                &[
+                    &tenant_id,
+                    &resource_type,
+                    ts,
+                    &id.as_str(),
+                    &lookahead,
+                    &count_limit,
+                    &byte_cap,
+                ],
+            )
+            .await
+        } else {
+            query_cached(
+                &client,
+                REINDEX_CAPPED_INITIAL_SQL,
+                &[
+                    &tenant_id,
+                    &resource_type,
+                    &lookahead,
+                    &count_limit,
+                    &byte_cap,
+                ],
+            )
+            .await
+        }
+        .map_err(|e| internal_error(format!("Failed to fetch resources page: {}", e)))?;
+
+        let has_more = rows.first().is_some_and(|row| row.get::<_, bool>(6));
+        let resources: Vec<StoredResource> = rows
+            .iter()
+            .map(|row| decode_reindex_page_row(row, tenant, resource_type))
+            .collect();
+        let next_cursor = if has_more {
+            resources
+                .last()
+                .map(|r| format!("{}|{}", r.last_modified().to_rfc3339(), r.id()))
+        } else {
+            None
+        };
         Ok(ResourcePage {
             resources,
             next_cursor,

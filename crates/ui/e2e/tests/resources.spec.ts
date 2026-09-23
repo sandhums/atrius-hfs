@@ -1,5 +1,10 @@
 import { test, expect } from "../pages/fixtures";
-import { createResource, updateResource, waitSearchable } from "../pages/api";
+import {
+  createResource,
+  updateResource,
+  waitSearchable,
+  deleteResources,
+} from "../pages/api";
 import type { ResourcesPage } from "../pages/resources";
 
 // The Resources workspace beyond the edit flows: the type rail (filter + live
@@ -141,6 +146,96 @@ test("the results heading sits on the same row as its count", async ({ resources
   expect(geometry.headingMarginBottom).toBe("0px");
 });
 
+// #1426: the results header groups digits for the active UI locale — English
+// 12345 reads "12,345 results", Spanish "12.345 resultados", German "12.345
+// Ergebnisse" — while the typed search still goes out exactly as before. The
+// Bundles are intercepted: five digits and a grouped include count would
+// otherwise mean seeding thousands of real resources.
+test("the results header groups counts in the active locale", async ({ page, resources }) => {
+  const patient = (id: string) => ({ resource: { resourceType: "Patient", id } });
+  const searchset = (
+    total: number | null,
+    entry: Array<{ resource: { resourceType: string; id: string } }>,
+    next = false,
+  ) => ({
+    resourceType: "Bundle",
+    type: "searchset",
+    ...(total === null ? {} : { total }),
+    ...(next ? { link: [{ relation: "next", url: "/Patient?_id=more&page=2" }] } : {}),
+    entry,
+  });
+
+  // One route serves every case: the run's own `_id` picks its Bundle, and
+  // anything else (the page's default Patient listing) answers empty.
+  const bundles: Record<string, unknown> = {
+    // Five digits is the smallest exact count *all* the locales below group:
+    // Spanish CLDR leaves four digits ungrouped ("1234 resultados").
+    "count-en": searchset(12345, [patient("count-en")]),
+    "count-es": searchset(12345, [patient("count-es")]),
+    "count-de": searchset(12345, [patient("count-de")]),
+    // One page whose total matches its entries: the include count runs
+    // through the same formatter.
+    "count-included": searchset(1235, [
+      patient("count-included"),
+      ...Array.from({ length: 1234 }, (_, index) => ({
+        resource: { resourceType: "Organization", id: `org-${index}` },
+      })),
+    ]),
+    // No `Bundle.total` with a next page: the page count is grouped and keeps
+    // its `+` wording (#1003).
+    "count-partial": searchset(
+      null,
+      Array.from({ length: 1234 }, (_, index) => patient(`p-${index}`)),
+      true,
+    ),
+    "count-small": searchset(42, [patient("count-small")]),
+    "count-zero": searchset(0, []),
+  };
+  const wire: string[] = [];
+  await page.route(
+    (url) => url.pathname.endsWith("/Patient") && url.search !== "",
+    async (route) => {
+      const url = new URL(route.request().url());
+      const marker = url.searchParams.get("_id") || "";
+      if (marker) wire.push(url.search);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/fhir+json",
+        body: JSON.stringify(bundles[marker] ?? searchset(0, [])),
+      });
+    },
+  );
+
+  const scenarios = [
+    { lang: "en", marker: "count-en", expected: "12,345 results" },
+    { lang: "es", marker: "count-es", expected: "12.345 resultados" },
+    { lang: "de", marker: "count-de", expected: "12.345 Ergebnisse" },
+    { lang: "en", marker: "count-included", expected: "1,235 results · 1,234 included" },
+    { lang: "en", marker: "count-partial", expected: "1,234+ results" },
+    { lang: "en", marker: "count-small", expected: "42 results" },
+    { lang: "en", marker: "count-zero", expected: "0 results" },
+  ] as const;
+  for (const scenario of scenarios) {
+    // `?lang=` is the page's own language switch (the fixture starts from a
+    // clean cookie jar), so each case states the locale it asserts.
+    await page.goto(`/ui/resources?type=Patient&lang=${scenario.lang}`, {
+      waitUntil: "networkidle",
+    });
+    await expect(page.locator("html")).toHaveAttribute("lang", scenario.lang);
+    await switchToBuilderMode(resources);
+    await resources.results.waitShown();
+
+    await resources.builder.run(`Patient?_id=${scenario.marker}`);
+    await expect(resources.results.meta).toHaveText(scenario.expected);
+  }
+
+  // Grouping is a rendering concern only: every run still asked for exactly
+  // the query the user typed, plus the existing `_total=accurate` (#1003).
+  await expect
+    .poll(() => wire)
+    .toEqual(scenarios.map((scenario) => `?_id=${scenario.marker}&_total=accurate`));
+});
+
 test("selecting a type updates the Create label and the URL", async ({ resources, page }) => {
   await resources.goto("Patient");
   await expect(resources.createLabel).toHaveText("Create new Patient");
@@ -190,6 +285,89 @@ test("a ?url= deep link still wins over the default Patient context", async ({ r
   await expect(resources.railItem("Observation")).toHaveAttribute("aria-current", "true");
   await expect(resources.createLabel).toHaveText("Create new Observation");
   await resources.results.waitShown();
+});
+
+test("URL encoding: Resources and deep links retain visual ampersands", async ({
+  page,
+  request,
+  resources,
+}) => {
+  const literal = "A&A HEALTHCARE LLC";
+  const expected = "GET /Location?name=A%26A%20HEALTHCARE%20LLC&_summary=true";
+  const deepLink = "/Location?name=A%26A%20HEALTHCARE%20LLC&_summary=true";
+  const ids: string[] = [];
+  const expectHydrated = async (withResults: boolean) => {
+    await expect(resources.builder.url).toHaveValue(expected);
+    await expect(resources.builder.conditionRows).toHaveCount(1);
+    await expect(
+      resources.builder.conditionRows.first().locator(".builder-row__value"),
+    ).toHaveValue(literal);
+    if (!withResults) return;
+    await expect(resources.results.rows).toHaveCount(2);
+    await expect(
+      resources.results.rows.locator(`[data-resource-id="${ids[0]}"]`),
+    ).toHaveCount(1);
+    await expect(
+      resources.results.rows.locator(`[data-resource-id="${ids[1]}"]`),
+    ).toHaveCount(1);
+    await expect(
+      resources.results.rows.locator(`[data-resource-id="${ids[2]}"]`),
+    ).toHaveCount(0);
+  };
+
+  try {
+    for (let i = 0; i < 2; i++) {
+      ids.push(await createResource(request, "Location", { name: literal }));
+    }
+    ids.push(await createResource(request, "Location", { name: "A ONLY DECOY" }));
+    for (const id of ids) await waitSearchable(request, "Location", id);
+
+    await resources.goto("Location");
+    await switchToBuilderMode(resources);
+    await resources.builder.addButton("condition").click();
+    const row = resources.builder.conditionRows.first();
+    await row.locator(".builder-row__key").fill("name");
+    await row.locator(".builder-row__value").fill(literal);
+    await expect(resources.builder.url).toHaveValue(expected);
+
+    const requestSent = page.waitForRequest((candidate) => {
+      const url = new URL(candidate.url());
+      return url.pathname === "/Location" && url.searchParams.has("name");
+    });
+    const recentPersisted = page.waitForResponse((response) => {
+      return (
+        new URL(response.url()).pathname === "/_user/settings" &&
+        response.request().method() === "PATCH" &&
+        response.ok()
+      );
+    });
+    await resources.builder.runButton.click();
+    const [sent] = await Promise.all([requestSent, recentPersisted]);
+    const sentUrl = new URL(sent.url());
+    expect(sentUrl.searchParams.getAll("name")).toEqual([literal]);
+    await expectHydrated(true);
+
+    await page.reload({ waitUntil: "networkidle" });
+    await switchToBuilderMode(resources);
+    await resources.builder.recentToggle.click();
+    await resources.builder.recentPanel
+      .getByRole("button", { name: expected, exact: true })
+      .click();
+    await expectHydrated(false);
+
+    for (const route of ["/ui/resources", "/ui/queries"]) {
+      const url = route + "?url=" + encodeURIComponent(deepLink);
+      await page.goto(url, { waitUntil: "networkidle" });
+      await switchToBuilderMode(resources);
+      await expectHydrated(true);
+
+      await page.reload({ waitUntil: "networkidle" });
+      await switchToBuilderMode(resources);
+      await expectHydrated(true);
+    }
+  } finally {
+    await deleteResources(request, "Location", ids);
+  }
 });
 
 test("invalid, wrong-case, and empty inputs fail closed without losing the typed query", async ({
