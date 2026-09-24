@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 use helios_fhir::FhirVersion;
 use serde_json::Value;
 use std::collections::HashSet;
+use std::sync::LazyLock;
 use std::time::Duration as StdDuration;
 use tokio::io::{AsyncBufRead, AsyncBufReadExt};
 use uuid::Uuid;
@@ -31,9 +32,10 @@ use crate::error::{BackendError, BulkSubmitError, StorageError, StorageResult};
 use crate::tenant::{TenantContext, TenantId, TenantPermissions};
 
 use super::PostgresBackend;
-use super::cached::{query_cached, query_opt_cached};
+use super::cached::{execute_cached, query_cached, query_one_cached, query_opt_cached};
 
 const MAX_GROUPED_FRESH_CREATES: usize = 100;
+const MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES: usize = 8 * 1024 * 1024;
 
 const FRESH_CREATE_CANDIDATES_SQL: &str = "\
 SELECT resource.resource_type, resource.id
@@ -78,13 +80,88 @@ fn internal_error(message: String) -> StorageError {
     })
 }
 
+#[derive(Default)]
+struct JsonByteCounter {
+    bytes: usize,
+}
+
+impl std::io::Write for JsonByteCounter {
+    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        self.bytes = self
+            .bytes
+            .checked_add(buffer.len())
+            .ok_or_else(|| std::io::Error::other("compact JSON byte count overflowed usize"))?;
+        Ok(buffer.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+fn compact_json_bytes(resource: &Value) -> StorageResult<usize> {
+    let mut counter = JsonByteCounter::default();
+    serde_json::to_writer(&mut counter, resource).map_err(|error| {
+        internal_error(format!("Failed to count compact resource JSON: {error}"))
+    })?;
+    Ok(counter.bytes)
+}
+
+/// Partitions one fresh run into ordered resource-write groups. The ranges
+/// retain no serialized payload and each non-oversized group fits both the SQL
+/// row limit and the compact input-JSON content budget. An oversized resource
+/// is deliberately returned as a singleton.
+fn grouped_fresh_create_ranges(
+    entries: &[NdjsonEntry],
+) -> StorageResult<Vec<std::ops::Range<usize>>> {
+    let mut ranges = Vec::new();
+    let mut group_start = 0;
+    let mut group_count = 0;
+    let mut group_bytes = 0usize;
+
+    for (index, entry) in entries.iter().enumerate() {
+        let entry_bytes = compact_json_bytes(&entry.resource)?;
+        let combined_bytes = group_bytes.checked_add(entry_bytes).ok_or_else(|| {
+            internal_error("Grouped fresh-create content byte count overflowed usize".to_string())
+        })?;
+
+        if group_count > 0
+            && (group_count == MAX_GROUPED_FRESH_CREATES
+                || combined_bytes > MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES)
+        {
+            ranges.push(group_start..index);
+            group_start = index;
+            group_count = 0;
+            group_bytes = 0;
+        }
+
+        group_count += 1;
+        group_bytes = group_bytes.checked_add(entry_bytes).ok_or_else(|| {
+            internal_error("Grouped fresh-create content byte count overflowed usize".to_string())
+        })?;
+
+        if entry_bytes > MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES {
+            debug_assert_eq!(group_count, 1);
+            ranges.push(group_start..index + 1);
+            group_start = index + 1;
+            group_count = 0;
+            group_bytes = 0;
+        }
+    }
+
+    if group_count > 0 {
+        ranges.push(group_start..entries.len());
+    }
+
+    Ok(ranges)
+}
+
 fn is_grouped_fresh_create_eligible(
     entries: &[NdjsonEntry],
     options: &BulkProcessingOptions,
     search_offloaded: bool,
 ) -> bool {
     if entries.is_empty()
-        || entries.len() > MAX_GROUPED_FRESH_CREATES
         || search_offloaded
         // Grouped creates yield receipts and rollback records, not the
         // resources as committed, so an observer that indexes them (#1127)
@@ -116,6 +193,22 @@ fn is_grouped_fresh_create_eligible(
             && entry.resource_type == payload_type
             && keys.insert((entry.resource_type.as_str(), cached_id))
     })
+}
+
+/// A shared-gate batch may only use identities known before BEGIN.
+fn planned_batch_keys(entries: &[NdjsonEntry]) -> Option<Vec<(String, String)>> {
+    entries
+        .iter()
+        .map(|entry| {
+            let id = entry.resource_id.as_deref()?;
+            let payload_id = entry.resource.get("id")?.as_str()?;
+            let payload_type = entry.resource.get("resourceType")?.as_str()?;
+            (entry.resource_type != "SearchParameter"
+                && id == payload_id
+                && entry.resource_type == payload_type)
+                .then(|| (entry.resource_type.clone(), id.to_string()))
+        })
+        .collect()
 }
 
 /// Builds a `LeaseError::LeaseLost` for a submit manifest.
@@ -158,6 +251,14 @@ const SUBMISSION_MANIFEST_COLUMNS: &str = "\
 manifest_id, manifest_url, replaces_manifest_url, status, added_at, total_entries, \
 processed_entries, failed_entries, lease_expiry, bytes_processed, bytes_total, phase, \
 files_done, files_total";
+
+static GET_MANIFEST_SQL: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "SELECT {SUBMISSION_MANIFEST_COLUMNS}
+         FROM bulk_manifests
+         WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3 AND manifest_id = $4"
+    )
+});
 
 /// Decodes one `bulk_manifests` row selected with
 /// [`SUBMISSION_MANIFEST_COLUMNS`], reading every field by column name.
@@ -685,22 +786,18 @@ impl BulkSubmitProvider for PostgresBackend {
         let client = self.get_client().await?;
         let tenant_id = tenant.tenant_id().as_str();
 
-        let rows = client
-            .query(
-                &format!(
-                    "SELECT {SUBMISSION_MANIFEST_COLUMNS}
-                     FROM bulk_manifests
-                     WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3 AND manifest_id = $4"
-                ),
-                &[
-                    &tenant_id,
-                    &submission_id.submitter.as_str(),
-                    &submission_id.submission_id.as_str(),
-                    &manifest_id,
-                ],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to get manifest: {}", e)))?;
+        let rows = query_cached(
+            &client,
+            &GET_MANIFEST_SQL,
+            &[
+                &tenant_id,
+                &submission_id.submitter.as_str(),
+                &submission_id.submission_id.as_str(),
+                &manifest_id,
+            ],
+        )
+        .await
+        .map_err(|e| internal_error(format!("Failed to get manifest: {}", e)))?;
 
         if rows.is_empty() {
             return Ok(None);
@@ -784,8 +881,8 @@ impl BulkSubmitProvider for PostgresBackend {
         // cannot read as if it had never happened (#968).
         {
             let client = self.get_client().await?;
-            client
-                .execute(
+            execute_cached(
+                &client,
                     "UPDATE bulk_manifests SET status = 'processing'
                      WHERE tenant_id = $1 AND submitter = $2 AND submission_id = $3 AND manifest_id = $4
                        AND status = 'pending'",
@@ -795,9 +892,9 @@ impl BulkSubmitProvider for PostgresBackend {
                         &submission_id.submission_id.as_str(),
                         &manifest_id,
                     ],
-                )
-                .await
-                .map_err(|e| internal_error(format!("Failed to update manifest status: {}", e)))?;
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to update manifest status: {}", e)))?;
         }
 
         let file_url = options.file_url.as_deref().unwrap_or("");
@@ -817,12 +914,21 @@ impl BulkSubmitProvider for PostgresBackend {
             defer_search_indexing: options.defer_indexing,
             ..Default::default()
         };
-        let mut txn = <Self as crate::core::TransactionProvider>::begin_transaction(
-            self,
-            tenant,
-            transaction_options.clone(),
-        )
-        .await?;
+        let lock_plan = planned_batch_keys(&entries);
+        let mut txn = match lock_plan.clone() {
+            Some(keys) => {
+                self.begin_planned_transaction(tenant, transaction_options.clone(), keys)
+                    .await?
+            }
+            None => {
+                <Self as crate::core::TransactionProvider>::begin_transaction(
+                    self,
+                    tenant,
+                    transaction_options.clone(),
+                )
+                .await?
+            }
+        };
         let processed = if is_grouped_fresh_create_eligible(
             &entries,
             options,
@@ -861,12 +967,20 @@ impl BulkSubmitProvider for PostgresBackend {
                     tracing::debug!(
                         "grouped PostgreSQL bulk-submit create failed; replaying entries individually: {grouped_error}"
                     );
-                    txn = <Self as crate::core::TransactionProvider>::begin_transaction(
-                        self,
-                        tenant,
-                        transaction_options,
-                    )
-                    .await?;
+                    txn = match lock_plan.clone() {
+                        Some(keys) => {
+                            self.begin_planned_transaction(tenant, transaction_options, keys)
+                                .await?
+                        }
+                        None => {
+                            <Self as crate::core::TransactionProvider>::begin_transaction(
+                                self,
+                                tenant,
+                                transaction_options,
+                            )
+                            .await?
+                        }
+                    };
                     None
                 }
                 Err(MixedAttemptError::Fatal(error)) => return Err(error),
@@ -876,15 +990,31 @@ impl BulkSubmitProvider for PostgresBackend {
                 // Only stage receipts and rollback records after every fresh
                 // run has flushed successfully. Bookkeeping failures are not
                 // eligible for whole-batch replay.
-                Self::flush_entry_rows_tx(
-                    &txn,
-                    submission_id,
-                    manifest_id,
-                    file_url,
-                    &mixed.results,
-                    &mixed.changes,
-                )
-                .await?;
+                // A batch may now be far larger than `MAX_GROUPED_FRESH_CREATES`
+                // (#1455), so bookkeeping is staged in bounded slices rather
+                // than one statement per column array. Receipts and rollback
+                // records are independent inserts and an existing entry that
+                // failed contributes a receipt without a change, so the two
+                // sequences are advanced separately instead of zipped.
+                let mut result_offset = 0;
+                let mut change_offset = 0;
+                while result_offset < mixed.results.len() || change_offset < mixed.changes.len() {
+                    let result_end =
+                        (result_offset + BOOKKEEPING_FLUSH_SIZE).min(mixed.results.len());
+                    let change_end =
+                        (change_offset + BOOKKEEPING_FLUSH_SIZE).min(mixed.changes.len());
+                    Self::flush_entry_rows_tx(
+                        &txn,
+                        submission_id,
+                        manifest_id,
+                        file_url,
+                        &mixed.results[result_offset..result_end],
+                        &mixed.changes[change_offset..change_end],
+                    )
+                    .await?;
+                    result_offset = result_end;
+                    change_offset = change_end;
+                }
                 ProcessedEntryBatch {
                     results: mixed.results,
                     aborted_on_max_errors: false,
@@ -942,8 +1072,8 @@ impl BulkSubmitProvider for PostgresBackend {
                 Some(url) => {
                     // Creates the file's row or locks the existing one, and
                     // returns what earlier passes already counted.
-                    let row = client
-                        .query_one(
+                    let row = query_one_cached(
+                        client,
                             "INSERT INTO bulk_manifest_file_progress
                                 (tenant_id, submitter, submission_id, manifest_id, file_url)
                              VALUES ($1, $2, $3, $4, $5)
@@ -951,16 +1081,16 @@ impl BulkSubmitProvider for PostgresBackend {
                              DO UPDATE SET max_line = bulk_manifest_file_progress.max_line
                              RETURNING max_line",
                             &[&tenant_id, &submitter, &sub_id_str, &manifest_id, &url],
-                        )
-                        .await
-                        .map_err(|e| {
-                            internal_error(format!("Failed to lock file progress: {}", e))
-                        })?;
+                    )
+                    .await
+                    .map_err(|e| {
+                        internal_error(format!("Failed to lock file progress: {}", e))
+                    })?;
                     let counted: i64 = row.get(0);
                     let tally = BatchTally::beyond(&results, Some(counted.max(0) as u64));
-                    client
-                        .execute(
-                            "UPDATE bulk_manifest_file_progress SET
+                    execute_cached(
+                        client,
+                        "UPDATE bulk_manifest_file_progress SET
                                 max_line = GREATEST(max_line, $1::BIGINT),
                                 total_entries = total_entries + $2::BIGINT,
                                 processed_entries = processed_entries + $3::BIGINT,
@@ -968,23 +1098,23 @@ impl BulkSubmitProvider for PostgresBackend {
                                 skipped_entries = skipped_entries + $5::BIGINT
                              WHERE tenant_id = $6 AND submitter = $7 AND submission_id = $8
                                AND manifest_id = $9 AND file_url = $10",
-                            &[
-                                &tally.last_line,
-                                &tally.entries,
-                                &tally.succeeded,
-                                &tally.failed,
-                                &tally.skipped,
-                                &tenant_id,
-                                &submitter,
-                                &sub_id_str,
-                                &manifest_id,
-                                &url,
-                            ],
-                        )
-                        .await
-                        .map_err(|e| {
-                            internal_error(format!("Failed to update file progress: {}", e))
-                        })?;
+                        &[
+                            &tally.last_line,
+                            &tally.entries,
+                            &tally.succeeded,
+                            &tally.failed,
+                            &tally.skipped,
+                            &tenant_id,
+                            &submitter,
+                            &sub_id_str,
+                            &manifest_id,
+                            &url,
+                        ],
+                    )
+                    .await
+                    .map_err(|e| {
+                        internal_error(format!("Failed to update file progress: {}", e))
+                    })?;
                     tally
                 }
                 None => BatchTally::beyond(&results, None),
@@ -992,8 +1122,8 @@ impl BulkSubmitProvider for PostgresBackend {
             // `processed_entries` counts successes, `skipped_entries` the
             // deliberate skips, and `last_processed_line` advances by the
             // entries newly charged (#969, #954).
-            client
-                .execute(
+            match execute_cached(
+                client,
                     "UPDATE bulk_manifests SET
                         total_entries = total_entries + $1,
                         processed_entries = processed_entries + $2,
@@ -1012,9 +1142,21 @@ impl BulkSubmitProvider for PostgresBackend {
                         &sub_id_str,
                         &manifest_id,
                     ],
-                )
-                .await
-                .map_err(|e| internal_error(format!("Failed to update manifest counts: {}", e)))?;
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to update manifest counts: {}", e)))
+            {
+                Ok(_) => {}
+                Err(error) => {
+                    // A late bookkeeping failure leaves the batch transaction
+                    // aborted. Roll it back on this connection so the pooled
+                    // session (and its six cached statements) is recycled
+                    // clean instead of being discarded by Drop.
+                    let _ =
+                        crate::core::Transaction::rollback(Box::new(txn)).await;
+                    return Err(error);
+                }
+            }
         }
 
         crate::core::Transaction::commit(Box::new(txn)).await?;
@@ -1042,19 +1184,19 @@ impl BulkSubmitProvider for PostgresBackend {
         let now = Utc::now();
         let client = self.get_client().await?;
         // Update submission updated_at
-        client
-            .execute(
-                "UPDATE bulk_submissions SET updated_at = $1
+        execute_cached(
+            &client,
+            "UPDATE bulk_submissions SET updated_at = $1
                  WHERE tenant_id = $2 AND submitter = $3 AND submission_id = $4",
-                &[
-                    &now,
-                    &tenant_id,
-                    &submission_id.submitter.as_str(),
-                    &submission_id.submission_id.as_str(),
-                ],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to update submission: {}", e)))?;
+            &[
+                &now,
+                &tenant_id,
+                &submission_id.submitter.as_str(),
+                &submission_id.submission_id.as_str(),
+            ],
+        )
+        .await
+        .map_err(|e| internal_error(format!("Failed to update submission: {}", e)))?;
 
         Ok(results)
     }
@@ -1273,38 +1415,45 @@ impl PostgresBackend {
     ) -> Result<HashSet<(String, String)>, MixedAttemptError> {
         use crate::core::Transaction;
 
-        let resource_types: Vec<&str> = entries
-            .iter()
-            .map(|entry| entry.resource_type.as_str())
-            .collect();
-        let resource_ids: Vec<&str> = entries
-            .iter()
-            .map(|entry| {
-                entry
-                    .resource_id
-                    .as_deref()
-                    .expect("grouped-create eligibility requires an explicit id")
-            })
-            .collect();
         let tenant_id = txn.tenant().tenant_id().as_str();
         let client = txn
             .raw_client()
             .map_err(MixedAttemptError::ReplayWholeBatch)?;
-        let rows = query_cached(
-            client,
-            FRESH_CREATE_CANDIDATES_SQL,
-            &[&tenant_id, &resource_types, &resource_ids],
-        )
-        .await
-        .map_err(|error| {
-            MixedAttemptError::ReplayWholeBatch(internal_error(format!(
-                "Failed to query grouped fresh-create candidates: {error}"
-            )))
-        })?;
+        let mut existing_keys = HashSet::new();
+        // A batch is no longer capped at `MAX_GROUPED_FRESH_CREATES` entries
+        // (#1455), so the unnest arrays are chunked to keep one lookup's
+        // parameter payload bounded. Every chunk must run: this snapshot has
+        // to name each existing key, not merely prove that one exists.
+        for chunk in entries.chunks(MAX_GROUPED_FRESH_CREATES) {
+            let resource_types: Vec<&str> = chunk
+                .iter()
+                .map(|entry| entry.resource_type.as_str())
+                .collect();
+            let resource_ids: Vec<&str> = chunk
+                .iter()
+                .map(|entry| {
+                    entry
+                        .resource_id
+                        .as_deref()
+                        .expect("grouped-create eligibility requires an explicit id")
+                })
+                .collect();
+            let rows = query_cached(
+                client,
+                FRESH_CREATE_CANDIDATES_SQL,
+                &[&tenant_id, &resource_types, &resource_ids],
+            )
+            .await
+            .map_err(|error| {
+                MixedAttemptError::ReplayWholeBatch(internal_error(format!(
+                    "Failed to query grouped fresh-create candidates: {error}"
+                )))
+            })?;
 
-        let mut existing_keys = HashSet::with_capacity(rows.len());
-        for row in rows {
-            existing_keys.insert((row.get(0), row.get(1)));
+            existing_keys.reserve(rows.len());
+            for row in rows {
+                existing_keys.insert((row.get(0), row.get(1)));
+            }
         }
         Ok(existing_keys)
     }
@@ -1365,8 +1514,11 @@ impl PostgresBackend {
     }
 
     /// Stages one maximal fresh run, then flushes it before control can move
-    /// to an existing entry's savepoint. Any error here invalidates the routing
-    /// snapshot and replays the whole batch through the individual path.
+    /// to an existing entry's savepoint. A run longer than one grouped write
+    /// may hold (#1455) is partitioned by `grouped_fresh_create_ranges` and
+    /// flushed a group at a time, still ahead of the next savepoint. Any error
+    /// here invalidates the routing snapshot and replays the whole batch
+    /// through the individual path.
     async fn create_fresh_run(
         &self,
         txn: &mut super::transaction::PostgresTransaction,
@@ -1375,30 +1527,35 @@ impl PostgresBackend {
     ) -> Result<MixedEntryBatch, MixedAttemptError> {
         use crate::core::Transaction;
 
+        let ranges =
+            grouped_fresh_create_ranges(entries).map_err(MixedAttemptError::ReplayWholeBatch)?;
         let mut results = Vec::with_capacity(entries.len());
         let mut changes = Vec::with_capacity(entries.len());
-        for entry in entries {
-            let created = txn
-                .create(&entry.resource_type, entry.resource.clone())
+        for range in ranges {
+            for entry in &entries[range] {
+                let created = txn
+                    .create(&entry.resource_type, entry.resource.clone())
+                    .await
+                    .map_err(MixedAttemptError::ReplayWholeBatch)?;
+                results.push(BulkEntryResult::success(
+                    entry.line_number,
+                    &entry.resource_type,
+                    created.id(),
+                    true,
+                ));
+                changes.push(SubmissionChange::create(
+                    manifest_id,
+                    &entry.resource_type,
+                    created.id(),
+                    created.version_id(),
+                ));
+            }
+
+            txn.flush()
                 .await
                 .map_err(MixedAttemptError::ReplayWholeBatch)?;
-            results.push(BulkEntryResult::success(
-                entry.line_number,
-                &entry.resource_type,
-                created.id(),
-                true,
-            ));
-            changes.push(SubmissionChange::create(
-                manifest_id,
-                &entry.resource_type,
-                created.id(),
-                created.version_id(),
-            ));
         }
 
-        txn.flush()
-            .await
-            .map_err(MixedAttemptError::ReplayWholeBatch)?;
         Ok(MixedEntryBatch { results, changes })
     }
 
@@ -3589,11 +3746,16 @@ mod tests {
         let hundred_and_one: Vec<_> = (1..=101)
             .map(|line| entry(line, "Patient", &format!("p-{line}")))
             .collect();
-        assert!(!is_grouped_fresh_create_eligible(
+        assert!(is_grouped_fresh_create_eligible(
             &hundred_and_one,
             &options,
             false
         ));
+
+        let thousand: Vec<_> = (1..=1000)
+            .map(|line| entry(line, "Patient", &format!("p-{line}")))
+            .collect();
+        assert!(is_grouped_fresh_create_eligible(&thousand, &options, false));
     }
 
     #[test]
@@ -3686,6 +3848,121 @@ mod tests {
             &options,
             false
         ));
+    }
+
+    #[test]
+    fn grouped_fresh_create_eligibility_detects_duplicates_across_lookup_chunks() {
+        let options = eligible_options();
+        let mut across_chunks: Vec<_> = (1..=101)
+            .map(|line| entry(line, "Patient", &format!("p-{line}")))
+            .collect();
+        across_chunks[100] = entry(101, "Patient", "p-1");
+        assert!(!is_grouped_fresh_create_eligible(
+            &across_chunks,
+            &options,
+            false
+        ));
+    }
+
+    fn entry_with_compact_size(line_number: u64, target_bytes: usize) -> NdjsonEntry {
+        let id = format!("sized-{line_number}");
+        let mut resource = json!({
+            "resourceType": "Patient",
+            "id": id,
+            "payload": ""
+        });
+        let base_bytes = compact_json_bytes(&resource).unwrap();
+        assert!(
+            target_bytes >= base_bytes,
+            "target {target_bytes} is smaller than fixture overhead {base_bytes}"
+        );
+        resource["payload"] = json!("x".repeat(target_bytes - base_bytes));
+        assert_eq!(compact_json_bytes(&resource).unwrap(), target_bytes);
+        NdjsonEntry::new(line_number, "Patient", resource)
+    }
+
+    fn range_bytes(entries: &[NdjsonEntry], range: std::ops::Range<usize>) -> usize {
+        entries[range]
+            .iter()
+            .map(|entry| compact_json_bytes(&entry.resource).unwrap())
+            .sum()
+    }
+
+    #[test]
+    fn grouped_fresh_create_ranges_split_on_the_row_limit() {
+        let entries: Vec<_> = (1..=250)
+            .map(|line| entry(line, "Patient", &format!("p-{line}")))
+            .collect();
+        let ranges = grouped_fresh_create_ranges(&entries).unwrap();
+        assert_eq!(ranges, vec![0..100, 100..200, 200..250]);
+    }
+
+    #[test]
+    fn grouped_fresh_create_content_budget_admits_exactly_eight_mibibytes() {
+        let entries = vec![
+            entry_with_compact_size(1, MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES),
+            entry_with_compact_size(2, 256),
+        ];
+        let ranges = grouped_fresh_create_ranges(&entries).unwrap();
+        assert_eq!(ranges, vec![0..1, 1..2]);
+        assert_eq!(
+            range_bytes(&entries, ranges[0].clone()),
+            MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES
+        );
+    }
+
+    #[test]
+    fn grouped_fresh_create_content_budget_flushes_before_crossing_entry() {
+        let entries = vec![
+            entry_with_compact_size(1, MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES / 2),
+            entry_with_compact_size(2, MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES / 2 + 1),
+        ];
+        let ranges = grouped_fresh_create_ranges(&entries).unwrap();
+        assert_eq!(ranges, vec![0..1, 1..2]);
+        assert!(
+            ranges
+                .iter()
+                .all(|range| range_bytes(&entries, range.clone())
+                    <= MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES)
+        );
+    }
+
+    #[test]
+    fn grouped_fresh_create_content_budget_flushes_oversized_entry_alone() {
+        let entries = vec![
+            entry_with_compact_size(1, 256),
+            entry_with_compact_size(2, MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES + 1),
+            entry_with_compact_size(3, 256),
+        ];
+        let ranges = grouped_fresh_create_ranges(&entries).unwrap();
+        assert_eq!(ranges, vec![0..1, 1..2, 2..3]);
+        assert_eq!(
+            range_bytes(&entries, ranges[1].clone()),
+            MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES + 1
+        );
+    }
+
+    #[test]
+    fn grouped_fresh_create_content_budget_count_and_bytes_meet_on_same_entry() {
+        let mut entries: Vec<_> = (1..=99)
+            .map(|line| entry_with_compact_size(line, 256))
+            .collect();
+        let prefix_bytes: usize = entries
+            .iter()
+            .map(|entry| compact_json_bytes(&entry.resource).unwrap())
+            .sum();
+        entries.push(entry_with_compact_size(
+            100,
+            MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES - prefix_bytes,
+        ));
+        entries.push(entry_with_compact_size(101, 256));
+
+        let ranges = grouped_fresh_create_ranges(&entries).unwrap();
+        assert_eq!(ranges, vec![0..100, 100..101]);
+        assert_eq!(
+            range_bytes(&entries, ranges[0].clone()),
+            MAX_GROUPED_FRESH_CREATE_CONTENT_BYTES
+        );
     }
 
     #[test]

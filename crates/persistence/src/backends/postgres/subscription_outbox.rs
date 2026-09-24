@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use deadpool_postgres::Pool;
+use deadpool_postgres::{GenericClient, Pool};
 use helios_fhir::FhirVersion;
 use uuid::Uuid;
 
@@ -41,12 +41,15 @@ impl PostgresSubscriptionOutbox {
         }
     }
 
-    /// Insert an outbox row on an open connection / transaction client.
-    pub(crate) async fn insert_on_client(
-        client: &deadpool_postgres::Client,
+    /// Insert an outbox row on an open connection or on the caller's transaction.
+    pub(crate) async fn insert_on_client<C>(
+        client: &C,
         source: &str,
         entry: &SubscriptionOutboxEntry,
-    ) -> StorageResult<i64> {
+    ) -> StorageResult<i64>
+    where
+        C: GenericClient + ?Sized,
+    {
         let envelope = entry.envelope(source);
         let tenant_id = entry.tenant_id.as_str();
         let fhir_version = entry.fhir_version.as_mime_param();
@@ -85,8 +88,8 @@ impl PostgresSubscriptionOutbox {
     }
 
     /// Write an outbox row when subscriptions are enabled (same-TX helper).
-    pub(crate) async fn maybe_enqueue_on_client(
-        client: &deadpool_postgres::Client,
+    pub(crate) async fn maybe_enqueue_on_client<C>(
+        client: &C,
         tenant_id: &TenantId,
         fhir_version: FhirVersion,
         resource_type: &str,
@@ -95,7 +98,10 @@ impl PostgresSubscriptionOutbox {
         event_type: OutboxEventType,
         resource: Option<Value>,
         previous_resource: Option<Value>,
-    ) -> StorageResult<()> {
+    ) -> StorageResult<()>
+    where
+        C: GenericClient + ?Sized,
+    {
         if !subscription_outbox_writes_enabled() {
             return Ok(());
         }

@@ -147,6 +147,20 @@ the background and is polled via `/$reindex-status/[job_id]`.
   A job that fails as a whole also carries `errorMessage`.
 - The `s3` backend standalone has no search index of any kind, so `$reindex`
   there returns `501`. Every other backend and composite supports it.
+- On standalone PostgreSQL, `$reindex` rewrites the index in groups of up to
+  128 resources with up to `W` groups in flight, where `W` is the smaller of
+  the effective `HFS_BULK_SUBMIT_FILE_CONCURRENCY` and the pool's
+  `max_connections` (at least 1; the default configuration stays serial at
+  `W = 1`). There is no separate reindex-concurrency setting. Each group
+  holds the same transaction-scoped write locks ordinary writes take, so a
+  group touching a resource under write waits for it (and vice versa) while
+  disjoint resources keep flowing. Composite deployments, including
+  PostgreSQL plus Elasticsearch, keep the previous serial scheduling.
+  Before enabling a value above 1 across multiple nodes, set file concurrency
+  to 1 fleet-wide and upgrade every PostgreSQL writer sharing the database,
+  including serial and composite nodes. Restore the desired value only after
+  all writers use the advisory-lock protocol. Older builds and direct SQL
+  maintenance do not acquire these locks.
 - The same applies after a **server upgrade that adds a parameter to the
   built-in set**, not just after an operator edits one. Resources written
   before the upgrade were extracted under the old definitions and have no index
@@ -358,7 +372,7 @@ Configured via `HFS_BULK_SUBMIT_*` environment variables:
 | `HFS_BULK_SUBMIT_POLL_RATE_LIMIT` | `10` | Status polls allowed per client, per submission, per rate window. `0` disables poll rate limiting. |
 | `HFS_BULK_SUBMIT_POLL_RATE_WINDOW` | `60` | Sliding window for the poll rate limit, seconds. |
 | `HFS_BULK_SUBMIT_WORKER_CONCURRENCY` | `2` | In-process submit-worker pool size. The same value bounds automatic deferred-reindex generations to `W` active jobs and `2W` resident tenants per `ReindexOperation`; there is no separate reindex-concurrency setting. |
-| `HFS_BULK_SUBMIT_FILE_CONCURRENCY` | `1` | How many of a single manifest's files one worker ingests at once (fan-out). **SQLite always runs at `1` regardless of the configured value** — it serialises writers, so a higher fan-out queues batch writes behind one lock until they outlast `busy_timeout` and abort the import (#942). A higher value only helps on a concurrent-writer backend such as PostgreSQL. |
+| `HFS_BULK_SUBMIT_FILE_CONCURRENCY` | `1` | How many of a single manifest's files one worker ingests at once (fan-out). **SQLite always runs at `1` regardless of the configured value** because it serialises writers; a higher fan-out queues batch writes behind one lock until they outlast `busy_timeout` and abort the import (#942). On standalone PostgreSQL, an effective value above `1` runs admitted output files in independent Tokio tasks. Existing standalone PostgreSQL deployments configured above `1` change scheduling on upgrade. Setting `1` restores inline scheduling and also reduces concurrency to one; there is no switch that keeps inline scheduling above `1`. Every other mode, including PostgreSQL plus Elasticsearch, keeps inline scheduling at its current effective concurrency. |
 | `HFS_BULK_SUBMIT_DISABLE_LOCAL_WORKER` | `false` | Disable in-pod workers. |
 | `HFS_BULK_SUBMIT_MAX_CONCURRENT_PER_TENANT` | `4` | Per-tenant active-submission cap (kick-off returns `429` if exceeded). |
 | `HFS_BULK_SUBMIT_BATCH_SIZE` | `100` | Resources per ingestion batch, one database transaction each. Honoured by the worker since #1127 (before, every run used `100` whatever this said). With index-during-ingest on, `1000` measured slower than `100`. |

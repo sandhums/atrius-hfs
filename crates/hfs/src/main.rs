@@ -2194,6 +2194,30 @@ fn composite_submit_jobs(
     feature = "mongodb",
     feature = "s3"
 ))]
+fn use_independent_submit_files(
+    mode: Option<StorageBackendMode>,
+    effective_file_concurrency: u32,
+) -> bool {
+    matches!(mode, Some(StorageBackendMode::Postgres)) && effective_file_concurrency > 1
+}
+
+#[cfg(any(
+    feature = "sqlite",
+    feature = "postgres",
+    feature = "mongodb",
+    feature = "s3"
+))]
+struct SubmitFileScheduling {
+    concurrency: u32,
+    independent_tasks: bool,
+}
+
+#[cfg(any(
+    feature = "sqlite",
+    feature = "postgres",
+    feature = "mongodb",
+    feature = "s3"
+))]
 async fn build_bulk_submit(
     config: &ServerConfig,
     jobs: Arc<dyn BulkSubmitJobStore>,
@@ -2320,11 +2344,15 @@ async fn build_bulk_submit(
     // lock until they outlast `busy_timeout` and abort the manifest (#942).
     // Ignore the configured value there, and warn about it, rather than letting
     // it fail the import.
-    let backend_kind = config
-        .storage_backend_mode()
-        .map(|mode| mode.primary_backend_kind())
+    let backend_mode = config.storage_backend_mode().ok();
+    let backend_kind = backend_mode
+        .map(StorageBackendMode::primary_backend_kind)
         .unwrap_or(BackendKind::Sqlite);
     let file_concurrency = cfg.effective_file_concurrency(backend_kind);
+    let file_scheduling = SubmitFileScheduling {
+        concurrency: file_concurrency,
+        independent_tasks: use_independent_submit_files(backend_mode, file_concurrency),
+    };
     if file_concurrency < cfg.file_concurrency.max(1) {
         warn!(
             configured = cfg.file_concurrency,
@@ -2341,7 +2369,7 @@ async fn build_bulk_submit(
         fetcher.clone(),
         output.clone(),
         &cfg,
-        file_concurrency,
+        file_scheduling,
         reindex_hook,
         ingest_validator,
         write_observer,
@@ -2367,7 +2395,7 @@ fn spawn_submit_workers(
     fetcher: Arc<dyn SubmitInputFetcher>,
     output: Arc<dyn ExportOutputStore>,
     cfg: &helios_rest::config::BulkSubmitConfig,
-    file_concurrency: u32,
+    file_scheduling: SubmitFileScheduling,
     reindex_hook: Option<Arc<dyn helios_persistence::core::DeferredReindexHook>>,
     ingest_validator: Option<Arc<dyn helios_persistence::core::IngestValidator>>,
     write_observer: Arc<dyn WriteObserver>,
@@ -2421,13 +2449,16 @@ fn spawn_submit_workers(
             }
         });
     }
-    let file_concurrency = file_concurrency.max(1) as usize;
-    if file_concurrency > 1 {
-        info!(
-            file_concurrency,
-            "Bulk submit fan-out: ingesting a manifest's output files concurrently"
-        );
-    }
+    let file_concurrency = file_scheduling.concurrency.max(1) as usize;
+    let scheduling = if file_scheduling.independent_tasks {
+        "independent-tasks"
+    } else {
+        "inline"
+    };
+    info!(
+        file_concurrency,
+        scheduling, "Bulk submit file scheduling selected"
+    );
     for i in 0..cfg.worker_concurrency {
         let jobs = jobs.clone();
         let fetcher = fetcher.clone();
@@ -2446,6 +2477,9 @@ fn spawn_submit_workers(
                     .with_skip_unchanged(skip_unchanged);
             if let Some(validator) = ingest_validator {
                 worker = worker.with_ingest_validator(validator);
+            }
+            if file_scheduling.independent_tasks {
+                worker = worker.with_independent_file_tasks();
             }
             loop {
                 match jobs.claim_next_manifest(&worker_id, lease).await {
@@ -2738,6 +2772,24 @@ async fn start_sqlite_elasticsearch(
     )
 }
 
+/// Selects reindex width only for the exact standalone PostgreSQL mode.
+#[cfg(feature = "postgres")]
+fn postgres_reindex_selection(
+    config: &ServerConfig,
+    pool_max_connections: usize,
+) -> (Option<StorageBackendMode>, usize, usize) {
+    let mode = config.storage_backend_mode().ok();
+    let n = config
+        .bulk_submit
+        .effective_file_concurrency(BackendKind::Postgres) as usize;
+    let width = if mode == Some(StorageBackendMode::Postgres) {
+        n.min(pool_max_connections.max(1))
+    } else {
+        1
+    };
+    (mode, n, width)
+}
+
 /// Starts the server with PostgreSQL backend.
 #[cfg(feature = "postgres")]
 async fn start_postgres(
@@ -2747,6 +2799,16 @@ async fn start_postgres(
     audit_state: Option<Arc<AuditMiddlewareState>>,
 ) -> anyhow::Result<()> {
     let backend = create_postgres_backend(&config).await?;
+    let (exact_mode, requested, width) =
+        postgres_reindex_selection(&config, backend.config().max_connections);
+    let backend = backend.with_reindex_concurrency(width);
+    info!(
+        storage_mode = ?exact_mode,
+        file_concurrency = requested,
+        reindex_width = width,
+        concurrent_reindex = width > 1,
+        "Selected PostgreSQL reindex scheduling"
+    );
 
     backend.init_schema().await?;
     let backend = Arc::new(backend);
@@ -4057,6 +4119,93 @@ mod tests {
             StorageBackendMode::S3Elasticsearch.primary_backend_kind(),
             BackendKind::S3
         );
+    }
+
+    #[test]
+    fn bulk_submit_file_scheduling_selection() {
+        let modes = [
+            Some(StorageBackendMode::Sqlite),
+            Some(StorageBackendMode::SqliteElasticsearch),
+            Some(StorageBackendMode::Postgres),
+            Some(StorageBackendMode::PostgresElasticsearch),
+            Some(StorageBackendMode::MongoDB),
+            Some(StorageBackendMode::MongoDBElasticsearch),
+            Some(StorageBackendMode::S3),
+            Some(StorageBackendMode::S3Elasticsearch),
+            None,
+        ];
+
+        for mode in modes {
+            for effective in [0, 1, 2, 8] {
+                let expected = matches!(mode, Some(StorageBackendMode::Postgres)) && effective > 1;
+                assert_eq!(
+                    use_independent_submit_files(mode, effective),
+                    expected,
+                    "mode={mode:?} effective={effective}"
+                );
+            }
+
+            for configured in [0, 1, 2, 8] {
+                let cfg = helios_rest::config::BulkSubmitConfig {
+                    file_concurrency: configured,
+                    ..Default::default()
+                };
+                let backend = mode
+                    .map(StorageBackendMode::primary_backend_kind)
+                    .unwrap_or(BackendKind::Sqlite);
+                let effective = cfg.effective_file_concurrency(backend);
+                let expected = matches!(mode, Some(StorageBackendMode::Postgres)) && effective > 1;
+                assert_eq!(
+                    use_independent_submit_files(mode, effective),
+                    expected,
+                    "mode={mode:?} configured={configured} effective={effective}"
+                );
+            }
+        }
+
+        assert!(!use_independent_submit_files(None, 8));
+        assert!(!use_independent_submit_files(
+            Some(StorageBackendMode::PostgresElasticsearch),
+            8,
+        ));
+    }
+
+    #[cfg(feature = "postgres")]
+    #[test]
+    fn test_postgres_reindex_groups_selection() {
+        let mut config = ServerConfig::default();
+        config.bulk_submit.file_concurrency = 4;
+        for mode in [
+            StorageBackendMode::Sqlite,
+            StorageBackendMode::SqliteElasticsearch,
+            StorageBackendMode::Postgres,
+            StorageBackendMode::PostgresElasticsearch,
+            StorageBackendMode::MongoDB,
+            StorageBackendMode::MongoDBElasticsearch,
+            StorageBackendMode::S3,
+            StorageBackendMode::S3Elasticsearch,
+        ] {
+            config.storage_backend = mode.to_string();
+            let (_, n, width) = postgres_reindex_selection(&config, 8);
+            assert_eq!(n, 4);
+            assert_eq!(
+                width,
+                if mode == StorageBackendMode::Postgres {
+                    4
+                } else {
+                    1
+                }
+            );
+        }
+        config.storage_backend = "postgres".to_string();
+        assert_eq!(postgres_reindex_selection(&config, 1).2, 1);
+        assert_eq!(postgres_reindex_selection(&config, 2).2, 2);
+        config.bulk_submit.file_concurrency = 0;
+        assert_eq!(postgres_reindex_selection(&config, 8).2, 1);
+        config.storage_backend.clear();
+        assert_eq!(postgres_reindex_selection(&config, 8).2, 1);
+        config.storage_backend = "invalid".to_string();
+        assert_eq!(postgres_reindex_selection(&config, 8).2, 1);
     }
 
     #[cfg(feature = "ui")]
