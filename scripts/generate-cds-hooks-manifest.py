@@ -44,6 +44,8 @@ DEFAULT_OUTPUT = Path("manifests/cds-services-kr.json")
 CDS_HOOKS_SERVICE_PROFILE = (
     "http://hl7.org/fhir/StructureDefinition/cdshooksserviceplandefinition"
 )
+# One-off generator output (infra smoke). Authored catalog uses the IG canonical.
+SYNTHESIZED_PLAN_URL_PREFIX = "https://atrius.org/PlanDefinition/"
 
 
 def parse_args() -> argparse.Namespace:
@@ -124,6 +126,16 @@ def plan_definition_service_id(plan: dict[str, Any]) -> str:
     return url.rstrip("/").rsplit("/", 1)[-1]
 
 
+def is_synthesized_plan(plan: dict[str, Any]) -> bool:
+    """Helper-library smoke rules, not clinician alerts.
+
+    These pin ``Library|0.1.0`` and stay stale after a dQM version bump, so
+    ``$apply`` fails with "Could not load source" on every patient-view.
+    """
+    url = str(plan.get("url") or "")
+    return url.startswith(SYNTHESIZED_PLAN_URL_PREFIX)
+
+
 def is_cds_hooks_plan(plan: dict[str, Any]) -> bool:
     profiles = (plan.get("meta") or {}).get("profile") or []
     if CDS_HOOKS_SERVICE_PROFILE in profiles:
@@ -146,6 +158,12 @@ def manifest_from_plans(
     seen_ids: set[str] = set()
 
     for plan in plans:
+        if is_synthesized_plan(plan):
+            skipped.append(
+                f"{plan.get('id', '?')} (synthesized https://atrius.org PlanDefinition)"
+            )
+            continue
+
         if not is_cds_hooks_plan(plan):
             skipped.append(f"{plan.get('id', '?')} (not a CDS Hooks PlanDefinition)")
             continue

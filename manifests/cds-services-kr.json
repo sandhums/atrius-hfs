@@ -4,7 +4,7 @@
       "id": "atriuscms165controllinghighbp",
       "hook": "patient-view",
       "title": "Atrius CMS165 Controlling High BP",
-      "description": "CDS Hooks service evaluating Initial Population from Library AtriusCMS165ControllingHighBP at patient-view.",
+      "description": "CDS Hooks service evaluating Initial Population for CDS from Library AtriusCMS165ControllingHighBP at patient-view.",
       "prefetch": {
         "patient": "Patient/{{context.patientId}}",
         "conditions": "Condition?patient={{context.patientId}}",
@@ -14,7 +14,7 @@
       },
       "libraryId": "AtriusCMS165ControllingHighBP",
       "libraryVersion": "1.0.000",
-      "expression": "Initial Population",
+      "expression": "Initial Population for CDS",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-cms165-cds",
@@ -165,70 +165,6 @@
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-vte-prophylaxis",
       "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-vte-prophylaxis"
-    },
-    {
-      "id": "atriusadultoutpatientencounters-qualifying-encounters",
-      "hook": "patient-view",
-      "title": "AtriusAdultOutpatientEncounters",
-      "description": "CDS Hooks service evaluating CQL expression `Qualifying Encounters` from Library `AtriusAdultOutpatientEncounters` version 0.1.0.",
-      "prefetch": {
-        "patient": "Patient/{{context.patientId}}"
-      },
-      "libraryId": "AtriusAdultOutpatientEncounters",
-      "libraryVersion": "4.19.000",
-      "expression": "Qualifying Encounters",
-      "resolveFromFhir": true,
-      "cdsHooksVersion": "1.0",
-      "planDefinitionId": "atriusadultoutpatientencounters-qualifying-encounters",
-      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriusadultoutpatientencounters-qualifying-encounters"
-    },
-    {
-      "id": "atriusadvancedillnessandfrailty-has-frailty-device-order",
-      "hook": "patient-view",
-      "title": "AtriusAdvancedIllnessAndFrailty",
-      "description": "CDS Hooks service evaluating CQL expression `Has Frailty Device Order` from Library `AtriusAdvancedIllnessAndFrailty` version 0.1.0.",
-      "prefetch": {
-        "patient": "Patient/{{context.patientId}}"
-      },
-      "libraryId": "AtriusAdvancedIllnessAndFrailty",
-      "libraryVersion": "1.27.000",
-      "expression": "Has Frailty Device Order",
-      "resolveFromFhir": true,
-      "cdsHooksVersion": "1.0",
-      "planDefinitionId": "atriusadvancedillnessandfrailty-has-frailty-device-order",
-      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriusadvancedillnessandfrailty-has-frailty-device-order"
-    },
-    {
-      "id": "atriuscqmcommon-inpatient-encounter",
-      "hook": "patient-view",
-      "title": "AtriusCQMCommon",
-      "description": "CDS Hooks service evaluating CQL expression `Inpatient Encounter` from Library `AtriusCQMCommon` version 0.1.0.",
-      "prefetch": {
-        "patient": "Patient/{{context.patientId}}"
-      },
-      "libraryId": "AtriusCQMCommon",
-      "libraryVersion": "4.1.000",
-      "expression": "Inpatient Encounter",
-      "resolveFromFhir": true,
-      "cdsHooksVersion": "1.0",
-      "planDefinitionId": "atriuscqmcommon-inpatient-encounter",
-      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriuscqmcommon-inpatient-encounter"
-    },
-    {
-      "id": "atriuspalliativecare-has-palliative-care-in-the-measurement-period",
-      "hook": "patient-view",
-      "title": "AtriusPalliativeCare",
-      "description": "CDS Hooks service evaluating CQL expression `Has Palliative Care in the Measurement Period` from Library `AtriusPalliativeCare` version 0.1.0.",
-      "prefetch": {
-        "patient": "Patient/{{context.patientId}}"
-      },
-      "libraryId": "AtriusPalliativeCare",
-      "libraryVersion": "1.18.000",
-      "expression": "Has Palliative Care in the Measurement Period",
-      "resolveFromFhir": true,
-      "cdsHooksVersion": "1.0",
-      "planDefinitionId": "atriuspalliativecare-has-palliative-care-in-the-measurement-period",
-      "planDefinitionUrl": "https://atrius.org/PlanDefinition/atriuspalliativecare-has-palliative-care-in-the-measurement-period"
     },
     {
       "id": "er-acute-breathlessness-pathway",
