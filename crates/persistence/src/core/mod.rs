@@ -164,8 +164,8 @@ pub use history::{
     InstanceHistoryProvider, SystemHistoryProvider, TypeHistoryProvider,
 };
 pub use patch::{
-    PatchError, apply_patch, apply_resource_patch, patch_format_from_bundle_resource,
-    patched_from_bundle_entry,
+    PatchError, apply_patch, apply_patch_for_version, apply_resource_patch, bundle_patch_format,
+    decode_bundle_patch_resource, patch_format_from_bundle_resource, patched_from_bundle_entry,
 };
 pub use preconditions::{
     EntityTag, EntityTagPrecondition, MalformedPrecondition, bundle_if_match_gate,
@@ -184,9 +184,9 @@ pub use search::{
 pub use sof_runner::{RowStream, SofError, SofRunner, ViewFilters, ViewRow};
 pub use storage::{
     ActivityCell, ConditionalCreateResult, ConditionalDeleteResult, ConditionalInteraction,
-    ConditionalPatchResult, ConditionalStorage, ConditionalUpdateResult, DailyResourceCount,
-    PatchFormat, PurgableStorage, ResourceCountDelta, ResourceStorage, TenantRecord, WriteMarker,
-    bucket_floor,
+    ConditionalPatchPreparation, ConditionalPatchResult, ConditionalStorage,
+    ConditionalUpdateResult, DailyResourceCount, PatchFormat, PurgableStorage, ResourceCountDelta,
+    ResourceStorage, TenantRecord, WriteMarker, bucket_floor,
 };
 pub use subscription_outbox::{
     CLOUDEVENTS_SPEC_VERSION, DynSubscriptionOutboxStore, InMemorySubscriptionOutbox,
@@ -195,8 +195,8 @@ pub use subscription_outbox::{
 };
 pub use transaction::{
     BundleEntry, BundleEntryEffect, BundleEntryResult, BundleMethod, BundleProvider, BundleResult,
-    BundleType, IsolationLevel, LockingStrategy, Transaction, TransactionOptions,
-    TransactionProvider,
+    BundleType, IsolationLevel, LockingStrategy, PatchCandidateValidator, Transaction,
+    TransactionOptions, TransactionProvider,
 };
 pub use user_settings::{
     BY_TENANT_KEY, GLOBAL_SETTINGS_KEYS, SettingsStore, StoredUserSettings, apply_merge_patch,

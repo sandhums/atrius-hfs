@@ -204,6 +204,15 @@ pub enum RestError {
         outcome: serde_json::Value,
     },
 
+    /// A Bundle PATCH failed inside an atomic transaction. The backend has
+    /// rolled back and retained the entry's exact status and OperationOutcome.
+    BundlePatchFailed {
+        /// The HTTP status of the failed PATCH entry.
+        status: StatusCode,
+        /// The complete FHIR outcome, including validator issue locations.
+        outcome: serde_json::Value,
+    },
+
     /// Unauthorized — missing or invalid authentication (HTTP 401).
     Unauthorized {
         /// Error message.
@@ -391,6 +400,9 @@ impl fmt::Display for RestError {
             RestError::ValidationFailed { .. } => {
                 write!(f, "Resource validation failed")
             }
+            RestError::BundlePatchFailed { status, .. } => {
+                write!(f, "Bundle PATCH failed with status {status}")
+            }
             RestError::Unauthorized { message } => {
                 write!(f, "Unauthorized: {}", message)
             }
@@ -546,6 +558,9 @@ impl RestError {
                 "processing",
                 "Resource validation failed".to_string(),
             ),
+            RestError::BundlePatchFailed { status, .. } => {
+                (*status, "processing", "Bundle PATCH failed".to_string())
+            }
             RestError::Unauthorized { message } => {
                 (StatusCode::UNAUTHORIZED, "login", message.clone())
             }
@@ -669,6 +684,9 @@ impl RestError {
         }
         if let RestError::ValidationFailed { outcome } = self {
             return (StatusCode::UNPROCESSABLE_ENTITY, outcome.clone());
+        }
+        if let RestError::BundlePatchFailed { status, outcome } = self {
+            return (*status, outcome.clone());
         }
         if let RestError::MultiIssue { outcome } = self {
             return (StatusCode::BAD_REQUEST, outcome.clone());
@@ -988,10 +1006,8 @@ impl From<PatchError> for RestError {
             PatchError::UnsupportedFormat { format } => RestError::NotImplemented {
                 feature: format.to_string(),
             },
-            // #1393 asks for `422` here: the document is well-formed and
-            // applies, the resource is just not in the state it tested for.
-            // This arm is the only place that decides it.
-            PatchError::TestFailed { .. } => RestError::BadRequest {
+            // The document is well-formed, but its precondition is false.
+            PatchError::TestFailed { .. } => RestError::UnprocessableEntity {
                 message: err.to_string(),
             },
             PatchError::MalformedDocument { .. }
@@ -1048,6 +1064,12 @@ impl From<TransactionError> for RestError {
             }
             TransactionError::BundleError { index, message } => RestError::BadRequest {
                 message: format!("Bundle entry {}: {}", index, message),
+            },
+            TransactionError::PatchEntry {
+                status, outcome, ..
+            } => RestError::BundlePatchFailed {
+                status: StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+                outcome,
             },
             // A transaction that ran out of time is the same condition as a
             // cancelled statement, one level up: the backend is healthy and

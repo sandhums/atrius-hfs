@@ -385,35 +385,48 @@ mod tests {
 
     #[test]
     fn upstream_sqlite_v34_runs_dead_letter_after_secondary_sync() {
-        let idx = implied_applied_indices(34, Numbering::Upstream, 35);
+        let idx = implied_applied_indices(34, Numbering::Upstream, 37);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&32), "attempts is Helios v33");
         assert!(idx.contains(&33), "secondary_sync is Helios v34");
-        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&34), "date range is Helios v35");
+        assert!(!idx.contains(&36), "dead_letter stays after login sessions");
         assert_eq!(idx.len(), 33, "all Helios steps through v34 except outbox");
     }
 
     #[test]
+    fn upstream_sqlite_v36_runs_dead_letter_after_login_sessions() {
+        let idx = implied_applied_indices(36, Numbering::Upstream, 37);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(idx.contains(&34), "date range is Helios v35");
+        assert!(idx.contains(&35), "login sessions are Helios v36");
+        assert!(!idx.contains(&36), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 35, "all Helios steps through v36 except outbox");
+    }
+
+    #[test]
     fn upstream_postgres_v41_runs_dead_letter_after_secondary_sync() {
-        let idx = implied_applied_indices(41, Numbering::Upstream, 45);
+        let idx = implied_applied_indices(41, Numbering::Upstream, 47);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&39), "attempts is Helios v40");
         assert!(idx.contains(&40), "secondary_sync is Helios v41");
         assert!(!idx.contains(&41), "reference-target-id is Helios v42");
-        assert!(!idx.contains(&42), "slot-2 is fork-only");
-        assert!(!idx.contains(&43), "manifest phase");
-        assert!(!idx.contains(&44), "outbox dead-letter");
+        assert!(!idx.contains(&42), "date range is Helios v43");
+        assert!(!idx.contains(&44), "slot-2 is fork-only");
+        assert!(!idx.contains(&46), "outbox dead-letter");
         assert_eq!(idx.len(), 40, "all Helios steps through v41 except outbox");
     }
 
     #[test]
-    fn upstream_postgres_v42_runs_dead_letter_after_reference_target_id() {
-        let idx = implied_applied_indices(42, Numbering::Upstream, 45);
+    fn upstream_postgres_v44_runs_dead_letter_after_login_sessions() {
+        let idx = implied_applied_indices(44, Numbering::Upstream, 47);
         assert!(!idx.contains(&15), "outbox");
-        assert!(idx.contains(&40), "secondary_sync is Helios v41");
         assert!(idx.contains(&41), "reference-target-id is Helios v42");
-        assert!(!idx.contains(&42), "slot-2 is fork-only");
-        assert!(!idx.contains(&44), "outbox dead-letter");
-        assert_eq!(idx.len(), 41, "all Helios steps through v42 except outbox");
+        assert!(idx.contains(&42), "date range is Helios v43");
+        assert!(idx.contains(&43), "login sessions are Helios v44");
+        assert!(!idx.contains(&44), "slot-2 is fork-only");
+        assert!(!idx.contains(&46), "outbox dead-letter");
+        assert_eq!(idx.len(), 43, "all Helios steps through v44 except outbox");
     }
 }

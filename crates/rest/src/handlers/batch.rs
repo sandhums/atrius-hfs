@@ -18,9 +18,10 @@ use helios_auth::{FhirOperation, Principal, SmartScopePolicy};
 use helios_fhir::FhirVersion;
 use helios_persistence::core::{
     BundleEntry, BundleEntryEffect, BundleEntryResult, BundleMethod, BundleProvider,
-    ConditionalCreateResult, ConditionalDeleteResult, ConditionalPatchResult, ConditionalStorage,
-    ConditionalUpdateResult, IncludeProvider, ResourceStorage, RevincludeProvider, SearchProvider,
-    WriteKind, WriteNotice, bundle_if_match_gate,
+    ConditionalCreateResult, ConditionalDeleteResult, ConditionalPatchPreparation,
+    ConditionalPatchResult, ConditionalStorage, ConditionalUpdateResult, IncludeProvider,
+    PatchCandidateValidator, ResourceStorage, RevincludeProvider, SearchProvider, WriteKind,
+    WriteNotice, apply_patch_for_version, bundle_if_match_gate, bundle_patch_format,
 };
 use helios_persistence::error::{ResourceError, StorageError, TransactionError};
 use serde_json::Value;
@@ -28,10 +29,39 @@ use tracing::{debug, error, warn};
 
 use crate::error::{RestError, RestResult, create_operation_outcome};
 use crate::extractors::{FhirVersionExtractor, TenantExtractor};
-use crate::fhir_types::{admit_resource_type, is_valid_resource_type};
+use crate::fhir_types::{
+    admit_resource_type, is_valid_resource_type, is_valid_resource_type_for_version,
+};
 use crate::handlers::extract_patient_from_resource;
 use crate::middleware::prefer::PreferHeader;
 use crate::state::AppState;
+
+struct RestPatchValidator<'a> {
+    validation: &'a crate::validation::ValidationService,
+}
+
+#[async_trait::async_trait]
+impl PatchCandidateValidator for RestPatchValidator<'_> {
+    async fn validate_patch_candidate(
+        &self,
+        tenant: &helios_persistence::tenant::TenantContext,
+        version: FhirVersion,
+        resource_type: &str,
+        candidate: &Value,
+    ) -> Result<(), Value> {
+        self.validation
+            .check_write(
+                tenant.tenant_id().as_str(),
+                version,
+                resource_type,
+                candidate,
+            )
+            .await
+            .map_err(|error| error.client_outcome().1)?;
+        super::sof::reject_unknown_view_definition_resource(resource_type, candidate)
+            .map_err(|error| error.client_outcome().1)
+    }
+}
 
 /// Handler for batch/transaction processing.
 ///
@@ -526,7 +556,7 @@ where
     for (index, entry, _) in &indexed_entries {
         if !matches!(
             entry.method,
-            BundleMethod::Post | BundleMethod::Put | BundleMethod::Delete | BundleMethod::Patch
+            BundleMethod::Post | BundleMethod::Put | BundleMethod::Patch | BundleMethod::Delete
         ) {
             continue;
         }
@@ -651,9 +681,12 @@ where
                     .read(tenant.context(), &resource_type, &id)
                     .await?
                 {
-                    let patched = helios_persistence::core::patched_from_bundle_entry(
+                    let patch =
+                        helios_persistence::core::bundle_patch_format(patch_doc, fhir_version)?;
+                    let patched = helios_persistence::core::apply_patch_for_version(
                         existing.content(),
-                        patch_doc,
+                        &patch,
+                        existing.fhir_version(),
                     )?;
                     state
                         .validation()
@@ -679,19 +712,26 @@ where
         .collect();
 
     // Call the persistence layer
+    let patch_validator = RestPatchValidator {
+        validation: state.validation(),
+    };
     let result = state
         .storage()
-        .process_transaction(tenant.context(), entries_for_processing, fhir_version)
+        .process_transaction_with_patch_validator(
+            tenant.context(),
+            entries_for_processing,
+            fhir_version,
+            Some(&patch_validator),
+        )
         .await;
 
     match result {
         Ok(bundle_result) => {
-            // Stored StructureDefinitions feed the tenant's profile
-            // registry. The request content is what was stored (modulo
-            // server-assigned id/meta, which the converter does not read).
-            for (_, entry, _) in &indexed_entries {
+            // Stored StructureDefinitions feed the tenant's profile registry.
+            for ((_, entry, _), result) in indexed_entries.iter().zip(bundle_result.entries.iter())
+            {
                 if matches!(entry.method, BundleMethod::Post | BundleMethod::Put)
-                    && let Some(resource) = &entry.resource
+                    && let Some(resource) = &result.resource
                     && resource.get("resourceType").and_then(Value::as_str)
                         == Some("StructureDefinition")
                 {
@@ -700,6 +740,28 @@ where
                         fhir_version,
                         resource,
                     );
+                }
+                if entry.method == BundleMethod::Patch
+                    && let Ok((resource_type, id)) = parse_request_url(&entry.url)
+                    && resource_type == "StructureDefinition"
+                {
+                    match state
+                        .storage()
+                        .read(tenant.context(), &resource_type, &id)
+                        .await
+                    {
+                        Ok(Some(stored)) => state.validation().upsert_stored_profile(
+                            tenant.tenant_id(),
+                            stored.fhir_version(),
+                            stored.content(),
+                        ),
+                        Ok(None) => {
+                            warn!(resource_id = %id, "committed PATCH target missing during profile refresh")
+                        }
+                        Err(error) => {
+                            warn!(resource_id = %id, %error, "could not refresh profile after committed PATCH")
+                        }
+                    }
                 }
             }
 
@@ -800,6 +862,20 @@ where
             Ok((StatusCode::OK, Json(response_bundle)).into_response())
         }
         Err(e) => {
+            let e = match e {
+                TransactionError::PatchEntry {
+                    index,
+                    status,
+                    outcome,
+                } => TransactionError::PatchEntry {
+                    index: indexed_entries
+                        .get(index)
+                        .map_or(index, |(original, _, _)| *original),
+                    status,
+                    outcome,
+                },
+                other => other,
+            };
             // Derive a sanitized reason so backend detail carried by a
             // rolled-back/internal transaction error never reaches the client
             // response, the audit trail, or the entry outcome. The raw detail is
@@ -1099,8 +1175,11 @@ where
     // the resource the criteria resolve to (#1381). What is left to refuse is
     // the pairing FHIR gives no meaning: a precondition on a version beside
     // `ifNoneExist`, or beside criteria on a method with no conditional write.
-    let conditional_write =
-        criteria.is_some() && matches!(method, BundleMethod::Put | BundleMethod::Delete);
+    let conditional_write = criteria.is_some()
+        && matches!(
+            method,
+            BundleMethod::Put | BundleMethod::Patch | BundleMethod::Delete
+        );
     if if_match.is_some() && !conditional_write && (criteria.is_some() || if_none_exist.is_some()) {
         // `invalid` — the parent — rather than either child: both elements are
         // individually well-formed, so neither "a required element is missing"
@@ -1113,6 +1192,7 @@ where
         });
     }
 
+    // All declared Bundle methods are handled; parse_entry_method rejects unknown codes.
     match method {
         BundleMethod::Get => {
             // A GET entry is either a search (`Patient?name=x`, bare
@@ -1543,172 +1623,196 @@ where
             }
         }
         BundleMethod::Patch => {
-            let patch_doc = match entry.get("resource") {
-                Some(r) => r,
-                None => {
-                    return entry_failure(RestError::BadRequest {
-                        message: "PATCH entry missing resource".to_string(),
-                    });
-                }
-            };
-            if let Err(error) =
-                admit_bundle_mutation(&method, &resource_type, Some(patch_doc), fhir_version)
-            {
-                return entry_failure(error);
-            }
-
-            let existing = if let Some(criteria) = criteria.as_deref() {
-                match state
-                    .storage()
-                    .conditional_matches(tenant.context(), &resource_type, criteria)
-                    .await
-                {
-                    Ok(matches) => match matches.len() {
-                        0 => {
-                            return entry_failure(RestError::NotFound {
-                                resource_type: resource_type.clone(),
-                                id: "conditional".to_string(),
-                            });
-                        }
-                        1 => matches.into_iter().next().unwrap(),
-                        n => {
-                            return entry_failure(RestError::MultipleMatches {
-                                operation: "patch".to_string(),
-                                count: n,
-                            });
-                        }
-                    },
-                    Err(e) if is_unsupported_capability(&e) => {
-                        let format =
-                            match helios_persistence::core::patch_format_from_bundle_resource(
-                                patch_doc,
-                            ) {
-                                Ok(f) => f,
-                                Err(e) => {
-                                    return entry_storage_failure(e);
-                                }
-                            };
-                        let if_match = match conditional_entry_if_match(if_match) {
-                            Ok(if_match) => if_match,
-                            Err(failure) => return *failure,
-                        };
-                        return match state
-                            .storage()
-                            .conditional_patch(
-                                tenant.context(),
-                                &resource_type,
-                                criteria,
-                                &format,
-                                &if_match,
-                            )
-                            .await
-                        {
-                            Ok(ConditionalPatchResult::Patched(stored)) => {
-                                // Conditional writes announce nothing.
-                                super::write_event::report(
-                                    state,
-                                    tenant.context(),
-                                    fhir_version,
-                                    &resource_type,
-                                    0,
-                                    None,
-                                );
-                                record_stored_profile(state, tenant, fhir_version, &stored);
-                                BundleEntryResult::ok(stored)
-                            }
-                            Ok(ConditionalPatchResult::NoMatch) => {
-                                entry_failure(RestError::NotFound {
-                                    resource_type: resource_type.clone(),
-                                    id: "conditional".to_string(),
-                                })
-                            }
-                            Ok(ConditionalPatchResult::MultipleMatches(count)) => {
-                                entry_failure(RestError::MultipleMatches {
-                                    operation: "patch".to_string(),
-                                    count,
-                                })
-                            }
-                            Err(e) => entry_storage_failure(e),
-                        };
-                    }
-                    Err(e) => {
-                        return entry_storage_failure(e);
-                    }
-                }
-            } else {
-                if id.is_empty() {
-                    return entry_failure(RestError::InvalidElementValue {
-                        message: "PATCH entry request.url must address an instance ('[type]/[id]')"
-                            .to_string(),
-                    });
-                }
-                if let Some(failure) =
-                    check_entry_if_match(state, tenant, &resource_type, &id, if_match).await
-                {
-                    return failure;
-                }
-                match state
-                    .storage()
-                    .read(tenant.context(), &resource_type, &id)
-                    .await
-                {
-                    Ok(Some(stored)) => stored,
-                    Ok(None) => {
-                        return entry_failure(RestError::NotFound {
-                            resource_type: resource_type.clone(),
-                            id: id.clone(),
-                        });
-                    }
-                    Err(e) => {
-                        return entry_storage_failure(e);
-                    }
-                }
-            };
-            let patched = match helios_persistence::core::patched_from_bundle_entry(
-                existing.content(),
-                patch_doc,
-            ) {
-                Ok(v) => v,
-                Err(e) => {
-                    return entry_storage_failure(e);
-                }
-            };
-            if let Err(e) = state
-                .validation()
-                .check_write(tenant.tenant_id(), fhir_version, &resource_type, &patched)
-                .await
-            {
-                return entry_failure(e);
-            }
-            match state
-                .storage()
-                .update(tenant.context(), &existing, patched)
-                .await
-            {
-                Ok(stored) => {
-                    super::write_event::report(
-                        state,
-                        tenant.context(),
-                        fhir_version,
-                        &resource_type,
-                        0,
-                        Some(super::write_event::stored_notice(
-                            WriteKind::Update,
-                            &stored,
-                        )),
-                    );
-                    record_stored_profile(state, tenant, fhir_version, &stored);
-                    BundleEntryResult::ok(stored)
-                }
-                Err(e) => entry_storage_failure(e),
-            }
-        } // No catch-all: the match is exhaustive over `BundleMethod`, so adding a
-          // variant is a compile error here rather than a silent 405. Codes
-          // outside the value set never reach this point — `parse_entry_method`
-          // refuses them at the top of this function.
+            process_batch_patch(
+                state,
+                tenant,
+                fhir_version,
+                entry,
+                &resource_type,
+                &id,
+                criteria,
+                if_match,
+                audit_target,
+            )
+            .await
+        }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn process_batch_patch<S>(
+    state: &AppState<S>,
+    tenant: &TenantExtractor,
+    fhir_version: FhirVersion,
+    entry: &Value,
+    resource_type: &str,
+    id: &str,
+    criteria: Option<&str>,
+    if_match: Option<&str>,
+    audit_target: &mut Option<AuditTarget>,
+) -> BundleEntryResult
+where
+    S: ResourceStorage + ConditionalStorage + Send + Sync,
+{
+    if let Err(error) = admit_bundle_mutation(
+        &BundleMethod::Patch,
+        resource_type,
+        entry.get("resource"),
+        fhir_version,
+    ) {
+        return entry_failure(error);
+    }
+    let Some(document) = entry.get("resource") else {
+        return entry_failure(RestError::BadRequest {
+            message: "PATCH entry missing resource".to_string(),
+        });
+    };
+    let patch = match bundle_patch_format(document, fhir_version) {
+        Ok(patch) => patch,
+        Err(error) => return entry_failure(error.into()),
+    };
+
+    let (current, candidate) = if let Some(criteria) = criteria {
+        if let Err(error) = super::conditional_support::require_patch(state.storage()) {
+            return entry_failure(error);
+        }
+        let if_match = match conditional_entry_if_match(if_match) {
+            Ok(if_match) => if_match,
+            Err(failure) => return *failure,
+        };
+        match state
+            .storage()
+            .prepare_conditional_patch(tenant.context(), resource_type, criteria, &patch, &if_match)
+            .await
+        {
+            Ok(ConditionalPatchPreparation::Ready { current, patched }) => (current, patched),
+            Ok(ConditionalPatchPreparation::NoMatch) => {
+                return entry_failure(RestError::NotFound {
+                    resource_type: resource_type.to_string(),
+                    id: "conditional".to_string(),
+                });
+            }
+            Ok(ConditionalPatchPreparation::MultipleMatches(count)) => {
+                return entry_failure(RestError::MultipleMatches {
+                    operation: "patch".to_string(),
+                    count,
+                });
+            }
+            // Backends without conditional search still apply the patch through
+            // `conditional_patch`. `prepare_conditional_patch` reports that gap
+            // as an unsupported capability.
+            Err(error) if is_unsupported_capability(&error) => {
+                return match state
+                    .storage()
+                    .conditional_patch(tenant.context(), resource_type, criteria, &patch, &if_match)
+                    .await
+                {
+                    Ok(ConditionalPatchResult::Patched(stored)) => {
+                        *audit_target = Some(AuditTarget::from_stored(&stored));
+                        super::write_event::report(
+                            state,
+                            tenant.context(),
+                            stored.fhir_version(),
+                            resource_type,
+                            0,
+                            None,
+                        );
+                        record_stored_profile(state, tenant, stored.fhir_version(), &stored);
+                        BundleEntryResult::updated(stored)
+                    }
+                    Ok(ConditionalPatchResult::NoMatch) => entry_failure(RestError::NotFound {
+                        resource_type: resource_type.to_string(),
+                        id: "conditional".to_string(),
+                    }),
+                    Ok(ConditionalPatchResult::MultipleMatches(count)) => {
+                        entry_failure(RestError::MultipleMatches {
+                            operation: "patch".to_string(),
+                            count,
+                        })
+                    }
+                    Err(error) => entry_storage_failure(error),
+                };
+            }
+            Err(error) => {
+                return entry_failure(super::update::conditional_write_error(error, resource_type));
+            }
+        }
+    } else {
+        if id.is_empty() {
+            return entry_failure(RestError::InvalidElementValue {
+                message: "PATCH entry request.url must address an instance ('[type]/[id]')"
+                    .to_string(),
+            });
+        }
+        let current = match state
+            .storage()
+            .read(tenant.context(), resource_type, id)
+            .await
+        {
+            Ok(Some(current)) => current,
+            Ok(None) => {
+                return entry_failure(RestError::NotFound {
+                    resource_type: resource_type.to_string(),
+                    id: id.to_string(),
+                });
+            }
+            Err(error) => return entry_storage_failure(error),
+        };
+        if let Some(failure) = bundle_if_match_gate(if_match, Some(current.version_id())) {
+            return failure;
+        }
+        let candidate =
+            match apply_patch_for_version(current.content(), &patch, current.fhir_version()) {
+                Ok(candidate) => candidate,
+                Err(error) => return entry_failure(error.into()),
+            };
+        (current, candidate)
+    };
+
+    let validator = RestPatchValidator {
+        validation: state.validation(),
+    };
+    if let Err(outcome) = validator
+        .validate_patch_candidate(
+            tenant.context(),
+            current.fhir_version(),
+            resource_type,
+            &candidate,
+        )
+        .await
+    {
+        return BundleEntryResult::error(422, outcome);
+    }
+    let stored = match state
+        .storage()
+        .update(tenant.context(), &current, candidate)
+        .await
+    {
+        Ok(stored) => stored,
+        Err(error) => return entry_storage_failure(error),
+    };
+    *audit_target = Some(AuditTarget::from_stored(&stored));
+    super::write_event::report(
+        state,
+        tenant.context(),
+        stored.fhir_version(),
+        resource_type,
+        0,
+        criteria
+            .is_none()
+            .then(|| super::write_event::stored_notice(WriteKind::Update, &stored)),
+    );
+    record_stored_profile(state, tenant, stored.fhir_version(), &stored);
+    let mut result = BundleEntryResult::updated(stored);
+    if criteria.is_none() {
+        result.location = Some(format!("{resource_type}/{id}"));
+    }
+    result
+}
+
+/// Applies the type and immutability gates shared by batch and transaction
+/// mutations. The caller decides whether the error belongs to one batch entry
+/// or rejects the whole transaction.
 /// Folds a written StructureDefinition into the tenant profile registry so
 /// later entries' `check_write` resolve against it. Every write arm calls this;
 /// `batch_concurrency` serializes the bundle when one of them will.
@@ -1768,10 +1872,19 @@ fn admit_bundle_mutation(
         admit_resource_type(resource_type, resource, fhir_version)?;
     }
 
+    if matches!(method, BundleMethod::Patch)
+        && !is_valid_resource_type_for_version(resource_type, fhir_version)
+    {
+        return Err(RestError::UnknownResourceType {
+            resource_type: resource_type.to_string(),
+            version: fhir_version,
+        });
+    }
+
     if resource_type == "AuditEvent"
         && matches!(
             method,
-            BundleMethod::Post | BundleMethod::Put | BundleMethod::Delete | BundleMethod::Patch
+            BundleMethod::Post | BundleMethod::Put | BundleMethod::Patch | BundleMethod::Delete
         )
     {
         return Err(RestError::MethodNotAllowed {
@@ -1891,7 +2004,11 @@ fn emit_entry_audit<S>(
         .as_ref()
         .and_then(|(_, id)| (!id.is_empty()).then_some(id.clone()));
 
-    if let Some(resource) = result.resource.as_ref().or(request_resource) {
+    if let Some(resource) = result
+        .resource
+        .as_ref()
+        .or_else(|| (method != "PATCH").then_some(request_resource).flatten())
+    {
         if let Some(rt) = resource.get("resourceType").and_then(|v| v.as_str()) {
             resource_type = rt.to_string();
         }
@@ -1918,13 +2035,16 @@ fn emit_entry_audit<S>(
             extract_patient_from_resource(rt, resource)
         })
         .or_else(|| {
-            request_resource.and_then(|resource| {
-                let rt = resource
-                    .get("resourceType")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or(&resource_type);
-                extract_patient_from_resource(rt, resource)
-            })
+            (method != "PATCH")
+                .then_some(request_resource)
+                .flatten()
+                .and_then(|resource| {
+                    let rt = resource
+                        .get("resourceType")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&resource_type);
+                    extract_patient_from_resource(rt, resource)
+                })
         });
 
     let mut builder = AuditEventBuilder::new(state.audit_source_observer())
@@ -2493,7 +2613,7 @@ where
             .map(|(k, v)| (k.into_owned(), v.into_owned()))
             .collect();
         let registry = state.storage().search_param_registry(tenant.context());
-        let mut query = {
+        let query = {
             let registry = registry.read();
             crate::extractors::build_search_query_from_pairs(
                 resource_type,
@@ -2505,6 +2625,12 @@ where
                 message: format!("Conditional reference '{reference}' is not a valid search: {e}"),
             })?
         };
+        // `search()` does not read a chain or `_has` (#1389): resolve them
+        // into an `_id` filter first, as a type search does.
+        let mut query =
+            helios_persistence::search::resolve_chains(state.storage(), tenant.context(), &query)
+                .await
+                .map_err(RestError::from)?;
         // Two is enough to prove the match is not unique.
         query.count = Some(2);
         let result = state
@@ -2815,6 +2941,29 @@ fn is_unsupported_capability(err: &StorageError) -> bool {
 /// non-sensitive message.
 fn transaction_error_response_parts(err: &TransactionError) -> (StatusCode, &'static str, String) {
     match err {
+        TransactionError::PatchEntry {
+            index,
+            status,
+            outcome,
+        } => {
+            let code = outcome["issue"][0]["code"].as_str().unwrap_or("processing");
+            let code = match code {
+                "invalid" => "invalid",
+                "not-supported" => "not-supported",
+                "not-found" => "not-found",
+                "conflict" => "conflict",
+                _ => "processing",
+            };
+            (
+                StatusCode::from_u16(*status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+                code,
+                format!(
+                    "Transaction PATCH entry {index} failed: {}",
+                    extract_outcome_description(Some(outcome))
+                        .unwrap_or_else(|| "patch was not applied".to_string())
+                ),
+            )
+        }
         TransactionError::BundleError { index, message } => (
             StatusCode::BAD_REQUEST,
             "processing",
@@ -2886,6 +3035,13 @@ fn transaction_error_response_parts(err: &TransactionError) -> (StatusCode, &'st
 /// `create_operation_outcome` every other error in this crate uses, rather than
 /// carrying its own `json!` literal.
 fn transaction_error_to_response(err: TransactionError) -> RestResult<Response> {
+    if let TransactionError::PatchEntry {
+        status, outcome, ..
+    } = &err
+    {
+        let status = StatusCode::from_u16(*status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        return Ok((status, Json(outcome.clone())).into_response());
+    }
     let (status_code, issue_code, message) = transaction_error_response_parts(&err);
     let outcome = create_operation_outcome("error", issue_code, &message);
     Ok((status_code, Json(outcome)).into_response())
@@ -4236,6 +4392,10 @@ mod tests {
         // A conditional PUT that matched an existing resource updates it.
         assert_eq!(
             transaction_write_event_type(BundleMethod::Put, 200),
+            Some(WriteKind::Update)
+        );
+        assert_eq!(
+            transaction_write_event_type(BundleMethod::Patch, 200),
             Some(WriteKind::Update)
         );
         // DELETE carries no body; its notice is built from the URL, not here.
