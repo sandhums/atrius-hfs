@@ -108,6 +108,8 @@ fn test_mongodb_config_defaults() {
     assert_eq!(config.server_selection_timeout_ms, 15_000);
     assert!(!config.search_offloaded);
     assert_eq!(config.fhir_version, FhirVersion::default());
+    // #1403: the `$reindex` walk's clock-skew and commit-lag allowance.
+    assert_eq!(config.reindex_catch_up_margin_ms, 120_000);
 }
 
 #[test]
@@ -1142,6 +1144,14 @@ async fn mongodb_conditional_patch() {
 /// Same `#[path]` arrangement.
 #[path = "search/versioned_write_race_suite.rs"]
 mod versioned_write_race_suite;
+
+/// #1403: the id-order `$reindex` walk and its catch-up rounds.
+#[path = "mongodb/reindex_id_walk.rs"]
+mod reindex_id_walk;
+
+/// #1499: MongoDB honours `HFS_REINDEX_BATCH_BYTES` (PR2a).
+#[path = "mongodb/reindex_pipeline.rs"]
+mod reindex_pipeline;
 
 /// #1405: of several writers holding the same version, one `update` writes and
 /// every loser is a `ConcurrencyError` — the server's `WriteConflict` used to
@@ -8970,6 +8980,135 @@ async fn mongodb_integration_reindex_page_counts_contained_entries() {
     );
 }
 
+/// #1403 PR0: MongoDB is the only writer that measures its own phases in this
+/// PR. Every call goes through `&dyn ReindexTarget` to prove dynamic dispatch
+/// reaches MongoDB's override rather than the trait's zero-measuring default
+/// (S1 "default-method trap").
+#[tokio::test]
+async fn mongodb_integration_reindex_page_reports_phase_stats() {
+    use helios_persistence::search::{ReindexPageStats, ReindexTarget};
+    use helios_persistence::types::StoredResource;
+
+    let Some(backend) = create_backend_with_full_registry("reindex_page_phase_stats").await else {
+        eprintln!(
+            "Skipping mongodb_integration_reindex_page_reports_phase_stats (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("reindex-phase-stats-tenant");
+    let target: &dyn ReindexTarget = &backend;
+
+    // Step 1: seed 8 Patients.
+    let patients: Vec<StoredResource> = (0..8)
+        .map(|i| {
+            StoredResource::from_storage(
+                "Patient",
+                format!("phase-stats-{i}"),
+                "1",
+                tenant.tenant_id().clone(),
+                json!({
+                    "resourceType": "Patient",
+                    "id": format!("phase-stats-{i}"),
+                    "name": [{"family": "Stats"}],
+                    "gender": "female",
+                    "birthDate": "1990-01-01"
+                }),
+                chrono::Utc::now(),
+                chrono::Utc::now(),
+                None,
+                FhirVersion::default(),
+            )
+        })
+        .collect();
+    let mut first = ReindexPageStats::default();
+    let outcomes = target
+        .write_search_entries_page_timed(&tenant, &patients, &mut first)
+        .await;
+    assert!(outcomes.iter().all(|r| r.is_ok()), "{outcomes:?}");
+    assert_eq!(first.deleted_entries, 0, "the database is unique per test");
+    assert!(first.inserted_entries > 0);
+    assert_eq!(first.insert_commands, 1);
+    assert!(first.extract > std::time::Duration::ZERO);
+    assert!(first.delete > std::time::Duration::ZERO);
+    assert!(first.insert > std::time::Duration::ZERO);
+
+    // Step 2: rewrite the same page.
+    let mut second = ReindexPageStats::default();
+    let outcomes = target
+        .write_search_entries_page_timed(&tenant, &patients, &mut second)
+        .await;
+    assert!(outcomes.iter().all(|r| r.is_ok()), "{outcomes:?}");
+    assert_eq!(second.deleted_entries, first.inserted_entries);
+    assert_eq!(second.inserted_entries, first.inserted_entries);
+    let mut total_after_rewrite = 0u64;
+    for p in &patients {
+        total_after_rewrite += search_index_entry_count(&backend, &tenant, "Patient", p.id()).await;
+    }
+    assert_eq!(total_after_rewrite, first.inserted_entries);
+
+    // Step 3: contained.
+    let with_contained = StoredResource::from_storage(
+        "Observation",
+        "phase-stats-contained",
+        "1",
+        tenant.tenant_id().clone(),
+        json!({
+            "resourceType": "Observation",
+            "id": "phase-stats-contained",
+            "status": "final",
+            "contained": [{
+                "resourceType": "Patient",
+                "id": "inner",
+                "name": [{"family": "Contained"}]
+            }],
+            "subject": {"reference": "#inner"},
+            "code": {"coding": [{"system": "http://loinc.org", "code": "1234-5"}]}
+        }),
+        chrono::Utc::now(),
+        chrono::Utc::now(),
+        None,
+        FhirVersion::default(),
+    );
+    let mut third = ReindexPageStats::default();
+    let outcomes = target
+        .write_search_entries_page_timed(&tenant, std::slice::from_ref(&with_contained), &mut third)
+        .await;
+    assert!(outcomes.iter().all(|r| r.is_ok()), "{outcomes:?}");
+    let own_rows =
+        search_index_entry_count(&backend, &tenant, "Observation", "phase-stats-contained").await;
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect MongoDB client for search_index_contained assertions");
+    let database = client.database(&backend.config().database_name);
+    let contained_rows = database
+        .collection::<Document>("search_index_contained")
+        .count_documents(doc! {
+            "tenant_id": tenant.tenant_id().as_str(),
+            "resource_type": "Observation",
+            "resource_id": "phase-stats-contained",
+        })
+        .await
+        .expect("failed to count search_index_contained rows");
+    assert!(contained_rows > 0);
+    assert_eq!(third.inserted_entries, own_rows + contained_rows);
+    assert_eq!(third.insert_commands, 2);
+
+    // Step 4: offloaded.
+    let Some(offloaded) =
+        create_backend_with_search_offloaded("reindex_page_phase_stats_offloaded", true).await
+    else {
+        eprintln!("Skipping the offloaded step (requires Docker or HFS_TEST_MONGODB_URL)");
+        return;
+    };
+    let offloaded_target: &dyn ReindexTarget = &offloaded;
+    let mut offloaded_stats = ReindexPageStats::default();
+    let outcomes = offloaded_target
+        .write_search_entries_page_timed(&tenant, &patients, &mut offloaded_stats)
+        .await;
+    assert!(outcomes.iter().all(|r| matches!(r, Ok(0))), "{outcomes:?}");
+    assert_eq!(offloaded_stats, ReindexPageStats::default());
+}
+
 /// Guard for the `is_search_offloaded()` short-circuit the batched override
 /// needs. The default loop honors the flag via `delete_search_entries` and
 /// `write_search_entries`'s own guards; the page override has to reproduce
@@ -10677,7 +10816,13 @@ mod bulk_submit {
 
     /// Creates a submission with one fetchable manifest — the shape the REST
     /// kickoff handler produces.
-    async fn seed(backend: &MongoBackend, tenant: &TenantContext) -> (SubmissionId, String) {
+    ///
+    /// `pub(super)` so the sibling `#[path]`-included `reindex_id_walk.rs`
+    /// module can reach it as `super::bulk_submit::seed` (#1403 P11).
+    pub(super) async fn seed(
+        backend: &MongoBackend,
+        tenant: &TenantContext,
+    ) -> (SubmissionId, String) {
         let id = SubmissionId::generate("data-provider");
         backend.create_submission(tenant, &id, None).await.unwrap();
         let manifest = backend
@@ -10734,7 +10879,7 @@ mod bulk_submit {
     static FAILPOINT_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
     /// A `failCommand` failpoint scoped to one client's `appName`.
-    struct FailPoint {
+    pub(super) struct FailPoint {
         admin: mongodb::Database,
         initial_count: i64,
         _lock: tokio::sync::MutexGuard<'static, ()>,
@@ -10745,7 +10890,11 @@ mod bulk_submit {
         /// Returns `None`, after printing why, when no Mongo is available or
         /// the server was not started with `enableTestCommands=1` (an
         /// external `HFS_TEST_MONGODB_URL`).
-        async fn enable(app_name: &str, mut data: Document, mode: Document) -> Option<FailPoint> {
+        pub(super) async fn enable(
+            app_name: &str,
+            mut data: Document,
+            mode: Document,
+        ) -> Option<FailPoint> {
             let lock = FAILPOINT_LOCK.lock().await;
             let Some(connection_string) = shared_mongo::connection_string().await else {
                 eprintln!("Skipping failpoint test (requires Docker or HFS_TEST_MONGODB_URL)");
@@ -10790,7 +10939,7 @@ mod bulk_submit {
         }
 
         /// Waits until this configuration has matched `additional` commands.
-        async fn wait_until_entered(&self, additional: i64) {
+        pub(super) async fn wait_until_entered(&self, additional: i64) {
             self.admin
                 .run_command(doc! {
                     "waitForFailPoint": "failCommand",
@@ -10804,7 +10953,7 @@ mod bulk_submit {
         /// Turns the failpoint off and releases the lock. Call at the end of
         /// every test; a `times`-bounded failpoint that is never turned off
         /// still only affects its own `appName`.
-        async fn off(self) {
+        pub(super) async fn off(self) {
             let _ = self
                 .admin
                 .run_command(doc! { "configureFailPoint": "failCommand", "mode": "off" })
@@ -11908,6 +12057,27 @@ mod bulk_submit {
             env!("CARGO_MANIFEST_DIR"),
             "/tests/bulk_submit/paging_contract.rs"
         ));
+    }
+
+    mod claim_contract {
+        use helios_persistence as persistence;
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/bulk_submit/claim_contract.rs"
+        ));
+    }
+
+    /// See `claim_contract::unleased_processing_is_not_claimable` (#1530).
+    #[tokio::test]
+    async fn test_unleased_processing_manifest_is_not_claimable() {
+        let Some(backend) = create_backend("submit_unleased_processing").await else {
+            return;
+        };
+        claim_contract::unleased_processing_is_not_claimable(
+            &backend,
+            &create_tenant("submit-tenant"),
+        )
+        .await;
     }
 
     #[async_trait::async_trait]
@@ -17607,4 +17777,78 @@ async fn mongodb_sync_failure_ledger_contract() {
         &format!("ledger-1334-{}", uuid::Uuid::new_v4()),
     )
     .await;
+}
+
+/// `Patient/$export` decides membership with the compartment's own parameter
+/// set (#1122): a resource that joins through `recorder`, `performer` or
+/// `link` is exported, one that merely mentions the patient elsewhere is not.
+#[tokio::test]
+async fn mongodb_integration_export_compartment_membership_follows_the_compartment_definition() {
+    use helios_persistence::core::bulk_export::{ExportRequest, PatientExportProvider};
+
+    let Some(backend) = create_backend("export_compartment_params").await else {
+        eprintln!(
+            "Skipping mongodb_integration_export_compartment_membership_follows_the_compartment_definition (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("export-compartment-params");
+
+    for resource in [
+        serde_json::json!({"resourceType": "Patient", "id": "p1"}),
+        serde_json::json!({"resourceType": "Patient", "id": "other"}),
+        serde_json::json!({"resourceType": "Patient", "id": "linked",
+            "link": [{"other": {"reference": "Patient/p1"}, "type": "seealso"}]}),
+        serde_json::json!({"resourceType": "AllergyIntolerance", "id": "recorded",
+            "patient": {"reference": "Patient/other"},
+            "recorder": {"reference": "Patient/p1"}}),
+        serde_json::json!({"resourceType": "AllergyIntolerance", "id": "someone-elses",
+            "patient": {"reference": "Patient/other"}}),
+        serde_json::json!({"resourceType": "Observation", "id": "performed", "status": "final",
+            "code": {"text": "x"}, "subject": {"reference": "Patient/other"},
+            "performer": [{"reference": "Patient/p1/_history/2"}]}),
+        serde_json::json!({"resourceType": "Observation", "id": "about", "status": "final",
+            "code": {"text": "x"}, "subject": {"reference": "Patient/p1"}}),
+        serde_json::json!({"resourceType": "Observation", "id": "mentions-only", "status": "final",
+            "code": {"text": "x"}, "subject": {"reference": "Patient/other"},
+            "focus": [{"reference": "Patient/p1"}]}),
+    ] {
+        let resource_type = resource["resourceType"].as_str().unwrap().to_string();
+        backend
+            .create(&tenant, &resource_type, resource, FhirVersion::default())
+            .await
+            .unwrap();
+    }
+
+    let request = ExportRequest::patient();
+    let ids = ["p1".to_string()];
+    let exported = |resource_type: &'static str| {
+        let backend = &backend;
+        let tenant = &tenant;
+        let request = &request;
+        let ids = &ids;
+        async move {
+            let batch = backend
+                .fetch_patient_compartment_batch(tenant, request, resource_type, ids, None, 100)
+                .await
+                .unwrap();
+            let mut out: Vec<String> = batch
+                .lines
+                .iter()
+                .map(|line| {
+                    serde_json::from_str::<serde_json::Value>(line).unwrap()["id"]
+                        .as_str()
+                        .unwrap()
+                        .to_string()
+                })
+                .collect();
+            out.sort();
+            out
+        }
+    };
+
+    assert_eq!(exported("AllergyIntolerance").await, ["recorded"]);
+    assert_eq!(exported("Observation").await, ["about", "performed"]);
+    assert_eq!(exported("Patient").await, ["linked", "p1"]);
+    assert!(exported("Organization").await.is_empty());
 }

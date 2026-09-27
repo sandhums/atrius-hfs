@@ -1076,6 +1076,65 @@ async fn test_minio_pending_login_is_consumed_exactly_once() {
     assert!(backend.load_pending(&id).await.unwrap().is_none());
 }
 
+// ── Identifier-scoped conditional create (#1435) ─────────────────────────
+
+/// Against a real store: the first `If-None-Exist` on an identifier creates,
+/// the next answers the resource it created, two live matches are a
+/// `MultipleMatches`, and a criterion the scan cannot evaluate is refused.
+#[tokio::test]
+async fn test_minio_conditional_create_by_identifier() {
+    use helios_persistence::core::{ConditionalCreateResult, ConditionalStorage};
+
+    if skip_if_disabled("test_minio_conditional_create_by_identifier") {
+        return;
+    }
+    let harness = make_prefix_backend("conditional-create").await;
+    let backend = &harness.backend;
+    let t = tenant("tenant-cc");
+    let mrn = format!("mrn-{}", Uuid::new_v4().simple());
+    let patient = json!({
+        "resourceType": "Patient",
+        "identifier": [{"system": "http://example.org/mrn", "value": mrn}],
+        "active": true
+    });
+    let criteria = format!("identifier=http%3A%2F%2Fexample.org%2Fmrn%7C{mrn}");
+
+    let created = match backend
+        .conditional_create(&t, "Patient", patient.clone(), &criteria, FhirVersion::R4)
+        .await
+        .unwrap()
+    {
+        ConditionalCreateResult::Created(stored) => stored,
+        other => panic!("expected Created, got {other:?}"),
+    };
+    match backend
+        .conditional_create(&t, "Patient", patient.clone(), &criteria, FhirVersion::R4)
+        .await
+        .unwrap()
+    {
+        ConditionalCreateResult::Exists(stored) => assert_eq!(stored.id(), created.id()),
+        other => panic!("expected Exists, got {other:?}"),
+    }
+
+    backend
+        .create(&t, "Patient", patient.clone(), FhirVersion::R4)
+        .await
+        .unwrap();
+    assert!(matches!(
+        backend
+            .conditional_create(&t, "Patient", patient.clone(), &criteria, FhirVersion::R4)
+            .await
+            .unwrap(),
+        ConditionalCreateResult::MultipleMatches(2)
+    ));
+
+    let err = backend
+        .conditional_create(&t, "Patient", patient, "active=true", FhirVersion::R4)
+        .await
+        .unwrap_err();
+    assert!(matches!(err, StorageError::Search(_)), "{err:?}");
+}
+
 #[tokio::test]
 async fn test_minio_settings_round_trip() {
     if skip_if_disabled("test_minio_settings_round_trip") {
@@ -1845,4 +1904,91 @@ async fn test_minio_sof_patient_filter() {
         p1_set.is_disjoint(&p2_set),
         "patient filters must return non-overlapping observations"
     );
+}
+
+/// `Patient/$export` on S3 decides membership with the compartment's own
+/// parameter set (#1122), read from the payload the same way the other
+/// backends do. A bare `S3Backend` carries no spec parameters (a composite
+/// starter or the server's `populate_base_search_registry` loads them), so
+/// the test loads the workspace spec file into its base registry first.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_minio_patient_export_follows_the_compartment_definition() {
+    if skip_if_disabled("test_minio_patient_export_follows_the_compartment_definition") {
+        return;
+    }
+    use helios_persistence::core::bulk_export::PatientExportProvider;
+    use helios_persistence::search::SearchParameterLoader;
+
+    let harness = make_prefix_backend("compartment").await;
+    let tenant = tenant("minio-tenant-compartment");
+    {
+        let loader = SearchParameterLoader::new(FhirVersion::default());
+        let data_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data");
+        let mut registry = harness.backend.tenant_registries().base().write();
+        for param in loader.load_embedded().unwrap() {
+            let _ = registry.register(param);
+        }
+        for param in loader.load_from_spec_file(&data_dir).unwrap() {
+            let _ = registry.register(param);
+        }
+    }
+
+    for resource in [
+        json!({"resourceType": "Patient", "id": "p1"}),
+        json!({"resourceType": "Patient", "id": "other"}),
+        json!({"resourceType": "Patient", "id": "linked",
+            "link": [{"other": {"reference": "Patient/p1"}, "type": "seealso"}]}),
+        json!({"resourceType": "AllergyIntolerance", "id": "recorded",
+            "patient": {"reference": "Patient/other"},
+            "recorder": {"reference": "Patient/p1"}}),
+        json!({"resourceType": "AllergyIntolerance", "id": "someone-elses",
+            "patient": {"reference": "Patient/other"}}),
+        json!({"resourceType": "Observation", "id": "performed", "status": "final",
+            "code": {"text": "x"}, "subject": {"reference": "Patient/other"},
+            "performer": [{"reference": "Patient/p1/_history/2"}]}),
+        json!({"resourceType": "Observation", "id": "about", "status": "final",
+            "code": {"text": "x"}, "subject": {"reference": "Patient/p1"}}),
+        json!({"resourceType": "Observation", "id": "mentions-only", "status": "final",
+            "code": {"text": "x"}, "subject": {"reference": "Patient/other"},
+            "focus": [{"reference": "Patient/p1"}]}),
+    ] {
+        let resource_type = resource["resourceType"].as_str().unwrap().to_string();
+        harness
+            .backend
+            .create(&tenant, &resource_type, resource, FhirVersion::default())
+            .await
+            .unwrap();
+    }
+
+    let request = ExportRequest::patient();
+    let ids = ["p1".to_string()];
+    let mut exported = std::collections::BTreeMap::new();
+    for resource_type in [
+        "AllergyIntolerance",
+        "Observation",
+        "Patient",
+        "Organization",
+    ] {
+        let batch = harness
+            .backend
+            .fetch_patient_compartment_batch(&tenant, &request, resource_type, &ids, None, 100)
+            .await
+            .unwrap();
+        let mut found: Vec<String> = batch
+            .lines
+            .iter()
+            .map(|line| {
+                serde_json::from_str::<serde_json::Value>(line).unwrap()["id"]
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+            })
+            .collect();
+        found.sort();
+        exported.insert(resource_type, found);
+    }
+    assert_eq!(exported["AllergyIntolerance"], ["recorded"]);
+    assert_eq!(exported["Observation"], ["about", "performed"]);
+    assert_eq!(exported["Patient"], ["linked", "p1"]);
+    assert!(exported["Organization"].is_empty());
 }
