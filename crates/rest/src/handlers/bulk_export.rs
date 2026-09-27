@@ -379,6 +379,7 @@ where
         patient_refs,
         batch_size: cfg.batch_size,
         output_format,
+        fhir_version,
     };
 
     let input = StartExportInput {

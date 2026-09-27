@@ -344,7 +344,7 @@ where
         None => IndexBuildMode::default(),
     };
 
-    Ok(MongoBackendConfig {
+    let mut config = MongoBackendConfig {
         connection_string,
         database_name,
         max_connections,
@@ -355,8 +355,14 @@ where
         search_offloaded,
         max_included_resources,
         index_build,
+        reindex_catch_up_margin_ms: MongoBackendConfig::default().reindex_catch_up_margin_ms,
         app_name: MongoBackendConfig::default().app_name,
-    })
+        ..Default::default()
+    };
+    config
+        .apply_reindex_env(&env)
+        .map_err(|message| anyhow::anyhow!(message))?;
+    Ok(config)
 }
 
 #[cfg(feature = "sqlite")]
@@ -871,21 +877,27 @@ async fn serve(
     // Peer address in request extensions: the natural-language search rate
     // limiter falls back to it when auth is disabled and there is no principal
     // to bill a request to.
-    axum::serve(
+    let served = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
-    .with_graceful_shutdown(async move {
-        let _ = tokio::signal::ctrl_c().await;
-        info!("Shutdown signal received, draining connections");
-        if let Some(state) = audit_state {
-            lifecycle::record_shutdown(&*state.sink, &state.config.source_observer).await;
-            state.sink.flush().await;
-        }
-        // Flush any buffered OTLP spans (no-op without the `otel` feature).
-        helios_observability::telemetry::shutdown();
+    .with_graceful_shutdown(async {
+        let signal = helios_observability::shutdown::signal().await;
+        info!(signal, "Shutdown signal received, draining connections");
     })
-    .await?;
+    .await;
+
+    // Flush only once the drain is over. axum awaits the shutdown future above
+    // before it stops accepting or winds down a single connection, so a flush
+    // inside it ran while requests were still in flight and lost every audit
+    // event and span they produced. Flush on a serve error too.
+    if let Some(state) = audit_state {
+        lifecycle::record_shutdown(&*state.sink, &state.config.source_observer).await;
+        state.sink.flush().await;
+    }
+    // Flush any buffered OTLP spans (no-op without the `otel` feature).
+    helios_observability::telemetry::shutdown();
+    served?;
     Ok(())
 }
 
@@ -1970,13 +1982,45 @@ fn wire_reindex(
 /// Builds the deferred bulk-submit hook using the existing submit-worker
 /// concurrency as the per-process automatic reindex limit, plus where to clear
 /// the persisted "this manifest still owes a rebuild" marker when a generation
-/// finishes (#1125). Without a ledger (`None`) nothing is recorded and a restart
-/// cannot resume, as before.
+/// finishes (#1125). Without a ledger (`None`) nothing is recorded and a
+/// restart cannot resume, as before.
+///
+/// Split into this function and [`automatic_reindex_hook_with_ledger`] so a
+/// test can read the concrete `ReindexOnFinish`'s `batch_bytes()` (#1499)
+/// without downcasting the trait object every other caller uses.
 ///
 /// Gated exactly like [`wire_reindex`], which produces the `op` every caller
-/// passes in: any build with a reindex target. Keep the two in step rather than
-/// naming individual backends here — a narrower gate breaks the builds that
-/// leave that backend out (#1291).
+/// passes in: any build with a reindex target. Keep the two in step rather
+/// than naming individual backends here — a narrower gate breaks the builds
+/// that leave that backend out (#1291).
+#[cfg(any(
+    feature = "sqlite",
+    feature = "postgres",
+    feature = "mongodb",
+    feature = "elasticsearch"
+))]
+fn build_automatic_reindex_hook(
+    op: Arc<ReindexOperation>,
+    config: &ServerConfig,
+    ledger: Option<Arc<dyn helios_persistence::search::DeferredReindexLedger>>,
+) -> helios_persistence::search::ReindexOnFinish {
+    let hook = helios_persistence::search::ReindexOnFinish::with_max_concurrency(
+        op,
+        config.bulk_submit.worker_concurrency as usize,
+    )
+    .with_batch_size(config.reindex_batch_size)
+    .with_batch_bytes(config.reindex_batch_bytes)
+    .with_bulk_index_rebuild(config.bulk_submit.bulk_index_rebuild);
+    match ledger {
+        Some(ledger) => hook.with_ledger(ledger),
+        None => hook,
+    }
+}
+
+/// Builds [`build_automatic_reindex_hook`]'s hook and erases it behind
+/// `Arc<dyn DeferredReindexHook>`, the shape every wiring site outside tests
+/// needs. See that function's doc comment for what it configures and why the
+/// two are split (#1499).
 #[cfg(any(
     feature = "sqlite",
     feature = "postgres",
@@ -1988,17 +2032,7 @@ fn automatic_reindex_hook_with_ledger(
     config: &ServerConfig,
     ledger: Option<Arc<dyn helios_persistence::search::DeferredReindexLedger>>,
 ) -> Arc<dyn helios_persistence::core::DeferredReindexHook> {
-    let hook = helios_persistence::search::ReindexOnFinish::with_max_concurrency(
-        op,
-        config.bulk_submit.worker_concurrency as usize,
-    )
-    .with_batch_size(config.reindex_batch_size)
-    .with_batch_bytes(config.reindex_batch_bytes)
-    .with_bulk_index_rebuild(config.bulk_submit.bulk_index_rebuild);
-    Arc::new(match ledger {
-        Some(ledger) => hook.with_ledger(ledger),
-        None => hook,
-    })
+    Arc::new(build_automatic_reindex_hook(op, config, ledger))
 }
 
 /// Ops bundle for a backend that indexes itself — the standalone deployments
@@ -3955,6 +3989,34 @@ mod tests {
         assert_eq!(targets.len(), 2);
     }
 
+    // ── Automatic reindex hook wiring (#1499) ──────────────────────
+
+    #[cfg(feature = "sqlite")]
+    #[test]
+    fn test_automatic_reindex_hook_gets_the_server_default_batch_bytes_when_unset() {
+        use clap::Parser;
+
+        let config = ServerConfig::try_parse_from(["rest-server"]).unwrap();
+        assert_eq!(
+            config.reindex_batch_bytes,
+            32 * 1024 * 1024,
+            "HFS_REINDEX_BATCH_BYTES server default (#1499)"
+        );
+
+        let backend = Arc::new(
+            create_sqlite_backend(&ServerConfig {
+                database_url: Some(":memory:".to_string()),
+                ..Default::default()
+            })
+            .unwrap(),
+        );
+        let registries = backend.tenant_registries().clone();
+        let op = Arc::new(ReindexOperation::new(backend, registries));
+
+        let hook = build_automatic_reindex_hook(op, &config, None);
+        assert_eq!(hook.batch_bytes(), 32 * 1024 * 1024);
+    }
+
     // ── create_sqlite_backend() ───────────────────────────────────
 
     #[cfg(feature = "sqlite")]
@@ -4093,6 +4155,36 @@ mod tests {
         })
         .expect_err("invalid mode must fail startup");
         assert!(format!("{err}").contains("HFS_MONGODB_INDEX_BUILD"));
+    }
+
+    #[cfg(feature = "mongodb")]
+    #[test]
+    fn test_build_mongodb_config_reads_reindex_pipeline_knobs_and_rejects_invalid_values() {
+        let config = ServerConfig::default();
+
+        let mongo_config = build_mongodb_config_with_env(&config, false, |name| match name {
+            "HFS_MONGODB_REINDEX_OVERLAP" => Some("false".to_string()),
+            "HFS_MONGODB_REINDEX_PREPARE_THREADS" => Some("2".to_string()),
+            "HFS_MONGODB_REINDEX_PREFETCH" => Some("off".to_string()),
+            _ => None,
+        })
+        .expect("valid config");
+        assert!(!mongo_config.reindex_overlap);
+        assert_eq!(mongo_config.reindex_prepare_threads, 2);
+        assert!(!mongo_config.reindex_prefetch);
+
+        let default_config =
+            build_mongodb_config_with_env(&config, false, |_| None).expect("valid config");
+        assert!(default_config.reindex_overlap);
+        assert_eq!(default_config.reindex_prepare_threads, 0);
+        assert!(default_config.reindex_prefetch);
+
+        let err = build_mongodb_config_with_env(&config, false, |name| match name {
+            "HFS_MONGODB_REINDEX_OVERLAP" => Some("sideways".to_string()),
+            _ => None,
+        })
+        .expect_err("invalid value must fail startup");
+        assert!(format!("{err}").contains("HFS_MONGODB_REINDEX_OVERLAP"));
     }
 
     #[cfg(feature = "mongodb")]
