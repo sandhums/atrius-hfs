@@ -161,10 +161,10 @@ docker exec hfs-mongo mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_
 # MinIO (s3, s3-es, and the S3 output-backend variants of T5/T7)
 docker run -d --name hfs-minio -p 9000:9000 -p 9001:9001 \
   -e MINIO_ROOT_USER=hfs-minio -e MINIO_ROOT_PASSWORD=hfs-minio-secret \
-  quay.io/minio/minio:latest server /data --console-address ":9001"
+  ghcr.io/coollabsio/minio:RELEASE.2025-10-15T17-29-55Z server /data --console-address ":9001"
 # create the buckets once MinIO is up (console at http://localhost:9001)
 docker run --rm --network host -e MC_HOST_local=http://hfs-minio:hfs-minio-secret@localhost:9000 \
-  quay.io/minio/mc mb --ignore-existing local/hfs local/hfs-export local/hfs-sql-export
+  --entrypoint /usr/bin/mc ghcr.io/coollabsio/minio:RELEASE.2025-10-15T17-29-55Z mb --ignore-existing local/hfs local/hfs-export local/hfs-sql-export
 ```
 
 Readiness checks:
@@ -846,6 +846,18 @@ For each export: **Export** → **New Export** (`/ui/bulk-export/new`), fill the
 **Start Export**, and watch the card on the **Exports** list. In-progress cards
 refresh every 5 s and show the server's progress text; complete cards show **N
 files**, *finished in …*, and one download pill per resource type.
+
+Before starting an export, fill **Name**, scope, **Patients** or **Group ID**, and
+narrowing fields (**FHIR elements**, **Type filter**, **Since**, **Custom instant**,
+**Until**). Click **Clear** in **Resource types**: **All Resources** and every type
+become unchecked, with individual types enabled; all other values and the name
+heading remain unchanged. Repeat with individual types selected and after a
+server validation rejection (disable JavaScript to submit an impossible Custom
+date, then re-enable it on the rejected page); validation errors remain visible.
+Select a type afterwards to confirm the grid is usable. Without JavaScript,
+**Clear** is hidden: uncheck **All Resources** and individual types manually;
+other fields and errors stay unchanged. An empty type selection still means no
+resource-type filter when submitted.
 
 | # | Name | Form | Expect on the card |
 |---|---|---|---|

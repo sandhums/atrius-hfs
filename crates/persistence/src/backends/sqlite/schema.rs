@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 38;
+pub const SCHEMA_VERSION: i32 = 39;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -43,9 +43,12 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// attempts, secondary_sync, and `dead_at`. Helios v33 maps through attempts (32) and still
 /// runs secondary_sync and `dead_at`. Helios v34 maps through secondary_sync (33)
 /// and still runs Helios v35 `search_index_date_range` (`#1391`), Helios v36
-/// `login_sessions` (`#1481`), and `dead_at`. Helios v35 maps through the date
-/// range (34) and still runs login sessions and `dead_at`. Helios v36 maps
-/// through login sessions (35) and still runs `dead_at`.
+/// `login_sessions` (`#1481`), Helios v37 `bulk_manifest_file_progress_completed`
+/// (`#1610`), and `dead_at`. Helios v35 maps through the date range (34) and
+/// still runs login sessions, the completed flag, and `dead_at`. Helios v36
+/// maps through login sessions (35) and still runs the completed flag and
+/// `dead_at`. Helios v37 maps through the completed flag (36) and still runs
+/// `dead_at`.
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -83,6 +86,7 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("secondary_sync_failures", migrate_v33_to_v34),
     ("search_index_date_range", migrate_v34_to_v35),
     ("login_sessions", migrate_v35_to_v36),
+    ("bulk_manifest_file_progress_completed", migrate_v36_to_v37),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
@@ -2002,6 +2006,23 @@ fn migrate_v35_to_v36(conn: &Connection) -> StorageResult<()> {
             ON login_sessions (expires_at);",
     )
     .map_err(|e| migration_err(format!("v36 create login_sessions: {e}")))?;
+    Ok(())
+}
+
+/// Adds `completed` to `bulk_manifest_file_progress` (#1610): set once the
+/// worker walked the file's stream to its end, so a reclaimed manifest skips
+/// the file instead of re-walking it from the top. A file that failed
+/// part-way keeps `0` and is walked again.
+fn migrate_v36_to_v37(conn: &Connection) -> StorageResult<()> {
+    let columns = table_columns(conn, "bulk_manifest_file_progress")?;
+    if !columns.iter().any(|column| column == "completed") {
+        conn.execute(
+            "ALTER TABLE bulk_manifest_file_progress
+             ADD COLUMN completed INTEGER NOT NULL DEFAULT 0",
+            [],
+        )
+        .map_err(|e| migration_err(format!("v37 add completed: {e}")))?;
+    }
     Ok(())
 }
 
@@ -4495,6 +4516,33 @@ mod tests {
 
         // Every row now has an end: a replay visits nothing and counts nothing.
         assert_eq!(backfill_value_date_end(&conn).unwrap(), 0);
+    }
+
+    /// #1610: `completed` on the per-file progress table, on a fresh database
+    /// and on one migrated from v36.
+    #[test]
+    fn test_v37_adds_file_progress_completed() {
+        let has_completed = |conn: &Connection| {
+            table_columns(conn, "bulk_manifest_file_progress")
+                .unwrap()
+                .iter()
+                .any(|column| column == "completed")
+        };
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        assert!(has_completed(&conn));
+
+        let migrated = Connection::open_in_memory().unwrap();
+        initialize_schema(&migrated).unwrap();
+        migrated
+            .execute_batch("ALTER TABLE bulk_manifest_file_progress DROP COLUMN completed;")
+            .unwrap();
+        set_schema_version(&migrated, 36).unwrap();
+        unrecord_steps_completing_after(&migrated, 36);
+        assert!(!has_completed(&migrated));
+        initialize_schema(&migrated).unwrap();
+        assert_eq!(get_schema_version(&migrated).unwrap(), SCHEMA_VERSION);
+        assert!(has_completed(&migrated));
     }
 
     /// #1481: the v36 login-sessions table exists on a fresh database and on

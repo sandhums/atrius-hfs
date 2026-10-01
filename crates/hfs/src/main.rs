@@ -504,7 +504,7 @@ async fn create_audit_postgres_storage(
         create_postgres_backend(server_config).await?
     };
 
-    backend.init_schema().await?;
+    backend.init_schema_without_patient_export_index().await?;
     Ok(Arc::new(backend))
 }
 
@@ -1168,6 +1168,8 @@ async fn init_auth_with_audit(
             sessions: Arc::clone(sessions),
         });
     }
+    #[cfg(feature = "ui")]
+    helios_ui::set_bearer_only_auth(sessions.is_none());
 
     let auth_state = Arc::new(AuthMiddlewareState {
         provider: Arc::new(provider),
@@ -2720,6 +2722,7 @@ async fn start_sqlite_elasticsearch(
         refresh_interval: config.elasticsearch_refresh_interval.clone(),
         write_refresh: es_write_refresh_from_config(&config)?,
         nested_objects_limit: config.elasticsearch_nested_objects_limit,
+        max_terms_count: config.elasticsearch_max_terms_count,
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
@@ -3014,13 +3017,14 @@ async fn start_postgres_elasticsearch(
     use helios_persistence::core::BackendKind;
 
     // Create PostgreSQL backend
-    let backend = create_postgres_backend(&config).await?;
+    let mut backend = create_postgres_backend(&config).await?;
 
+    // Mark search as offloaded before schema initialization so this backend
+    // skips the large local patient export index.
+    backend.set_search_offloaded(true);
     backend.init_schema().await?;
 
     // Offload search to Elasticsearch
-    let mut backend = backend;
-    backend.set_search_offloaded(true);
     let pg = Arc::new(backend);
     attach_login_sessions(auth_state.as_ref(), pg.clone());
     info!("PostgreSQL search indexing disabled (offloaded to Elasticsearch)");
@@ -3061,6 +3065,7 @@ async fn start_postgres_elasticsearch(
         refresh_interval: config.elasticsearch_refresh_interval.clone(),
         write_refresh: es_write_refresh_from_config(&config)?,
         nested_objects_limit: config.elasticsearch_nested_objects_limit,
+        max_terms_count: config.elasticsearch_max_terms_count,
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
@@ -3288,6 +3293,7 @@ async fn start_mongodb_elasticsearch(
         refresh_interval: config.elasticsearch_refresh_interval.clone(),
         write_refresh: es_write_refresh_from_config(&config)?,
         nested_objects_limit: config.elasticsearch_nested_objects_limit,
+        max_terms_count: config.elasticsearch_max_terms_count,
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
@@ -3729,6 +3735,7 @@ async fn start_s3_elasticsearch(
         refresh_interval: config.elasticsearch_refresh_interval.clone(),
         write_refresh: es_write_refresh_from_config(&config)?,
         nested_objects_limit: config.elasticsearch_nested_objects_limit,
+        max_terms_count: config.elasticsearch_max_terms_count,
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
