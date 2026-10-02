@@ -280,14 +280,81 @@ fn sqlite_es_reindex_targets(
     Vec<Arc<dyn helios_persistence::search::ReindexTarget>>,
     &'static [&'static str],
 ) {
-    if sqlite.is_search_offloaded() {
-        (vec![es.clone()], &["elasticsearch"])
+    es_only_when_offloaded(
+        sqlite.is_search_offloaded(),
+        sqlite.clone(),
+        &["sqlite", "elasticsearch"],
+        es.clone(),
+    )
+}
+
+/// The indexes `$reindex` rebuilds on `postgres-elasticsearch` (pg-es).
+///
+/// Same rule as [`sqlite_es_reindex_targets`]: Elasticsearch always, the
+/// PostgreSQL primary only while it still indexes locally. pg-es offloads
+/// search at startup, so no query reads its `search_index`/`resource_fts`
+/// rows, yet the deferred rebuild after `$bulk-submit` wrote them anyway: per
+/// group of 128 resources a transaction, 129 advisory locks, two more reads of
+/// every body, the 1.5 MB SearchParameter overlay, a second FHIRPath
+/// extraction and the `to_tsvector` upsert. On the 18.9 M-resource #939 corpus
+/// that grew the database from 98 GB to 229 GB (plus 241 GB of WAL) in a
+/// rebuild that had not reached 50 % after 11.6 h.
+#[cfg(all(feature = "postgres", feature = "elasticsearch"))]
+fn postgres_es_reindex_targets(
+    pg: &Arc<helios_persistence::backends::postgres::PostgresBackend>,
+    es: &Arc<helios_persistence::backends::elasticsearch::ElasticsearchBackend>,
+) -> (
+    Vec<Arc<dyn helios_persistence::search::ReindexTarget>>,
+    &'static [&'static str],
+) {
+    es_only_when_offloaded(
+        pg.is_search_offloaded(),
+        pg.clone(),
+        &["postgres", "elasticsearch"],
+        es.clone(),
+    )
+}
+
+/// The composite rule behind [`sqlite_es_reindex_targets`] and
+/// [`postgres_es_reindex_targets`]: with search offloaded only Elasticsearch
+/// is a reindex target; otherwise the primary comes first, then Elasticsearch,
+/// named by `both`.
+#[cfg(all(
+    feature = "elasticsearch",
+    any(feature = "sqlite", feature = "postgres")
+))]
+fn es_only_when_offloaded(
+    primary_offloaded: bool,
+    primary: Arc<dyn helios_persistence::search::ReindexTarget>,
+    both: &'static [&'static str],
+    es: Arc<dyn helios_persistence::search::ReindexTarget>,
+) -> (
+    Vec<Arc<dyn helios_persistence::search::ReindexTarget>>,
+    &'static [&'static str],
+) {
+    if primary_offloaded {
+        (vec![es], &["elasticsearch"])
     } else {
-        (
-            vec![sqlite.clone(), es.clone()],
-            &["sqlite", "elasticsearch"],
-        )
+        (vec![primary, es], both)
     }
+}
+
+/// How much of one request's time the MongoDB backend may spend re-running a
+/// transaction Bundle after transient aborts (`HFS_REQUEST_TIMEOUT` less a
+/// 2 s margin, capped at the backend's own default of 120 s).
+///
+/// The request timeout layer drops the handler at `HFS_REQUEST_TIMEOUT` and
+/// answers `408`. A retry budget that ignored it would let a replay start at
+/// 18 s of a 30 s request and be cut off mid-flight, where the backend would
+/// otherwise have given up in time to answer `503 Retry-After`. The margin
+/// leaves the response itself room to be written; a timeout of 2 s or less
+/// leaves no budget, so a transient abort is answered at once without a replay.
+#[cfg(feature = "mongodb")]
+fn bundle_transaction_budget(request_timeout_secs: u64) -> std::time::Duration {
+    const MARGIN: std::time::Duration = std::time::Duration::from_secs(2);
+    std::time::Duration::from_secs(request_timeout_secs)
+        .saturating_sub(MARGIN)
+        .min(MongoBackendConfig::default().bundle_transaction_budget)
 }
 
 #[cfg(feature = "mongodb")]
@@ -359,6 +426,7 @@ where
         index_build,
         reindex_catch_up_margin_ms: MongoBackendConfig::default().reindex_catch_up_margin_ms,
         app_name: MongoBackendConfig::default().app_name,
+        bundle_transaction_budget: bundle_transaction_budget(config.request_timeout),
         ..Default::default()
     };
     config
@@ -2260,12 +2328,14 @@ fn composite_submit_jobs(
             concurrency: cfg.index_concurrency as usize,
             coalesce: cfg.index_coalesce as usize,
             max_wait: std::time::Duration::from_secs(cfg.index_max_wait_secs),
+            page_bytes: usize::try_from(cfg.index_page_bytes).unwrap_or(usize::MAX),
         };
         info!(
             queue = sink_config.queue,
             concurrency = sink_config.concurrency,
             coalesce = sink_config.coalesce,
             max_wait_secs = cfg.index_max_wait_secs,
+            page_bytes = sink_config.page_bytes,
             "Bulk submit indexes into Elasticsearch during ingest (DEFER_INDEXING=false); \
              the deferred reindex runs only for types the search index rejected"
         );
@@ -3153,10 +3223,14 @@ async fn start_postgres_elasticsearch(
     // `_typeFilter` runs against Elasticsearch, the index that actually serves
     // search in this deployment.
     let export_bundle = build_bulk_export(&config, composite.clone(), pg.clone()).await?;
+    // Reindex reads from the PostgreSQL primary and writes only the indexes a
+    // query can read: Elasticsearch alone while search is offloaded (#939).
+    let (reindex_targets, reindex_target_names) = postgres_es_reindex_targets(&pg, &es);
+    info!(targets = ?reindex_target_names, "Reindex writes to search targets");
     let ops = composite_ops(
         composite.clone(),
         pg.clone(),
-        vec![pg.clone(), es.clone()],
+        reindex_targets,
         pg.tenant_registries().clone(),
         audit_state.as_ref(),
         observability.clone(),
@@ -4037,6 +4111,42 @@ mod tests {
         assert_eq!(targets.len(), 2);
     }
 
+    /// The rule pg-es shares with sqlite-es (#939 C3): an offloaded primary is
+    /// not a reindex target. `PostgresBackend` cannot be built without a
+    /// database, so the shared rule is what gets exercised here; pg-es feeds it
+    /// `is_search_offloaded()`, which its startup sets to `true`.
+    #[cfg(all(
+        feature = "elasticsearch",
+        any(feature = "sqlite", feature = "postgres")
+    ))]
+    #[test]
+    fn test_es_only_when_offloaded_drops_the_primary() {
+        use helios_persistence::backends::elasticsearch::{
+            ElasticsearchBackend, ElasticsearchConfig,
+        };
+        use helios_persistence::search::ReindexTarget;
+
+        // Any two targets do; building the ES client does not connect.
+        let target = |port: u16| -> Arc<dyn ReindexTarget> {
+            Arc::new(
+                ElasticsearchBackend::new(ElasticsearchConfig {
+                    nodes: vec![format!("http://127.0.0.1:{port}")],
+                    ..Default::default()
+                })
+                .expect("ES backend builds without a cluster"),
+            )
+        };
+        let both: &'static [&'static str] = &["postgres", "elasticsearch"];
+
+        let (targets, names) = es_only_when_offloaded(true, target(1), both, target(2));
+        assert_eq!(names, &["elasticsearch"]);
+        assert_eq!(targets.len(), 1);
+
+        let (targets, names) = es_only_when_offloaded(false, target(1), both, target(2));
+        assert_eq!(names, both);
+        assert_eq!(targets.len(), 2);
+    }
+
     // ── Automatic reindex hook wiring (#1499) ──────────────────────
 
     #[cfg(feature = "sqlite")]
@@ -4233,6 +4343,53 @@ mod tests {
         })
         .expect_err("invalid value must fail startup");
         assert!(format!("{err}").contains("HFS_MONGODB_REINDEX_OVERLAP"));
+    }
+
+    #[cfg(feature = "mongodb")]
+    #[test]
+    fn test_bundle_transaction_budget_tracks_the_request_timeout() {
+        use std::time::Duration;
+
+        // The default HFS_REQUEST_TIMEOUT: a replay must finish, and the 503
+        // be written, before the 30 s timeout layer answers 408.
+        assert_eq!(bundle_transaction_budget(30), Duration::from_secs(28));
+        assert_eq!(bundle_transaction_budget(5), Duration::from_secs(3));
+        // No room for a margin: no budget, so no replay.
+        assert_eq!(bundle_transaction_budget(2), Duration::ZERO);
+        assert_eq!(bundle_transaction_budget(1), Duration::ZERO);
+        assert_eq!(bundle_transaction_budget(0), Duration::ZERO);
+        // Capped at the backend's own default, however long the request may run.
+        let default = MongoBackendConfig::default().bundle_transaction_budget;
+        assert_eq!(default, Duration::from_secs(120));
+        assert_eq!(bundle_transaction_budget(122), default);
+        assert_eq!(bundle_transaction_budget(3600), default);
+        assert_eq!(bundle_transaction_budget(u64::MAX), default);
+    }
+
+    #[cfg(feature = "mongodb")]
+    #[test]
+    fn test_build_mongodb_config_derives_the_bundle_budget_from_request_timeout() {
+        let config = ServerConfig {
+            request_timeout: 30,
+            ..Default::default()
+        };
+        let mongo_config =
+            build_mongodb_config_with_env(&config, false, |_| None).expect("valid config");
+        assert_eq!(
+            mongo_config.bundle_transaction_budget,
+            std::time::Duration::from_secs(28)
+        );
+
+        let config = ServerConfig {
+            request_timeout: 600,
+            ..Default::default()
+        };
+        let mongo_config =
+            build_mongodb_config_with_env(&config, false, |_| None).expect("valid config");
+        assert_eq!(
+            mongo_config.bundle_transaction_budget,
+            std::time::Duration::from_secs(120)
+        );
     }
 
     #[cfg(feature = "mongodb")]

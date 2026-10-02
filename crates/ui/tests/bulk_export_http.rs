@@ -21,6 +21,12 @@ use helios_fhir::FhirVersion;
 use helios_persistence::backends::sqlite::SqliteBackend;
 use helios_persistence::core::SettingsStore;
 
+#[path = "support/export_settings.rs"]
+mod export_settings;
+
+#[path = "support/html.rs"]
+mod html;
+
 const REST_JOB_ID: &str = "11111111-1111-4111-8111-111111111111";
 
 type SeenKickoff = (String, String, Option<String>);
@@ -650,6 +656,11 @@ async fn serve_with_settings(settings_available: bool) -> (String, MockExport, A
     let settings: Option<Arc<dyn SettingsStore>> =
         settings_available.then(|| backend.clone() as Arc<dyn SettingsStore>);
 
+    let (base, mock) = serve_with_store(settings).await;
+    (base, mock, backend)
+}
+
+async fn serve_with_store(settings: Option<Arc<dyn SettingsStore>>) -> (String, MockExport) {
     let mock = MockExport::default();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -670,7 +681,7 @@ async fn serve_with_settings(settings_available: bool) -> (String, MockExport, A
     )
     .layer(axum::middleware::from_fn(inject_test_principal));
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
-    (base, mock, backend)
+    (base, mock)
 }
 
 async fn serve() -> (String, MockExport, Arc<SqliteBackend>) {
@@ -1570,85 +1581,61 @@ async fn invalid_start_fields_return_one_400_without_a_job_or_kickoff() {
     assert_no_default_user_jobs(&backend).await;
 }
 
+/// The `patient` parameter of `Patient/$export` is optional (0..*): leaving
+/// the Patients field empty exports every patient's compartment, so the
+/// kick-off is a plain GET with no `patient` parameter.
 #[tokio::test]
-async fn patient_scope_without_a_selection_returns_400_without_a_job_or_kickoff() {
-    let (base, mock, backend) = serve().await;
-    let (status, html) = post_form_body(
+async fn patient_scope_without_a_selection_kicks_off_an_unfiltered_patient_export() {
+    let (base, mock, _) = serve().await;
+    let (status, _) = post_form(
         &base,
         "/ui/bulk-export",
-        &[("name", "Everyone by accident"), ("scope", "patient")],
+        &[("name", "Every patient"), ("scope", "patient")],
     )
     .await;
+    assert_eq!(status, 303);
 
-    assert_eq!(status, 400);
-    assert!(html.contains("Select at least one patient"), "{html}");
-    assert!(
-        html.contains(
-            r#"id="bulk-export-patients-error" class="field__hint field__hint--error" role="alert">"#
-        ),
-        "{html}"
-    );
-    assert!(
-        html.contains(r#"novalidate data-validation-started="true""#),
-        "{html}"
-    );
-    assert!(
-        html.contains(r#"name="scope" value="patient" checked"#),
-        "{html}"
-    );
-    assert!(mock.kickoffs.lock().unwrap().is_empty());
-    assert_no_default_user_jobs(&backend).await;
+    let kickoffs = mock.kickoffs.lock().unwrap().clone();
+    assert_eq!(kickoffs.len(), 1);
+    assert_eq!(kickoffs[0].0, "/Patient/$export");
+    assert!(query_values(&kickoffs[0].1, "patient").is_empty());
+    let requests = mock.requests.lock().unwrap().clone();
+    assert_eq!(requests.last().unwrap().method, Method::GET);
 }
 
 #[tokio::test]
-async fn patient_scope_with_only_blank_patient_values_is_rejected_the_same_way() {
-    let (base, mock, backend) = serve().await;
-    let (status, html) = post_form_body(
+async fn patient_scope_with_only_blank_patient_values_is_unfiltered_too() {
+    let (base, mock, _) = serve().await;
+    let (status, _) = post_form(
         &base,
         "/ui/bulk-export",
         &[
-            ("name", "Everyone by accident"),
+            ("name", "Every patient"),
             ("scope", "patient"),
             ("patient", "  \n , "),
         ],
     )
     .await;
+    assert_eq!(status, 303);
 
-    assert_eq!(status, 400);
-    assert!(html.contains("Select at least one patient"), "{html}");
-    assert!(
-        html.contains(
-            r#"id="bulk-export-patients-error" class="field__hint field__hint--error" role="alert">"#
-        ),
-        "{html}"
-    );
-    assert!(
-        html.contains(r#"novalidate data-validation-started="true""#),
-        "{html}"
-    );
-    assert!(
-        html.contains(r#"name="scope" value="patient" checked"#),
-        "{html}"
-    );
-    assert!(mock.kickoffs.lock().unwrap().is_empty());
-    assert_no_default_user_jobs(&backend).await;
+    let kickoffs = mock.kickoffs.lock().unwrap().clone();
+    assert_eq!(kickoffs.len(), 1);
+    assert_eq!(kickoffs[0].0, "/Patient/$export");
+    let requests = mock.requests.lock().unwrap().clone();
+    assert_eq!(requests.last().unwrap().method, Method::GET);
 }
 
 #[tokio::test]
-async fn the_builder_renders_the_patients_error_hidden_by_default() {
+async fn the_builder_says_an_empty_patients_field_exports_every_patient() {
     let (base, _, _) = serve().await;
     let (status, html) = get_text(&base, "/ui/bulk-export/new").await;
     assert_eq!(status, 200);
     assert!(
-        html.contains(
-            r#"id="bulk-export-patients-error" class="field__hint field__hint--error" role="alert" hidden>Select at least one patient"#
-        ),
+        html.contains("Leave empty to export every patient"),
         "{html}"
     );
-    assert!(
-        !html.contains("Leave empty to export every patient"),
-        "{html}"
-    );
+    assert!(!html.contains("bulk-export-patients-error"), "{html}");
+    assert!(!html.contains("At least one"), "{html}");
 }
 
 #[tokio::test]
@@ -2639,7 +2626,9 @@ async fn a_stale_poll_cannot_recreate_a_concurrently_deleted_job() {
     )
     .await;
     gate.release.notify_one();
-    polling.await.unwrap();
+    let (status, html) = polling.await.unwrap();
+    assert_eq!(status, 404);
+    assert_eq!(html::Dom::fragment(&html).count(".job-card"), 0);
 
     let current = backend.get_settings("l2:").await.unwrap().unwrap();
     assert!(
@@ -3953,5 +3942,183 @@ async fn invalid_patient_input_fails_without_export_all_and_other_scopes_ignore_
         kickoffs
             .iter()
             .any(|(path, _, _)| path == "/Group/g-1/$export")
+    );
+}
+
+fn summary_running_job() -> serde_json::Value {
+    serde_json::json!({
+        "name": "Summary export", "scope": "system", "status": "in-progress",
+        "remoteJob": "known", "remoteJobId": REST_JOB_ID,
+        "startedAt": "2026-01-01T09:00:00Z"
+    })
+}
+
+fn assert_bulk_summary(html: &str, total: usize, running: usize) {
+    let dom = html::Dom::fragment(html);
+    let summary = dom.one("#bulk-export-summary");
+    assert!(summary.has_class("page-head__lede"));
+    assert_eq!(summary.attr("hx-swap-oob"), Some("outerHTML"));
+    let word = if total == 1 { "export" } else { "exports" };
+    assert_eq!(
+        summary.text(),
+        format!("{total} {word} · {running} running")
+    );
+    assert_eq!(dom.count(".job-card"), 1);
+    assert_eq!(
+        dom.count(".job-card [hx-swap-oob]"),
+        0,
+        "summary must be a sibling, not part of the replaced card"
+    );
+    assert_eq!(dom.count("[hx-swap-oob]"), 1);
+    assert_eq!(dom.count("#sql-export-summary"), 0);
+}
+
+#[tokio::test]
+async fn terminal_card_responses_refresh_the_summary_without_polling_siblings() {
+    for terminal in ["complete", "failed", "cancelled"] {
+        let (base, mock, backend) = serve().await;
+        seed_job_for_user(&backend, "l2:", "default", "job-a", summary_running_job()).await;
+        seed_job_for_user(&backend, "l2:", "default", "job-b", summary_running_job()).await;
+        seed_job_for_user(&backend, "l2:", "other", "job-c", summary_running_job()).await;
+        seed_job_for_user(
+            &backend,
+            "u2:4:test:other",
+            "default",
+            "job-d",
+            summary_running_job(),
+        )
+        .await;
+        let (_, page) = get_text(&base, "/ui/bulk-export").await;
+        let dom = html::Dom::page(&page);
+        assert_eq!(
+            dom.one("#bulk-export-summary").text(),
+            "2 exports · 2 running"
+        );
+        assert_eq!(
+            dom.one("#bulk-export-jobs").attr("hx-sync"),
+            Some("#bulk-export-jobs:drop")
+        );
+        assert_eq!(dom.one("#bulk-export-jobs").all(".job-card").len(), 2);
+        assert_eq!(dom.count("[hx-swap-oob]"), 0);
+        if terminal == "cancelled" {
+            let (status, _) = post_form(&base, "/ui/bulk-export/active/job-a/cancel", &[]).await;
+            assert_eq!(status, 303);
+        } else if terminal == "failed" {
+            *mock.status_failure_body.lock().unwrap() = Some("failed".to_string());
+        } else {
+            *mock.polls.lock().unwrap() = 1; // The next real status request completes.
+        }
+        let (status, html) = get_text(&base, "/ui/bulk-export/active/job-a/card").await;
+        assert_eq!(status, 200);
+        assert_bulk_summary(&html, 2, 1);
+        assert!(
+            html::Dom::fragment(&html)
+                .one(".job-card .tag")
+                .has_class(&format!("tag--{terminal}"))
+        );
+        assert!(
+            !html::Dom::fragment(&html)
+                .one(".job-card")
+                .has_attr("hx-trigger")
+        );
+        assert_eq!(
+            mock.poll_requests.lock().unwrap().len(),
+            usize::from(terminal != "cancelled")
+        );
+        // A second terminal transition closes the exact same list: 2 -> 1 -> 0.
+        post_form(&base, "/ui/bulk-export/active/job-b/cancel", &[]).await;
+        let (_, html) = get_text(&base, "/ui/bulk-export/active/job-b/card").await;
+        assert_bulk_summary(&html, 2, 0);
+    }
+}
+
+#[tokio::test]
+async fn an_in_progress_card_does_not_emit_a_summary_swap() {
+    let (base, _, backend) = serve().await;
+    seed_job_for_user(&backend, "l2:", "default", "job-a", summary_running_job()).await;
+    let (status, html) = get_text(&base, "/ui/bulk-export/active/job-a/card").await;
+    assert_eq!(status, 200);
+    assert_eq!(
+        html::Dom::fragment(&html)
+            .one(".job-card")
+            .attr("hx-trigger"),
+        Some("every 5s")
+    );
+    assert_eq!(html::Dom::fragment(&html).count("#bulk-export-summary"), 0);
+}
+
+#[tokio::test]
+async fn a_post_poll_settings_read_failure_keeps_the_browser_polling_and_recovers() {
+    let backend = Arc::new(SqliteBackend::in_memory().unwrap());
+    backend.init_schema().unwrap();
+    seed_job_for_user(&backend, "l2:", "default", "job-a", summary_running_job()).await;
+    let store = Arc::new(export_settings::ExportSettings::new(backend, 2, None));
+    let (base, mock) = serve_with_store(Some(store)).await;
+    *mock.polls.lock().unwrap() = 1;
+    let (status, html) = get_text(&base, "/ui/bulk-export/active/job-a/card").await;
+    assert_eq!(status, 503);
+    assert_eq!(html::Dom::fragment(&html).count("#job-job-a"), 0);
+    assert_eq!(html::Dom::fragment(&html).count("[hx-swap-oob]"), 0);
+    let (status, html) = get_text(&base, "/ui/bulk-export/active/job-a/card").await;
+    assert_eq!(status, 200);
+    assert_bulk_summary(&html, 1, 0);
+    assert_eq!(
+        mock.poll_requests.lock().unwrap().len(),
+        1,
+        "a persisted terminal job never polls again"
+    );
+}
+
+#[tokio::test]
+async fn a_poll_that_loses_its_cas_renders_the_persisted_terminal_card_and_summary() {
+    let backend = Arc::new(SqliteBackend::in_memory().unwrap());
+    backend.init_schema().unwrap();
+    seed_job_for_user(&backend, "l2:", "default", "job-a", summary_running_job()).await;
+    let race = serde_json::json!({"byTenant": {"default": {"bulkExport": {"jobs": {"job-a": {"status": "cancelled"}}}}}});
+    let store = Arc::new(export_settings::ExportSettings::new(
+        backend.clone(),
+        0,
+        Some(race),
+    ));
+    let (base, mock) = serve_with_store(Some(store)).await;
+    *mock.polls.lock().unwrap() = 1;
+    let (status, html) = get_text(&base, "/ui/bulk-export/active/job-a/card").await;
+    assert_eq!(status, 200);
+    assert!(
+        html::Dom::fragment(&html)
+            .one(".job-card .tag")
+            .has_class("tag--cancelled")
+    );
+    assert_eq!(html::Dom::fragment(&html).count(".tag--complete"), 0);
+    assert_bulk_summary(&html, 1, 0);
+    let stored = backend.get_settings("l2:").await.unwrap().unwrap();
+    assert_eq!(
+        stored.document["byTenant"]["default"]["bulkExport"]["jobs"]["job-a"]["status"],
+        "cancelled"
+    );
+}
+
+#[tokio::test]
+async fn a_failed_poll_write_keeps_the_persisted_card_polling_until_storage_recovers() {
+    let backend = Arc::new(SqliteBackend::in_memory().unwrap());
+    backend.init_schema().unwrap();
+    seed_job_for_user(&backend, "l2:", "default", "job-a", summary_running_job()).await;
+    let store = Arc::new(export_settings::ExportSettings::new(backend, 0, None));
+    store.fail_patches.store(true, Ordering::SeqCst);
+    let (base, mock) = serve_with_store(Some(store.clone())).await;
+    *mock.polls.lock().unwrap() = 1;
+    let (status, markup) = get_text(&base, "/ui/bulk-export/active/job-a/card").await;
+    assert_eq!(status, 200);
+    let dom = html::Dom::fragment(&markup);
+    assert_eq!(dom.one(".job-card").attr("hx-trigger"), Some("every 5s"));
+    assert_eq!(dom.count("[hx-swap-oob]"), 0);
+    assert_eq!(dom.one(".job-card .tag").text(), "In progress");
+    store.fail_patches.store(false, Ordering::SeqCst);
+    let (status, markup) = get_text(&base, "/ui/bulk-export/active/job-a/card").await;
+    assert_eq!(status, 200);
+    assert_bulk_summary(&markup, 1, 0);
+    assert_eq!(
+        html::Dom::fragment(&markup).one(".job-card .tag").text(),
+        "Complete"
     );
 }

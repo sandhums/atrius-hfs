@@ -469,6 +469,11 @@ mod container_cleanup;
 #[path = "multitenancy/tenant_id_fidelity_suite.rs"]
 mod tenant_id_fidelity_suite;
 
+/// Backend-agnostic `PUT/DELETE [type]?[criteria]` transaction scenarios
+/// (#859), shared with the SQLite and PostgreSQL suites.
+#[path = "transactions/conditional_url_suite.rs"]
+mod conditional_url_suite;
+
 /// The backend-agnostic day-precision date-boundary suite (issue #519) — the
 /// #456 table that #463 pinned for SQLite only. Same `#[path]` arrangement.
 #[path = "search/date_boundary_suite.rs"]
@@ -787,6 +792,7 @@ async fn mongodb_repeated_type_composite_legacy_rows_require_reindex() {
     }
 
     let transaction_entry = |value: &str| BundleEntry {
+        criteria: None,
         method: BundleMethod::Post,
         url: "Observation".to_string(),
         resource: Some(
@@ -1179,6 +1185,16 @@ mod reindex_pipeline;
 /// #1500: MongoDB's `ReindexSource::fetch_resources_by_ids` override.
 #[path = "mongodb/reindex_fetch_by_ids.rs"]
 mod reindex_fetch_by_ids;
+
+/// #1586: a transaction bundle the server aborts with a
+/// `TransientTransactionError` is re-run instead of failing with a 400.
+#[path = "mongodb/transaction_retry.rs"]
+mod transaction_retry;
+
+/// #1602: a transaction entry's `ifNoneExist` applies `_id` / `_lastUpdated`
+/// even alongside an indexed parameter.
+#[path = "mongodb/ifnoneexist_resource_params.rs"]
+mod ifnoneexist_resource_params;
 
 /// #1405: of several writers holding the same version, one `update` writes and
 /// every loser is a `ConcurrencyError` — the server's `WriteConflict` used to
@@ -1737,6 +1753,166 @@ async fn mongodb_integration_readiness_check() {
     );
 }
 
+/// The indexes queries hint by name, written out here rather than read from
+/// the production list, so the test catches the list losing an entry.
+const HINTED_INDEXES: [(&str, &str); 5] = [
+    ("resources", "idx_resources_identity"),
+    ("resources", "idx_resources_type_scan"),
+    ("search_index", "idx_search_composite"),
+    ("search_index", "idx_search_composite_slot_probe"),
+    (
+        "search_index_contained",
+        "idx_search_contained_composite_slot_probe",
+    ),
+];
+
+async fn drop_test_index(backend: &MongoBackend, collection: &str, index: &str) {
+    raw_test_client(&backend.config().connection_string)
+        .await
+        .unwrap()
+        .database(&backend.config().database_name)
+        .collection::<Document>(collection)
+        .drop_index(index)
+        .await
+        .unwrap_or_else(|e| panic!("drop {collection}.{index}: {e}"));
+}
+
+async fn set_test_index_hidden(
+    backend: &MongoBackend,
+    collection: &str,
+    index: &str,
+    hidden: bool,
+) {
+    raw_test_client(&backend.config().connection_string)
+        .await
+        .unwrap()
+        .database(&backend.config().database_name)
+        .run_command(doc! {
+            "collMod": collection,
+            "index": { "name": index, "hidden": hidden },
+        })
+        .await
+        .unwrap_or_else(|e| panic!("set {collection}.{index} hidden={hidden}: {e}"));
+}
+
+/// The `Unavailable` message of a failed readiness check.
+async fn readiness_failure(backend: &MongoBackend) -> String {
+    match ResourceStorage::readiness_check(backend).await {
+        Err(BackendError::Unavailable { message, .. }) => message,
+        other => panic!("expected readiness to fail with Unavailable, got {other:?}"),
+    }
+}
+
+/// Every index a query hints by name is a readiness prerequisite: dropping or
+/// hiding one while the server runs fails readiness, naming the index, and
+/// recreating (as startup does) or unhiding it restores readiness.
+#[tokio::test]
+async fn mongodb_integration_readiness_requires_every_hinted_index() {
+    let Some(backend) = create_backend("readiness_hinted_indexes").await else {
+        eprintln!(
+            "Skipping mongodb_integration_readiness_requires_every_hinted_index (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    for (collection, index) in HINTED_INDEXES {
+        ResourceStorage::readiness_check(&backend)
+            .await
+            .unwrap_or_else(|e| panic!("ready before dropping {collection}.{index}: {e:?}"));
+
+        drop_test_index(&backend, collection, index).await;
+        assert_eq!(
+            readiness_failure(&backend).await,
+            format!("Required query index is missing: {collection}.{index}")
+        );
+
+        backend.init_schema().await.expect("recreate the index");
+        ResourceStorage::readiness_check(&backend)
+            .await
+            .unwrap_or_else(|e| panic!("ready again after recreating {collection}.{index}: {e:?}"));
+
+        set_test_index_hidden(&backend, collection, index, true).await;
+        assert_eq!(
+            readiness_failure(&backend).await,
+            format!("Required query index is hidden: {collection}.{index}")
+        );
+
+        set_test_index_hidden(&backend, collection, index, false).await;
+        ResourceStorage::readiness_check(&backend)
+            .await
+            .unwrap_or_else(|e| panic!("ready again after unhiding {collection}.{index}: {e:?}"));
+    }
+}
+
+/// A hinted search fails once its index is gone; readiness reports the same
+/// condition instead of staying ready.
+#[tokio::test]
+async fn mongodb_integration_readiness_fails_when_a_hinted_search_would() {
+    let Some(backend) = create_backend("readiness_hinted_search").await else {
+        eprintln!(
+            "Skipping mongodb_integration_readiness_fails_when_a_hinted_search_would (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("readiness-hinted-search");
+    backend
+        .create(
+            &tenant,
+            "Patient",
+            json!({"resourceType": "Patient", "id": "ready-p", "birthDate": "1980-01-01"}),
+            FhirVersion::default(),
+        )
+        .await
+        .unwrap();
+    let query = SearchQuery::new("Patient")
+        .with_parameter(SearchParameter {
+            name: "_id".to_string(),
+            param_type: SearchParamType::Token,
+            modifier: None,
+            values: vec![SearchValue::eq("ready-p")],
+            chain: vec![],
+            components: vec![],
+        })
+        .with_sort(SortDirective::parse("birthdate").with_param_type(Some(SearchParamType::Date)));
+
+    let found = backend.search(&tenant, &query).await.unwrap();
+    assert_eq!(found.resources.items.len(), 1);
+    ResourceStorage::readiness_check(&backend)
+        .await
+        .expect("ready with every index present");
+
+    drop_test_index(&backend, "search_index", "idx_search_composite").await;
+
+    let error = backend
+        .search(&tenant, &query)
+        .await
+        .expect_err("the hinted sort fails without its index")
+        .to_string();
+    assert!(
+        error.contains("hint provided does not correspond to an existing index"),
+        "the search failed for another reason: {error}"
+    );
+    assert_eq!(
+        readiness_failure(&backend).await,
+        "Required query index is missing: search_index.idx_search_composite"
+    );
+}
+
+/// Value indexes built in the background are not hinted, so losing one does
+/// not make the server unready.
+#[tokio::test]
+async fn mongodb_integration_readiness_ignores_background_value_indexes() {
+    let Some(backend) = create_backend("readiness_value_index").await else {
+        eprintln!(
+            "Skipping mongodb_integration_readiness_ignores_background_value_indexes (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    drop_test_index(&backend, "search_index", "idx_search_date_v3").await;
+    ResourceStorage::readiness_check(&backend)
+        .await
+        .expect("a missing background value index does not gate readiness");
+}
+
 #[tokio::test]
 async fn mongodb_integration_create_read_update_delete() {
     let Some(backend) = create_backend("crud").await else {
@@ -2265,6 +2441,7 @@ async fn mongodb_integration_transaction_bundle_create_and_resolve_references() 
             if_none_match: None,
             if_none_exist: None,
             full_url: Some("urn:uuid:new-patient".to_string()),
+            criteria: None,
         },
         BundleEntry {
             method: BundleMethod::Post,
@@ -2279,6 +2456,7 @@ async fn mongodb_integration_transaction_bundle_create_and_resolve_references() 
             if_none_match: None,
             if_none_exist: None,
             full_url: Some("urn:uuid:new-observation".to_string()),
+            criteria: None,
         },
     ];
 
@@ -2374,6 +2552,7 @@ async fn mongodb_integration_transaction_bundle_mixed_operations_and_idempotent_
             if_none_match: None,
             if_none_exist: None,
             full_url: None,
+            criteria: None,
         },
         BundleEntry {
             method: BundleMethod::Post,
@@ -2387,6 +2566,7 @@ async fn mongodb_integration_transaction_bundle_mixed_operations_and_idempotent_
             if_none_match: None,
             if_none_exist: None,
             full_url: Some("urn:uuid:new-created".to_string()),
+            criteria: None,
         },
         BundleEntry {
             method: BundleMethod::Put,
@@ -2400,6 +2580,7 @@ async fn mongodb_integration_transaction_bundle_mixed_operations_and_idempotent_
             if_none_match: None,
             if_none_exist: None,
             full_url: None,
+            criteria: None,
         },
     ];
 
@@ -2449,6 +2630,7 @@ async fn mongodb_integration_transaction_bundle_mixed_operations_and_idempotent_
         if_none_match: None,
         if_none_exist: None,
         full_url: None,
+        criteria: None,
     }];
 
     let Some(idempotent_result) = process_transaction_or_skip(
@@ -2509,6 +2691,7 @@ async fn mongodb_integration_transaction_if_none_exist_match_resolves_urn_refere
             if_none_match: None,
             if_none_exist: Some("identifier=http://example.org/mrn|MRN-URN-1".to_string()),
             full_url: Some("urn:uuid:patient".to_string()),
+            criteria: None,
         },
         BundleEntry {
             method: BundleMethod::Post,
@@ -2523,6 +2706,7 @@ async fn mongodb_integration_transaction_if_none_exist_match_resolves_urn_refere
             if_none_match: None,
             if_none_exist: None,
             full_url: Some("urn:uuid:observation".to_string()),
+            criteria: None,
         },
     ];
 
@@ -2579,6 +2763,7 @@ async fn mongodb_integration_transaction_bundle_conditional_headers() {
         if_none_match: None,
         if_none_exist: Some("identifier=http://example.org/mrn|MRN-TX-COND-1".to_string()),
         full_url: Some("urn:uuid:conditional-create".to_string()),
+        criteria: None,
     }];
 
     let Some(first_create) = process_transaction_or_skip(
@@ -2639,6 +2824,7 @@ async fn mongodb_integration_transaction_bundle_conditional_headers() {
         if_none_match: None,
         if_none_exist: None,
         full_url: None,
+        criteria: None,
     }];
 
     let Some(good_if_match_result) = process_transaction_or_skip(
@@ -2665,6 +2851,7 @@ async fn mongodb_integration_transaction_bundle_conditional_headers() {
         if_none_match: None,
         if_none_exist: None,
         full_url: None,
+        criteria: None,
     }];
 
     match backend
@@ -2739,6 +2926,7 @@ async fn mongodb_integration_transaction_bundle_rolls_back_on_failure() {
             if_none_match: None,
             if_none_exist: None,
             full_url: Some("urn:uuid:rollback-created".to_string()),
+            criteria: None,
         },
         BundleEntry {
             method: BundleMethod::Post,
@@ -2752,6 +2940,7 @@ async fn mongodb_integration_transaction_bundle_rolls_back_on_failure() {
             if_none_match: None,
             if_none_exist: None,
             full_url: Some("urn:uuid:rollback-fail".to_string()),
+            criteria: None,
         },
     ];
 
@@ -3725,6 +3914,7 @@ async fn mongodb_integration_transaction_bundle_indexes_and_clears_contained_row
     });
 
     let create_entries = vec![BundleEntry {
+        criteria: None,
         method: BundleMethod::Put,
         url: "Observation/bundle-holder".to_string(),
         resource: Some(with_contained),
@@ -3766,6 +3956,7 @@ async fn mongodb_integration_transaction_bundle_indexes_and_clears_contained_row
     );
 
     let delete_entries = vec![BundleEntry {
+        criteria: None,
         method: BundleMethod::Delete,
         url: "Observation/bundle-holder".to_string(),
         resource: None,
@@ -12531,6 +12722,25 @@ mod bulk_submit {
                 .run_command(doc! { "configureFailPoint": "failCommand", "mode": "off" })
                 .await;
         }
+
+        /// [`Self::off`], returning how many commands this configuration
+        /// matched: turning a failpoint off reports its lifetime `count`
+        /// (the same figure `enable` reads as `initial_count`), so the
+        /// difference is the number of times *this* test's failpoint fired.
+        /// Lets a test assert "the bundle ran exactly N times" (#1586).
+        pub(super) async fn off_and_count(self) -> i64 {
+            let response = self
+                .admin
+                .run_command(doc! { "configureFailPoint": "failCommand", "mode": "off" })
+                .await
+                .expect("configureFailPoint failCommand off");
+            let final_count = match response.get("count") {
+                Some(Bson::Int32(count)) => i64::from(*count),
+                Some(Bson::Int64(count)) => *count,
+                count => panic!("configureFailPoint off returned an invalid count: {count:?}"),
+            };
+            final_count - self.initial_count
+        }
     }
 
     /// Pins the failpoint plumbing every retry test relies on: it fires for the
@@ -13491,6 +13701,153 @@ mod bulk_submit {
                 assert_eq!(result.outcome, BulkEntryOutcome::Success);
             }
         }
+    }
+
+    /// Makes `collection` reject the documents the server writes, through a
+    /// validator requiring a `_never` field they do not have. Creates the
+    /// collection with that validator when it does not exist yet.
+    async fn reject_every_write(backend: &MongoBackend, collection: &str) {
+        let client = raw_test_client(&backend.config().connection_string)
+            .await
+            .unwrap();
+        let db = client.database(&backend.config().database_name);
+        let validator = doc! { "_never": { "$exists": true } };
+        let modified = db
+            .run_command(doc! {
+                "collMod": collection,
+                "validator": validator.clone(),
+                "validationAction": "error",
+                "validationLevel": "strict",
+            })
+            .await;
+        let missing = match &modified {
+            Ok(_) => false,
+            Err(e) => matches!(
+                &*e.kind,
+                mongodb::error::ErrorKind::Command(command) if command.code_name == "NamespaceNotFound"
+            ),
+        };
+        if missing {
+            db.run_command(doc! {
+                "create": collection,
+                "validator": validator,
+                "validationAction": "error",
+                "validationLevel": "strict",
+            })
+            .await
+            .unwrap_or_else(|e| panic!("could not create {collection} with a validator: {e}"));
+        } else {
+            modified.unwrap_or_else(|e| panic!("could not add a validator to {collection}: {e}"));
+        }
+    }
+
+    fn search_parameter_entry(code: &str) -> NdjsonEntry {
+        NdjsonEntry::new(
+            1,
+            "SearchParameter",
+            json!({
+                "resourceType": "SearchParameter",
+                "id": code,
+                "url": format!("http://example.org/fhir/SearchParameter/{code}"),
+                "name": code,
+                "status": "active",
+                "code": code,
+                "base": ["Patient"],
+                "type": "token",
+                "expression": "Patient.gender"
+            }),
+        )
+    }
+
+    fn registers(backend: &MongoBackend, tenant: &TenantContext, code: &str) -> bool {
+        backend
+            .search_param_registry(tenant)
+            .read()
+            .get_param("Patient", code)
+            .is_some()
+    }
+
+    /// A batch whose `resources` stage committed a SearchParameter before the
+    /// history stage failed still refreshes the tenant's SearchParameter cache:
+    /// the row is stored, so search must resolve it without waiting for the
+    /// periodic refresh.
+    #[tokio::test]
+    async fn a_batch_whose_history_write_fails_still_reloads_its_search_parameters() {
+        let Some(backend) = create_backend("submit_sp_reload_history_failure").await else {
+            return;
+        };
+        let tenant = create_tenant("submit-tenant");
+        let (id, manifest_id) = seed(&backend, &tenant).await;
+        reject_every_write(&backend, "resource_history").await;
+
+        let results = backend
+            .process_entries(
+                &tenant,
+                &id,
+                &manifest_id,
+                vec![search_parameter_entry("bulk-history-failed")],
+                &BulkProcessingOptions::new(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].outcome, BulkEntryOutcome::ProcessingError);
+        let diagnostics = results[0]
+            .operation_outcome
+            .as_ref()
+            .and_then(|oo| oo["issue"][0]["diagnostics"].as_str())
+            .unwrap_or_default();
+        assert!(
+            diagnostics.contains("insert batch resource history"),
+            "the batch failed at the history stage: {diagnostics}"
+        );
+
+        assert!(
+            backend
+                .read(&tenant, "SearchParameter", "bulk-history-failed")
+                .await
+                .unwrap()
+                .is_some(),
+            "the resources stage committed before the history stage failed"
+        );
+        assert!(
+            registers(&backend, &tenant, "bulk-history-failed"),
+            "a stored SearchParameter must be registered after its batch fails"
+        );
+    }
+
+    /// The reload runs before the receipts are written, so a receipt-write
+    /// failure, which still fails the ingest, cannot skip it.
+    #[tokio::test]
+    async fn a_batch_whose_receipt_write_fails_still_reloads_its_search_parameters() {
+        let Some(backend) = create_backend("submit_sp_reload_receipt_failure").await else {
+            return;
+        };
+        let tenant = create_tenant("submit-tenant");
+        let (id, manifest_id) = seed(&backend, &tenant).await;
+        reject_every_write(&backend, "bulk_entry_results").await;
+
+        let outcome = backend
+            .process_entries(
+                &tenant,
+                &id,
+                &manifest_id,
+                vec![search_parameter_entry("bulk-receipt-failed")],
+                &BulkProcessingOptions::new(),
+            )
+            .await;
+        let error = outcome
+            .expect_err("a failed receipt write still fails the ingest")
+            .to_string();
+        assert!(
+            error.contains("store batch entry results"),
+            "the ingest failed at the receipt write: {error}"
+        );
+
+        assert!(
+            registers(&backend, &tenant, "bulk-receipt-failed"),
+            "the SearchParameter written before the receipt failure must be registered"
+        );
     }
 
     /// Line numbers restart in every manifest output file, so the file is part
@@ -16038,6 +16395,145 @@ async fn mongodb_integration_export_until_is_inclusive() {
     );
 }
 
+// ============================================================================
+// Issue #859 — `PUT/DELETE [type]?[criteria]` inside a transaction
+// ============================================================================
+
+/// Runs one shared #859 scenario on its own database and tenant, skipping when
+/// Docker is unavailable or the topology cannot run transactions (probed with an
+/// empty bundle, the way `mongodb_integration_transaction_bundle_topology_behavior`
+/// does, since the scenarios call `process_transaction` directly).
+macro_rules! mongodb_conditional_url_test {
+    ($test_name:ident, $scenario:ident) => {
+        #[tokio::test]
+        async fn $test_name() {
+            let Some(backend) = create_backend(stringify!($scenario)).await else {
+                eprintln!(
+                    "Skipping {} (requires Docker or HFS_TEST_MONGODB_URL)",
+                    stringify!($test_name)
+                );
+                return;
+            };
+            let tenant = create_tenant(concat!("tenant-cond-url-", stringify!($scenario)));
+            if process_transaction_or_skip(&backend, &tenant, vec![], stringify!($test_name))
+                .await
+                .is_none()
+            {
+                return;
+            }
+            conditional_url_suite::$scenario(&backend, &tenant).await;
+        }
+    };
+}
+
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_put_updates_the_single_match,
+    conditional_put_updates_the_single_match
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_put_creates_when_nothing_matches,
+    conditional_put_creates_when_nothing_matches
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_put_with_several_matches_rolls_back,
+    conditional_put_with_several_matches_rolls_back
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_delete_removes_the_single_match,
+    conditional_delete_removes_the_single_match
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_delete_with_no_match_is_204,
+    conditional_delete_with_no_match_is_204
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_delete_with_several_matches_rolls_back,
+    conditional_delete_with_several_matches_rolls_back
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_overlap_with_an_instance_entry_fails_the_bundle,
+    overlap_with_an_instance_entry_fails_the_bundle
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_two_conditional_entries_resolving_to_one_resource_fail,
+    two_conditional_entries_resolving_to_one_resource_fail
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_matched_conditional_put_resolves_urn_references,
+    matched_conditional_put_resolves_urn_references
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_put_honours_if_match,
+    conditional_put_honours_if_match
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_patch_updates_the_single_match,
+    conditional_patch_updates_the_single_match
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_patch_with_no_match_fails_the_bundle,
+    conditional_patch_with_no_match_fails_the_bundle
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_patch_with_several_matches_rolls_back,
+    conditional_patch_with_several_matches_rolls_back
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_patch_honours_if_match,
+    conditional_patch_honours_if_match
+);
+mongodb_conditional_url_test!(
+    mongodb_integration_conditional_patch_overlapping_an_instance_entry_fails,
+    conditional_patch_overlapping_an_instance_entry_fails
+);
+
+/// A modifier is evaluated, not refused: the session-scoped matcher builds the
+/// same index filter direct search does, so `family:exact` finds the seeded
+/// patient and the entry updates it rather than creating a duplicate.
+#[tokio::test]
+async fn mongodb_integration_conditional_url_with_a_modifier_is_evaluated() {
+    let Some(backend) = create_backend("conditional_url_modifier").await else {
+        eprintln!(
+            "Skipping mongodb_integration_conditional_url_with_a_modifier_is_evaluated (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-cond-url-modifier");
+    if process_transaction_or_skip(
+        &backend,
+        &tenant,
+        vec![],
+        "mongodb_integration_conditional_url_with_a_modifier_is_evaluated",
+    )
+    .await
+    .is_none()
+    {
+        return;
+    }
+    conditional_url_suite::seed_identified_patient(&backend, &tenant, "p1", "Nguyen").await;
+
+    let mut entry = conditional_url_suite::conditional_put("Updated", None);
+    entry.url = "Patient?family:exact=Nguyen".to_string();
+    entry.criteria = Some(vec![helios_persistence::types::SearchParameter {
+        name: "family".to_string(),
+        param_type: helios_persistence::types::SearchParamType::String,
+        modifier: Some(helios_persistence::types::SearchModifier::Exact),
+        values: vec![helios_persistence::types::SearchValue::eq("Nguyen")],
+        ..Default::default()
+    }]);
+
+    let result = backend
+        .process_transaction(&tenant, vec![entry], FhirVersion::default())
+        .await
+        .expect("a modifier is evaluated inside the transaction");
+    assert_eq!(result.entries[0].status, 200, "{:?}", result.entries[0]);
+    assert_eq!(
+        result.entries[0].location.as_deref(),
+        Some("Patient/p1/_history/2")
+    );
+    assert_eq!(backend.count(&tenant, Some("Patient")).await.unwrap(), 1);
+}
+
 /// Exported lines carry `meta.versionId` / `meta.lastUpdated` from the stored
 /// document (#1273) on all three export queries, and client-supplied `meta`
 /// members survive the merge.
@@ -16203,6 +16699,7 @@ async fn mongodb_integration_if_none_exist_multi_param_and_semantics() {
             "identifier=http://example.org/mrn|MRN-MULTI-1&active=true".to_string(),
         ),
         full_url: Some("urn:uuid:active-patient".to_string()),
+        criteria: None,
     };
 
     let Some(result) = process_transaction_or_skip(
@@ -16248,6 +16745,7 @@ async fn mongodb_integration_if_none_exist_same_transaction_read_your_writes() {
         if_none_match: None,
         if_none_exist: Some("identifier=http://example.org/mrn|MRN-RYW-1".to_string()),
         full_url: Some(full_url.to_string()),
+        criteria: None,
     };
 
     let Some(result) = process_transaction_or_skip(
@@ -16315,6 +16813,7 @@ async fn mongodb_integration_if_none_exist_multiple_matches_rolls_back() {
             if_none_match: None,
             if_none_exist: None,
             full_url: None,
+            criteria: None,
         },
         BundleEntry {
             method: BundleMethod::Post,
@@ -16327,6 +16826,7 @@ async fn mongodb_integration_if_none_exist_multiple_matches_rolls_back() {
             if_none_match: None,
             if_none_exist: Some("identifier=http://example.org/mrn|MRN-AMB-1".to_string()),
             full_url: Some("urn:uuid:ambiguous".to_string()),
+            criteria: None,
         },
     ];
 
@@ -16403,6 +16903,7 @@ async fn mongodb_integration_if_none_exist_offloaded_search_uses_resource_scan()
         if_none_match: None,
         if_none_exist: Some("identifier=http://example.org/mrn|MRN-OFFL-1".to_string()),
         full_url: Some("urn:uuid:offloaded".to_string()),
+        criteria: None,
     };
 
     let Some(result) = process_transaction_or_skip(
@@ -16467,6 +16968,7 @@ async fn mongodb_integration_if_none_exist_of_only_result_parameters_is_refused(
                     if_none_match: None,
                     if_none_exist: None,
                     full_url: None,
+                    criteria: None,
                 },
                 BundleEntry {
                     method: BundleMethod::Post,
@@ -16476,6 +16978,7 @@ async fn mongodb_integration_if_none_exist_of_only_result_parameters_is_refused(
                     if_none_match: None,
                     if_none_exist: Some(criteria.to_string()),
                     full_url: None,
+                    criteria: None,
                 },
             ];
             let context = format!("offloaded={offloaded} ifNoneExist={criteria}");
@@ -16534,6 +17037,7 @@ async fn mongodb_integration_if_none_exist_broad_param_beyond_probe_limit() {
                 if_none_match: None,
                 if_none_exist: None,
                 full_url: Some(format!("urn:uuid:noise-{i}")),
+                criteria: None,
             })
             .collect();
         let Some(result) = process_transaction_or_skip(
@@ -16564,6 +17068,7 @@ async fn mongodb_integration_if_none_exist_broad_param_beyond_probe_limit() {
         if_none_match: None,
         if_none_exist: None,
         full_url: Some("urn:uuid:target-broad".to_string()),
+        criteria: None,
     };
     let Some(target_result) = process_transaction_or_skip(
         &backend,
@@ -16595,6 +17100,7 @@ async fn mongodb_integration_if_none_exist_broad_param_beyond_probe_limit() {
         if_none_match: None,
         if_none_exist: Some("identifier=http://example.org/mrn|TARGET-BROAD-1".to_string()),
         full_url: Some("urn:uuid:ine-broad".to_string()),
+        criteria: None,
     };
     let Some(ine_result) = process_transaction_or_skip(
         &backend,
@@ -16646,6 +17152,7 @@ async fn mongodb_integration_search_paged_intersection_correctness() {
         let end = (chunk_start + 50).min(MALE_ACTIVE);
         let entries: Vec<BundleEntry> = (chunk_start..end)
             .map(|i| BundleEntry {
+                criteria: None,
                 method: BundleMethod::Post,
                 url: "Patient".to_string(),
                 resource: Some(serde_json::json!({
@@ -16680,6 +17187,7 @@ async fn mongodb_integration_search_paged_intersection_correctness() {
         let end = (chunk_start + 50).min(FEMALE_ACTIVE);
         let entries: Vec<BundleEntry> = (chunk_start..end)
             .map(|i| BundleEntry {
+                criteria: None,
                 method: BundleMethod::Post,
                 url: "Patient".to_string(),
                 resource: Some(serde_json::json!({
@@ -18476,6 +18984,7 @@ async fn mongodb_integration_composite_if_none_exist_resolves_or_creates() {
     // $gt160 matches the existing height-170: the conditional create must
     // resolve to it and create nothing.
     let match_entries = vec![BundleEntry {
+        criteria: None,
         method: BundleMethod::Post,
         url: "Observation".to_string(),
         resource: Some(json!({
@@ -18516,6 +19025,7 @@ async fn mongodb_integration_composite_if_none_exist_resolves_or_creates() {
 
     // $gt300 matches nothing: the conditional create must actually create.
     let create_entries = vec![BundleEntry {
+        criteria: None,
         method: BundleMethod::Post,
         url: "Observation".to_string(),
         resource: Some(json!({
@@ -18847,6 +19357,7 @@ async fn mongodb_integration_composite_multi_batch_driver_paging() {
         let end = (chunk_start + 50).min(MATCHING);
         let entries: Vec<BundleEntry> = (chunk_start..end)
             .map(|i| BundleEntry {
+                criteria: None,
                 method: BundleMethod::Post,
                 url: "Observation".to_string(),
                 resource: Some(json!({
@@ -18885,6 +19396,7 @@ async fn mongodb_integration_composite_multi_batch_driver_paging() {
         let end = (chunk_start + 10).min(NON_MATCHING);
         let entries: Vec<BundleEntry> = (chunk_start..end)
             .map(|i| BundleEntry {
+                criteria: None,
                 method: BundleMethod::Post,
                 url: "Observation".to_string(),
                 resource: Some(json!({
@@ -18962,6 +19474,7 @@ fn i1394r1_patient(family: &str, identifier_value: &str) -> serde_json::Value {
 
 fn i1394r1_create_entry(family: &str, identifier_value: &str, criteria: &str) -> BundleEntry {
     BundleEntry {
+        criteria: None,
         method: BundleMethod::Post,
         url: "Patient".to_string(),
         resource: Some(i1394r1_patient(family, identifier_value)),
@@ -19465,6 +19978,7 @@ async fn i1394r1_offloaded_if_none_exist_read_your_writes_matches() {
     let tenant = i1394r1_tenant("ryw");
 
     let create = BundleEntry {
+        criteria: None,
         method: BundleMethod::Post,
         url: "Patient".to_string(),
         resource: Some(i1394r1_patient("First", "MRN-NEW-1")),

@@ -180,10 +180,7 @@ where
             HeaderMap::new(),
             &outcome,
             negotiated.format,
-        )
-        .map_err(|_| RestError::InternalError {
-            message: "Failed to serialize response".to_string(),
-        });
+        );
     }
 
     let Some(resource) = inputs.resource else {
@@ -250,9 +247,6 @@ where
         &outcome,
         negotiated.format,
     )
-    .map_err(|_| RestError::InternalError {
-        message: "Failed to serialize response".to_string(),
-    })
 }
 
 async fn create_mode_issues<S>(

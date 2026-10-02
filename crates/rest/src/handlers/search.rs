@@ -207,11 +207,7 @@ where
     S: ResourceStorage + SearchProvider + IncludeProvider + RevincludeProvider + Send + Sync,
 {
     let bundle_json = execute_search_bundle(state, &tenant, resource_type, pairs, strict).await?;
-    format_resource_response(StatusCode::OK, HeaderMap::new(), &bundle_json, format).map_err(|_| {
-        RestError::InternalError {
-            message: "Failed to serialize response".to_string(),
-        }
-    })
+    format_resource_response(StatusCode::OK, HeaderMap::new(), &bundle_json, format)
 }
 
 /// Executes a type-level search and returns the searchset Bundle as JSON.
@@ -663,7 +659,7 @@ where
     // Convert result to FHIR Bundle. `into_bundle` moves each resource's JSON
     // into its entry; `to_bundle` would deep-clone every one of them and then
     // drop the originals.
-    let mut bundle = result.into_bundle(&public_base, &self_link);
+    let mut bundle = result.into_bundle_with_page_size(&public_base, &self_link, Some(count));
     if query.total == Some(TotalMode::None) {
         bundle.total = None;
     }
@@ -908,7 +904,7 @@ where
     let match_count = result.resources.len();
 
     // Convert result to FHIR Bundle (moving, not cloning, each resource).
-    let mut bundle = result.into_bundle(&public_base, &self_link);
+    let mut bundle = result.into_bundle_with_page_size(&public_base, &self_link, Some(count));
     if query.total == Some(TotalMode::None) {
         bundle.total = None;
     }
@@ -946,11 +942,7 @@ where
         fhir_version,
     )?;
 
-    format_resource_response(StatusCode::OK, HeaderMap::new(), &bundle_json, format).map_err(|_| {
-        RestError::InternalError {
-            message: "Failed to serialize response".to_string(),
-        }
-    })
+    format_resource_response(StatusCode::OK, HeaderMap::new(), &bundle_json, format)
 }
 
 /// Builds a type-level search URL from base URL and parameters.

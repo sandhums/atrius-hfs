@@ -151,8 +151,6 @@ struct PlannedBatch {
     changes: Vec<(usize, usize, SubmissionChange)>,
     error_count: u32,
     aborted_on_max_errors: bool,
-    /// A `SearchParameter` was written, so the tenant overlay cache is stale.
-    touched_search_parameters: bool,
 }
 
 /// Outcome of ingesting one batch.
@@ -188,7 +186,7 @@ impl MongoBackend {
     ) -> StorageResult<BatchOutcome> {
         let db = self.get_database().await?;
 
-        let (results, error_count, aborted_on_max_errors, touched_search_parameters) = match self
+        let (results, error_count, aborted_on_max_errors) = match self
             .write_batch(&db, tenant, submission_id, manifest_id, entries, options)
             .await
         {
@@ -196,7 +194,6 @@ impl MongoBackend {
                 planned.results,
                 planned.error_count,
                 planned.aborted_on_max_errors,
-                planned.touched_search_parameters,
             ),
             Err(err) => {
                 tracing::warn!(
@@ -204,24 +201,26 @@ impl MongoBackend {
                     entries = entries.len(),
                     "batch flush failed; recording every entry as processing-error: {err}"
                 );
-                (
-                    all_failed(entries, &err),
-                    entries.len() as u32,
-                    false,
-                    false,
-                )
+                (all_failed(entries, &err), entries.len() as u32, false)
             }
         };
 
-        self.write_entry_results(&db, tenant, submission_id, manifest_id, options, &results)
-            .await?;
-
         // A SearchParameter write may change a tenant's overlay. The per-entry
         // path reloaded the cache once per such resource; once per batch is the
-        // same invalidation for a fraction of the reloads.
-        if touched_search_parameters && let Err(e) = self.reload_stored_cache().await {
+        // same invalidation for a fraction of the reloads. The `resources` stage
+        // can commit before a later stage fails, and the plan is gone on error,
+        // so decide from the input entries, and reload before a failed receipt
+        // write can return early. A batch that wrote nothing reloads harmlessly.
+        if entries
+            .iter()
+            .any(|entry| entry.resource_type == "SearchParameter")
+            && let Err(e) = self.reload_stored_cache().await
+        {
             tracing::warn!("SearchParameter cache reload failed: {e}");
         }
+
+        self.write_entry_results(&db, tenant, submission_id, manifest_id, options, &results)
+            .await?;
 
         Ok(BatchOutcome {
             results,
@@ -370,7 +369,6 @@ impl MongoBackend {
             changes: Vec::new(),
             error_count: 0,
             aborted_on_max_errors: false,
-            touched_search_parameters: false,
         };
         /// The row's state as an entry sees it: a write staged earlier in the
         /// batch wins over what the pre-read found.
@@ -595,9 +593,6 @@ impl MongoBackend {
                 &plan.id,
                 created,
             ));
-            if plan.resource_type == "SearchParameter" {
-                planned.touched_search_parameters = true;
-            }
             planned.history.push((plan_idx, history));
             planned.changes.push((plan_idx, result_idx, change));
         }
@@ -1163,11 +1158,10 @@ async fn run_update_command(
     Ok(UpdateOutcome { failures })
 }
 
-/// `Unavailable`'s `Display` renders only `backend_name` (its `message` is
-/// meant to be read off the field, as the REST error mapping and the retry
-/// unit tests already do), so this reads that field directly rather than
-/// dropping the detail — the exhausted-attempts count — through
-/// `err.to_string()`. Falls back to `Display` for every other variant.
+/// The failure reason for a per-entry receipt: for `Unavailable`, its message
+/// (which carries the exhausted-attempts count) without the
+/// `backend unavailable: <name>: ` prefix. Falls back to `Display` for every
+/// other variant.
 fn detail(err: &StorageError) -> String {
     match err {
         StorageError::Backend(BackendError::Unavailable { message, .. }) => message.clone(),
@@ -1349,16 +1343,17 @@ mod tests {
     }
 
     #[test]
-    fn detail_reads_the_unavailable_message_instead_of_dropping_it_through_display() {
+    fn detail_is_the_unavailable_message_without_the_backend_prefix() {
         let io_error =
             mongodb::error::Error::from(std::io::Error::from(std::io::ErrorKind::TimedOut));
         let err = exhausted("update batch resource", 6, &io_error);
-        // `StorageError`'s `Display` for `Backend` is transparent, and
-        // `Unavailable`'s own `Display` renders only `backend_name` — so
-        // `.to_string()` alone drops the attempt count `detail` must recover.
-        assert_eq!(err.to_string(), "backend unavailable: mongodb");
         let text = detail(&err);
         assert!(text.contains("update batch resource"), "{text}");
         assert!(text.contains("(after 6 attempts)"), "{text}");
+        // `Display` carries the same reason after the backend prefix.
+        assert_eq!(
+            err.to_string(),
+            format!("backend unavailable: mongodb: {text}")
+        );
     }
 }

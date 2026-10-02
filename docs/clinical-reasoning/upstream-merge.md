@@ -150,14 +150,15 @@ One engine. Writes go through `ValidationService::check_write` (`HFS_VALIDATION_
 | `src/config.rs` | `HFS_FHIR_PACKAGE_CACHE`, `HFS_FHIR_PACKAGES` (Helios already owns `HFS_VALIDATION_MODE`) |
 | `src/state.rs` | `validation: Arc<ValidationService>` — **not** a `profile_validation` field |
 | `src/handlers/create.rs` / `update.rs` / `patch.rs` | `state.validation().check_write(...)` before persist |
-| `src/handlers/batch.rs` | `check_write` on batch POST/PUT/PATCH; transaction pre-flight for POST/PUT/PATCH and DELETE existence. Take Helios `write_event::report` (including PATCH success). Do **not** take Helios's 501 PATCH-in-bundle arm. Accept Helios's delete of `handlers/subscription_event.rs` once batch no longer calls it |
+| `src/handlers/batch.rs` | `check_write` on batch POST/PUT/PATCH; transaction pre-flight for instance POST/PUT/PATCH and DELETE existence. Conditional URL criteria are Helios `#859` (resolved inside the transaction; do not 400 them). Take Helios `write_event::report` (including PATCH success). Do **not** take Helios's 501 PATCH-in-bundle arm. Accept Helios's delete of `handlers/subscription_event.rs` once batch no longer calls it |
 | `src/handlers/validate.rs` | `$validate` `mode` enforcement (create/update/delete/profile); do not restore the deleted Atrius handler |
 | `tests/validation_enforcement_tests.rs` | Write-path `HFS_VALIDATION_MODE` tests |
 
 `check_write` **does** run on batch and transaction POST/PUT/PATCH. Transaction
-DELETE entries fail the bundle if the instance is missing. Bulk-submit ingest
-calls `IngestValidator` (`check_write`) when the worker is wired with
-`ValidationService`. Do not restore the old crates.
+DELETE of a missing instance fails the bundle. A type-level DELETE or PATCH
+that already carries criteria is Helios `#859` and is not refused up front.
+Bulk-submit ingest calls `IngestValidator` (`check_write`) when the worker is
+wired with `ValidationService`. Do not restore the old crates.
 
 `$validate` `mode` changes enforcement: `create` (duplicate id), `update` (id
 required / not found), `delete` (id, existence, AuditEvent immutability; no
@@ -171,9 +172,11 @@ evaluated. Remaining limitations (not a second engine):
   match.
 - Binding discriminators do not expand a ValueSet at mark time.
 - Conditional PATCH is **resolved in a batch** (one match `200`, none `404`,
-  several `412`) and **refused in a transaction** (any non-`GET` URL criteria
-  still `400 not-supported`, #859). Instance PATCH and Bundle instance-url
-  PATCH are implemented; do not take Helios's 501 PATCH-in-bundle arm.
+  several `412`) and **in a transaction** (Helios `#859`: criteria resolve
+  inside the open transaction). Keep feat `bundle_patch_format` and the
+  unsupported-capability fallback to `conditional_patch`. Instance PATCH and
+  Bundle instance-url PATCH are implemented; do not take Helios's 501
+  PATCH-in-bundle arm.
 
 ### `crates/persistence`
 
@@ -382,6 +385,8 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 ---
 
 ## Last feat sync
+
+2 Oct 2026: `main` `810ff5873` (Helios `bcd7b84fb` / 0.2.4, `#859` conditional URLs inside transactions) → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-10-02` → `10ed47b9a`. Ledger unchanged SQLite 39 / Postgres 50 (no inbound schema steps). Workspace version is now 0.2.4. Conflicts (6): Cargo pins move to 0.2.4 and keep `helios-terminology-client` plus `helios-auth` `features = ["redis"]`. `batch.rs` takes Helios `transaction_conditional_interaction` and `transaction_failure_description`, and keeps `bundle_patch_format`, `ConditionalPatchResult`, and `is_unsupported_capability`. The transaction pre-check lets a type-level DELETE or PATCH that already has criteria through (`#859`); instance DELETE of a missing resource still fails the bundle. Composite storage keeps `BundleEntryEffect` and `resolve_includes_iterative`. HTS inbound is `map_err` only. HTS ICD, BCP 47, ECL/FTS, and IG Publisher fork docs survived. HIS pins: bump all three (`helios-fhir`, `helios-auth`, `helios-observability`) to this merge SHA after push — `helios-fhir` Cargo.toml moved to 0.2.4. Prior: 1 Oct `10ed47b9a`, tag `pre-merge-main-2026-10-01`.
 
 1 Oct 2026: `main` `6179b9302` (Helios `e063ef8ab` / 0.2.3, `#1627` scope `$reindex` `clearExisting`) → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-10-01` → `871c87c0d`. Ledger SQLite 39 / Postgres 50. Workspace still 0.2.3. Conflicts (5): named ledger kept — insert SQLite `bulk_manifest_file_progress_completed` (`#1610`, Helios v37) and Postgres `patient_export_references` (Helios v45) plus the same completed step (Helios v46) **immediately after** `login_sessions` and **before** fork-only slot-2/phase/dead-letter; discard integer `migrate_schema`; `migrate_v44_to_v45` does not stamp integer 45. `postgres_tests` keeps the subscription-env guard and Helios's quoted parameter-name test. Persistence README keeps the fork backend list and takes Helios's S3 tenancy sentence. `fhir-benchmark.yml` keeps the `HeliosSoftware` owner guard and `needs: setup`. List-export `_since` uses `parse_instant_param`. The unmatched-path test builds `Principal::stub`. No inbound HTS. HTS ICD, BCP 47, ECL/FTS, and IG Publisher fork docs survived. HIS pins: bump all three (`helios-fhir`, `helios-auth`, `helios-observability`) to this merge SHA after push — `helios-fhir` search loader changed. Prior: 28 Sep `871c87c0d`, tag `pre-merge-main-2026-09-28`.
 
