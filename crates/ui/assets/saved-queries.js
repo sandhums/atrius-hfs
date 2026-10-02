@@ -77,15 +77,13 @@
   var etag = null;
   var lang = document.documentElement.lang || undefined;
 
-  /* Result-header counts follow the page's own locale (#1426), the same way
-   * `whenText` localizes dates: `lang` is the negotiated `<html lang>`, and
-   * an absent attribute leaves the choice to the platform. Only the rendered
-   * text is grouped — the wire query, `Bundle.total`, paging, and the numbers
-   * the script keeps for itself are untouched. */
+  /* Displayed counts follow the page's own locale (#1426), the same way
+   * `whenText` localizes dates — through the shared `window.HfsNumber`
+   * (`number.js`), which reads the same negotiated `<html lang>`. Only the
+   * rendered text is grouped — the wire query, `Bundle.total`, paging, and
+   * the numbers the script keeps for itself are untouched. */
   function formatCount(value) {
-    var count = Number(value);
-    if (!Number.isFinite(count)) return String(value);
-    return count.toLocaleString(lang);
+    return window.HfsNumber.format(value);
   }
 
   function fetchDocument() {
@@ -320,6 +318,12 @@
       if (parsed.datalist && current)
         current.replaceWith(parsed.datalist.cloneNode(true));
       refreshChainAffordances();
+      refreshParamTypeaheads();
+      refreshParamValidity();
+      if (results && results.sort) {
+        results.sort.dataset.optionsFor = "";
+        syncCandidateSort();
+      }
       return parsed.meta;
     });
   }
@@ -1009,6 +1013,7 @@
     var selectedMod = part.modifier;
     var modifier = document.createElement("select");
     modifier.className = "builder-row__modifier";
+    modifier.setAttribute("aria-label", sections.dataset.msgModifyHeading);
     option(modifier, "", sections.dataset.msgMatchIs, !selectedMod);
     COLON_MODIFIERS.forEach(function (m) {
       option(modifier, m, ":" + m, selectedMod === m);
@@ -1191,13 +1196,14 @@
 
       var ref = listedInput(seg, sections.dataset.msgParam, hops[k].ref);
       ref.input.className = "builder-row__key builder-row__chainref";
-      if (k === 0) ref.input.setAttribute("list", "param-options");
+      if (k === 0) attachParamTypeahead(ref.input, row);
       seg.appendChild(ref.input);
 
       seg.appendChild(chainLabel("›"));
 
       var typeSel = document.createElement("select");
       typeSel.className = "builder-row__ctype";
+      typeSel.setAttribute("aria-label", sections.dataset.msgHasType);
       seg.appendChild(typeSel);
 
       ref.input.addEventListener("input", function () {
@@ -1231,7 +1237,7 @@
       leaf.input.value = "";
       addSegment(hops.length - 1);
       refillLeaf(true);
-      leaf.input.focus();
+      focusQuietly(leaf.input);
       updateUrl();
     });
 
@@ -1349,6 +1355,7 @@
       row.appendChild(chainLabel(":"));
       target = document.createElement("select");
       target.className = "builder-row__itarget";
+      target.setAttribute("aria-label", sections.dataset.msgHasType);
       row.appendChild(target);
     }
 
@@ -1429,6 +1436,134 @@
       });
   }
 
+  /* Standard FHIR search parameters and result controls that the per-type
+   * catalog does not list; they are always accepted here because the server
+   * has the final word on them. */
+  var ALWAYS_KNOWN_PARAMS = [
+    "_list", "_filter", "_text", "_content", "_query", "_contained",
+    "_containedType", "_format", "_pretty", "_maxresults", "_score", "_graph",
+  ];
+
+  /* The single rule for "is this a search parameter of the type". A catalog
+   * that is not loaded, empty or failed gives no basis to object, so it never
+   * flags anything; modifiers (`name:exact`) are judged by their base name. */
+  function paramKnown(type, code) {
+    var base = (code || "").trim().split(":")[0];
+    if (!base) return true;
+    if (ALWAYS_KNOWN_PARAMS.indexOf(base) >= 0) return true;
+    var meta = PARAM_META[type];
+    if (!meta || !Object.keys(meta).length) return true;
+    return Object.prototype.hasOwnProperty.call(meta, base);
+  }
+
+  var paramErrorSeq = 0;
+
+  function clearParamInvalid(row) {
+    row.classList.remove("builder-row--invalid");
+    row.querySelectorAll("[aria-invalid]").forEach(function (el) {
+      el.removeAttribute("aria-invalid");
+      el.removeAttribute("aria-describedby");
+    });
+    var err = row.querySelector(":scope > .builder-row__error");
+    if (err) err.remove();
+  }
+
+  function markParamInvalid(row, input, type) {
+    var err = row.querySelector(":scope > .builder-row__error");
+    if (!err) {
+      err = document.createElement("p");
+      err.className = "builder-row__error field__hint--error";
+      err.id = "builder-row-error-" + ++paramErrorSeq;
+    }
+    err.textContent = tpl(sections.dataset.msgParamUnknown || "", { type: type });
+    row.appendChild(err);
+    row.classList.add("builder-row--invalid");
+    input.setAttribute("aria-invalid", "true");
+    input.setAttribute("aria-describedby", err.id);
+  }
+
+  /* Flags condition rows whose parameter is not in the catalog of the
+   * current type (direct rows: the key; chains: the first hop only; `_has`
+   * rows never). Nothing is blocked; the URL keeps the parameter. */
+  function refreshParamValidity() {
+    if (!sections) return;
+    var type = sections.dataset.type || "";
+    sections
+      .querySelectorAll("#builder-conditions .builder-row")
+      .forEach(function (row) {
+        if (row.classList.contains("builder-row--has")) return;
+        var input;
+        if (row.classList.contains("builder-row--chain")) {
+          var seg = row.querySelector(".builder-row__hopseg");
+          input = seg && seg.querySelector(".builder-row__chainref");
+        } else {
+          input = row.querySelector(".builder-row__key");
+        }
+        if (!input) return;
+        if (paramKnown(type, input.value)) clearParamInvalid(row);
+        else markParamInvalid(row, input, type);
+      });
+    updatePlain();
+  }
+
+  /* Options for the parameter typeahead: the loaded catalog of the current
+   * resource type, in the server's order. */
+  function paramTypeaheadOptions() {
+    var meta = PARAM_META[sections.dataset.type] || {};
+    return Object.keys(meta).map(function (code) {
+      return { value: code, hint: meta[code].type };
+    });
+  }
+
+  /* Turns a builder parameter input into a typeahead, remembering the handle
+   * on its row so rebuilding or removing the row can release the listbox.
+   * Without the typeahead script the native datalist stays as the fallback. */
+  function attachParamTypeahead(input, row) {
+    if (!window.HfsTypeahead) {
+      input.setAttribute("list", "param-options");
+      return;
+    }
+    var handle = window.HfsTypeahead.attach(input, {
+      options: paramTypeaheadOptions,
+      emptyText: sections.dataset.msgParamNone,
+    });
+    (row._typeaheads = row._typeaheads || []).push(handle);
+  }
+
+  /* Programmatic focus (after Add, drill-in, chaining) must leave the
+   * typeahead list closed so it never covers the controls the user may click
+   * next; typing, ArrowDown, a click on the field or a later focus open it. */
+  function focusQuietly(el) {
+    el.focus();
+    var row = el.closest && el.closest(".builder-row");
+    if (row)
+      (row._typeaheads || []).forEach(function (handle) {
+        handle.close();
+      });
+  }
+
+  /* Re-reads the catalog in every live typeahead; a closed list stays closed. */
+  function refreshParamTypeaheads() {
+    document.querySelectorAll(".builder-row").forEach(function (row) {
+      (row._typeaheads || []).forEach(function (handle) {
+        handle.refresh();
+      });
+    });
+  }
+
+  function releaseRowTypeaheads(root) {
+    var rows = root.classList && root.classList.contains("builder-row") ? [root] : [];
+    root.querySelectorAll(".builder-row").forEach(function (row) {
+      rows.push(row);
+    });
+    rows.forEach(function (row) {
+      (row._typeaheads || []).forEach(function (handle) {
+        handle.destroy();
+      });
+      row._typeaheads = [];
+    });
+  }
+
   function builderRow(kind, part) {
     if (kind === "condition" && part.kind === "chain") return chainRow(part);
     if (kind === "condition" && part.kind === "has") return hasRow(part);
@@ -1443,11 +1578,11 @@
     if (kind === "condition") {
       key = document.createElement("input");
       key.value = part.key;
-      key.setAttribute("list", "param-options");
       key.placeholder = sections.dataset.msgParam;
       key.spellcheck = false;
     } else {
       key = document.createElement("select");
+      key.setAttribute("aria-label", sections.dataset.msgParam);
       var keys = kind === "include" ? INCLUDE_KEYS : CONTROL_KEYS;
       keys.forEach(function (k) {
         option(key, k, k, part.key === k);
@@ -1457,6 +1592,7 @@
     row.appendChild(key);
 
     if (kind === "condition") {
+      attachParamTypeahead(key, row);
       /* Reference params can drill into their target (#394); hidden until
        * the registry metadata confirms the param is a reference. */
       var drill = document.createElement("button");
@@ -1477,6 +1613,7 @@
     if (kind !== "control") {
       var modifier = document.createElement("select");
       modifier.className = "builder-row__modifier";
+      modifier.setAttribute("aria-label", sections.dataset.msgModifyHeading);
       option(modifier, "", sections.dataset.msgMatchIs, !selectedMod);
       if (kind === "include") {
         option(modifier, "iterate", ":iterate", selectedMod === "iterate");
@@ -1670,6 +1807,7 @@
 
     var hosts = builderHosts();
     Object.keys(hosts).forEach(function (kind) {
+      releaseRowTypeaheads(hosts[kind]);
       hosts[kind].textContent = "";
     });
     splitQuery(parsed.query).forEach(function (part) {
@@ -1679,6 +1817,7 @@
     refreshRunAvailability();
     refreshChainAffordances();
     updatePlain();
+    syncCandidateSort();
     if (builderHasEscapeError()) showEscapeError();
     else clearError();
   }
@@ -1767,6 +1906,7 @@
     urlInput.value =
       "GET /" + type + (parts.length ? "?" + parts.join("&") : "");
     lastSerialized = urlInput.value;
+    syncCandidateSort();
     updatePlain();
     refreshRunAvailability();
   }
@@ -1779,6 +1919,13 @@
       if (row) {
         var deferUpdate = false;
         noteBuilderUserEdit();
+        /* Typing never flags; a flagged row clears until the edit is
+         * confirmed (change). */
+        if (
+          event.target.classList.contains("builder-row__key") &&
+          row.classList.contains("builder-row--invalid")
+        )
+          clearParamInvalid(row);
         var directKeyChanged =
           event.target.classList.contains("builder-row__key") &&
           !row.classList.contains("builder-row--chain") &&
@@ -1821,6 +1968,19 @@
         }
       }
     });
+    /* `change` covers a typeahead choice; `focusout` also covers an edit
+     * reverted to the value it had on focus (no native change then). */
+    function revalidateOnConfirm(event) {
+      var t = event.target;
+      if (
+        t.classList.contains("builder-row__key") ||
+        (t.classList.contains("builder-row__chainref") &&
+          t.closest(".builder-row__hopseg"))
+      )
+        refreshParamValidity();
+    }
+    sections.addEventListener("change", revalidateOnConfirm);
+    sections.addEventListener("focusout", revalidateOnConfirm);
     sections.addEventListener("click", function (event) {
       var remove = event.target.closest("[data-remove-row]");
       var drillFrom = event.target.closest("[data-chain-from]");
@@ -1889,7 +2049,9 @@
       }
       if (remove) {
         noteBuilderUserEdit();
-        remove.closest(".builder-row").remove();
+        var removedRow = remove.closest(".builder-row");
+        releaseRowTypeaheads(removedRow);
+        removedRow.remove();
         refreshRunAvailability();
         updateUrl();
       } else if (drillFrom) {
@@ -1917,9 +2079,10 @@
           modifier: keptMod,
           value: keptValues.join(","),
         });
+        releaseRowTypeaheads(from);
         from.replaceWith(chain);
         noteBuilderUserEdit();
-        chain.querySelector(".builder-row__cparam").focus();
+        focusQuietly(chain.querySelector(".builder-row__cparam"));
         updateUrl();
       } else if (add) {
         var kind = add.dataset.add;
@@ -1957,7 +2120,7 @@
         builderHosts()[kind].appendChild(row);
         noteBuilderUserEdit();
         if (kind === "condition") refreshChainAffordances();
-        row.querySelector(kind === "condition" ? ".builder-row__key" : ".builder-row__value").focus();
+        focusQuietly(row.querySelector(kind === "condition" ? ".builder-row__key" : ".builder-row__value"));
       }
     });
   }
@@ -2161,6 +2324,7 @@
    * the inverse companion of natural-language search. */
   var plainHost = document.getElementById("query-plain");
   var plainText = document.getElementById("query-plain-text");
+  var plainUnknown = document.getElementById("query-plain-unknown");
   var PLAIN = null;
   (function () {
     var blob = document.getElementById("plain-english-msgs");
@@ -2322,7 +2486,7 @@
         return;
       }
       if (part.key === "_count") {
-        extras.push(tpl(PLAIN.count, { n: part.value }));
+        extras.push(tpl(PLAIN.count, { n: formatCount(part.value) }));
         return;
       }
       if (part.key === "_sort") {
@@ -2335,6 +2499,28 @@
         renderPlainClause(PLAIN.clause, PLAIN.clauseNoValue, { path: part.key }, v),
       );
     });
+
+    /* The phrase names exactly the rows currently flagged (the same source
+     * of truth as the row mark), never the live keystrokes. */
+    var unknown = [];
+    var unknownTemplate = (plainUnknown && plainUnknown.dataset.template) || "";
+    if (unknownTemplate && sections) {
+      sections
+        .querySelectorAll("#builder-conditions .builder-row--invalid")
+        .forEach(function (row) {
+          var input = row.classList.contains("builder-row--chain")
+            ? row.querySelector(".builder-row__hopseg .builder-row__chainref")
+            : row.querySelector(".builder-row__key");
+          var code = input && input.value.trim().split(":")[0];
+          if (!code) return;
+          var shown = tpl(unknownTemplate, { param: code, type: parsed.type });
+          if (unknown.indexOf(shown) < 0) unknown.push(shown);
+        });
+    }
+    if (plainUnknown) {
+      plainUnknown.textContent = unknown.length ? " \u00b7 " + unknown.join(" \u00b7 ") : "";
+      plainUnknown.hidden = !unknown.length;
+    }
 
     var sentence = tpl(PLAIN.find, { type: parsed.type });
     if (clauses.length) {
@@ -2400,6 +2586,7 @@
     prev: document.getElementById("query-results-prev"),
     next: document.getElementById("query-results-next"),
     sort: document.getElementById("query-results-sort"),
+    previous: document.getElementById("query-results-previous"),
   };
 
   /* Compact display heuristics for common FHIR shapes (HumanName,
@@ -2411,7 +2598,7 @@
     if (Array.isArray(value)) {
       if (!value.length) return "";
       var first = fmt(value[0]);
-      return value.length > 1 ? first + " +" + (value.length - 1) : first;
+      return value.length > 1 ? first + " +" + formatCount(value.length - 1) : first;
     }
     if (value.family || value.given)
       return [value.family, (value.given || []).join(" ")]
@@ -2732,19 +2919,17 @@
     results.body.replaceChildren(prepared.rows);
     results.meta.textContent = prepared.meta;
     results.note.textContent = prepared.note;
-    if (results.sort) {
-      var syncSort = function () {
-        rebuildSortOptions(context.type);
-        results.sort.value = prepared.sort;
-        if (results.sort.value !== prepared.sort) results.sort.value = "";
-      };
-      syncSort();
-      if (!PARAM_META[context.type])
-        fetchCatalog(context.type).then(function () {
-          results.sort.dataset.optionsFor = "";
-          syncSort();
-        });
-    }
+    results.previous.hidden = true;
+    var renderedRevision = builderRevision;
+    syncCandidateSort();
+    if (!PARAM_META[context.type])
+      fetchCatalog(context.type).then(function () {
+        // Catalog completion must not relabel a newer candidate or search.
+        if (lastSearchContext !== context || activeSearch ||
+            builderRevision !== renderedRevision) return;
+        results.sort.dataset.optionsFor = "";
+        syncCandidateSort();
+      });
 
     if (prepared.prev) {
       results.prev.hidden = false;
@@ -2829,19 +3014,114 @@
   /* Runs a search against the FHIR API and renders the Bundle in-page.
    * `record` adds it to the roaming recent list (explicit runs only, so
    * paging does not spam recents). */
-  /* Monotonic ticket per search: a slow earlier response must not land on
-   * top of a faster later one (#958). */
-  var searchTicket = 0;
+  var activeSearch = null;
+  var searchStatus = document.getElementById("query-search-status");
+  var searchCancel = document.getElementById("query-search-cancel");
+  var searchElapsed = document.getElementById("query-search-elapsed");
+  var searchSlow = document.getElementById("query-search-slow");
+  var searchSlowStatus = document.getElementById("query-search-slow-status");
+  var searchKeepWaiting = document.getElementById("query-search-keep-waiting");
+
+  function syncCandidateSort() {
+    if (!results || !results.sort) return;
+    var candidate = parseSearchUrl(urlInput && urlInput.value);
+    if (!candidate) return;
+    rebuildSortOptions(candidate.type);
+    var value = "";
+    splitQuery(candidate.query).forEach(function (part) {
+      if (part.key === "_sort") value = part.value;
+    });
+    results.sort.value = value;
+    if (results.sort.value !== value) results.sort.value = "";
+  }
 
   function setResultsBusy(busy) {
-    if (!results.card) return;
     results.card.classList.toggle("is-busy", busy);
     results.card.setAttribute("aria-busy", busy ? "true" : "false");
-    var busyNote = document.getElementById("query-results-busy");
-    if (busyNote) busyNote.hidden = !busy;
-    var run = form && form.querySelector('button[data-intent="run"]');
-    if (run) run.disabled = busy;
+    var run = form.querySelector('[data-intent="run"]');
+    if (run) run.setAttribute("aria-busy", busy ? "true" : "false");
+    results.meta.hidden = busy;
     if (results.sort) results.sort.disabled = busy;
+    searchCancel.hidden = !busy;
+  }
+
+  function finishSearch(search) {
+    if (activeSearch !== search) return false;
+    // Invalidate before abort/cleanup so even synchronous rejection is stale.
+    activeSearch = null;
+    clearTimeout(search.elapsedTimer);
+    clearInterval(search.tickTimer);
+    clearTimeout(search.slowTimer);
+    var returnFocus = searchCancel.contains(document.activeElement) ||
+      searchSlow.contains(document.activeElement);
+    search.status.done();
+    if (search.slowStatus) search.slowStatus.done();
+    searchElapsed.hidden = true;
+    searchElapsed.textContent = "";
+    searchSlow.hidden = true;
+    setResultsBusy(false);
+    if (returnFocus && urlInput) urlInput.focus();
+    return true;
+  }
+
+  function cancelSearch() {
+    var search = activeSearch;
+    if (!search || !finishSearch(search)) return;
+    search.controller.abort();
+    results.card.hidden = search.prior.hidden;
+    results.error.textContent = search.prior.errorText;
+    results.error.hidden = search.prior.errorHidden;
+    results.previous.hidden = !lastSearchPath;
+    syncCandidateSort();
+  }
+
+  searchCancel && searchCancel.addEventListener("click", cancelSearch);
+  document.getElementById("query-search-slow-cancel").addEventListener("click", cancelSearch);
+  searchKeepWaiting && searchKeepWaiting.addEventListener("click", function () {
+    if (!activeSearch) return;
+    if (activeSearch.slowStatus) activeSearch.slowStatus.done();
+    searchSlow.hidden = true;
+    urlInput.focus();
+  });
+
+  function beginSearch() {
+    var prior = activeSearch ? activeSearch.prior : {
+      hidden: results.card.hidden,
+      errorHidden: results.error.hidden,
+      errorText: results.error.textContent,
+    };
+    if (activeSearch) {
+      var old = activeSearch;
+      finishSearch(old);
+      old.controller.abort();
+    }
+    var search = {
+      controller: new AbortController(),
+      started: performance.now(),
+      prior: prior,
+      status: window.hfsBusy.region(searchStatus, searchStatus.dataset.msgSearching),
+    };
+    activeSearch = search;
+    clearResultsError();
+    results.previous.hidden = !lastSearchPath;
+    setResultsBusy(true);
+    function elapsed() {
+      if (activeSearch !== search) return;
+      searchElapsed.hidden = false;
+      searchElapsed.textContent = searchStatus.dataset.msgElapsed.replace(
+        "{seconds}", formatCount(Math.floor((performance.now() - search.started) / 1000)),
+      );
+    }
+    search.elapsedTimer = setTimeout(function () {
+      elapsed();
+      if (activeSearch === search) search.tickTimer = setInterval(elapsed, 1000);
+    }, 2000);
+    search.slowTimer = setTimeout(function () {
+      if (activeSearch !== search) return;
+      searchSlow.hidden = false;
+      search.slowStatus = window.hfsBusy.region(searchSlowStatus, searchSlow.dataset.msgSlow);
+    }, 60000);
+    return search;
   }
 
   /* The results header needs `Bundle.total`, which the server only computes
@@ -2864,13 +3144,14 @@
     if (!results.card) {
       window.open(path, "_blank", "noopener");
     } else {
-      var ticket = ++searchTicket;
-      setResultsBusy(true);
+      var search = beginSearch();
       fetch(withTotal(path), {
         headers: fhirHeaders(),
         credentials: "same-origin",
+        signal: search.controller.signal,
       })
         .then(function (response) {
+          if (activeSearch !== search) return null;
           if (!response.ok) {
             // Same-origin error responses carry our own OperationOutcome,
             // whose diagnostic beats the generic connection hint (#1227). A
@@ -2882,18 +3163,19 @@
               function (body) {
                 return { __resultsError: outcomeMessage(body) };
               },
-              function () {
+              function (error) {
+                if (error.name === "AbortError") throw error;
                 return { __resultsError: null };
               },
             );
           }
-          return response.json().catch(function () {
+          return response.json().catch(function (error) {
+            if (error.name === "AbortError") throw error;
             return null;
           });
         })
         .then(function (body) {
-          if (ticket !== searchTicket) return;
-          setResultsBusy(false);
+          if (!finishSearch(search)) return;
           if (body && body.__resultsError !== undefined) {
             showResultsError(path, body.__resultsError);
             return;
@@ -2901,9 +3183,9 @@
           if (!renderResults(path, body, requestedContext))
             showResultsError(path);
         })
-        .catch(function () {
-          if (ticket !== searchTicket) return;
-          setResultsBusy(false);
+        .catch(function (error) {
+          if (!finishSearch(search)) return;
+          if (error.name === "AbortError") return;
           showResultsError(path);
         });
     }
@@ -2916,21 +3198,21 @@
       if (pager) runSearch(pager.dataset.url, false, lastSearchContext);
     });
 
-  /* Sort re-runs the current results path with the picked `_sort` (#416). */
+  /* Sort hydrates the same candidate the editor would run, including its
+   * visual control rows, before consuming the settled builder revision. */
   results.sort &&
     results.sort.addEventListener("change", function () {
-      if (!lastSearchContext) return;
-      var parts = (lastSearchContext.query || "").split("&").filter(function (p) {
+      if (activeSearch) return;
+      var candidate = parseSearchUrl(urlInput && urlInput.value);
+      if (!candidate) return;
+      var parts = (candidate.query || "").split("&").filter(function (p) {
         return p && p.indexOf("_sort=") !== 0;
       });
       if (results.sort.value) parts.push("_sort=" + results.sort.value);
-      var path = searchPath(lastSearchContext.type, parts.join("&"));
-      /* The visible query stays in step with what the table shows (#958). */
-      if (urlInput) {
-        urlInput.value = "GET " + path;
-        urlInput.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      runSearch(path, false);
+      var revision = loadIntoBuilder(searchPath(candidate.type, parts.join("&")));
+      consumeWhenBuilderReady(revision, function () {
+        runCurrentBuilderSearch(false);
+      });
     });
 
   /* Delegated on `results.body` (not replaced between renders, unlike the
@@ -2994,7 +3276,7 @@
       ? entry.lastAccessedAt
       : when.toLocaleString(lang);
     var runs = Number(entry.accessCount);
-    return runs > 0 ? text + " · " + runs + "×" : text;
+    return runs > 0 ? text + " · " + formatCount(runs) + "×" : text;
   }
 
   function button(label, action, resourceType, id) {

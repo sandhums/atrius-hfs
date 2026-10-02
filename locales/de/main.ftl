@@ -391,6 +391,7 @@ plain-include = Zusätzlich wird der {"{param}"} jedes {"{type}"} zurückgegeben
 plain-revinclude = Plus jedes {"{type}"}, dessen {"{param}"} hierher zeigt
 plain-iterate = (wiederholt)
 plain-count = Zeigt {"{n}"} pro Seite
+plain-unknown-param = "{"{param}"}" ist kein Suchparameter für {"{type}"}
 plain-sort = Sortiert nach {"{sort}"}
 plain-verb-is = ist
 plain-verb-contains = enthält
@@ -443,6 +444,8 @@ queries-has-via = verknüpft über
 queries-has-where = wobei ihr
 queries-add-has = ⧉ Eine hierher verweisende Ressource filtern
 queries-param-placeholder = Parameter
+queries-param-none = Keine passenden Parameter
+queries-param-unknown = Kein Suchparameter für {"{type}"}. Wähle einen aus der Liste.
 queries-value-placeholder = Wert
 queries-results = Ergebnisse
 queries-results-total = { $count } Ergebnisse
@@ -450,6 +453,11 @@ queries-results-total-partial = { $count }+ Ergebnisse
 queries-results-included = { $count } eingeschlossen
 queries-results-empty = Keine Ergebnisse.
 queries-searching = Suche läuft…
+queries-search-elapsed = { $seconds } Sekunden vergangen
+queries-search-cancel = Abbrechen
+queries-search-slow = Diese Suche dauert länger als erwartet. Sie können weiter warten oder sie abbrechen.
+queries-search-keep-waiting = Weiter warten
+queries-results-previous = Vorherige Ergebnisse
 queries-col-updated = Aktualisiert
 queries-copy-id = ID kopieren
 queries-copied = Kopiert
@@ -733,20 +741,19 @@ bulk-export-scope = Was möchten Sie exportieren?
 bulk-export-scope-system = Alles
 bulk-export-scope-system-hint = Der gesamte Server — jeder unten ausgewählte Ressourcentyp.
 bulk-export-scope-patient = Patienten
-bulk-export-scope-patient-hint = Jeder Patient und die zugehörigen Datensätze. Nichts Patientenfremdes.
+bulk-export-scope-patient-hint = Alle Patienten oder nur die ausgewählten, mit den zugehörigen Datensätzen. Nichts Patientenfremdes.
 bulk-export-scope-group = Gruppe
 bulk-export-scope-group-hint = Nur die Mitglieder einer bereits definierten Kohorte.
 bulk-export-field-group-id = Gruppen-ID
 bulk-export-field-group-id-hint = Erforderlich für den Gruppen-Umfang: die ID der zu exportierenden FHIR-Group.
 bulk-export-field-patients = Patienten
 bulk-export-field-patients-placeholder = Patienten suchen
-bulk-export-field-patients-hint = Suchen Sie nach Vorname, Nachname oder exaktem Identifier. Mindestens ein Patient ist erforderlich.
+bulk-export-field-patients-hint = Suchen Sie nach Vorname, Nachname oder exaktem Identifier. Leer lassen, um alle Patienten zu exportieren.
 bulk-export-field-patients-fallback-placeholder = FHIR-IDs der Patienten
-bulk-export-field-patients-fallback-hint = Geben Sie exakte logische FHIR-IDs durch Kommas oder Zeilenumbrüche getrennt ein. Mindestens eine ist erforderlich.
-bulk-export-field-patients-id-only-hint = Suchen Sie nach einer exakten FHIR-ID. Mindestens ein Patient ist erforderlich.
+bulk-export-field-patients-fallback-hint = Geben Sie exakte logische FHIR-IDs durch Kommas oder Zeilenumbrüche getrennt ein. Leer lassen, um alle Patienten zu exportieren.
+bulk-export-field-patients-id-only-hint = Suchen Sie nach einer exakten FHIR-ID. Leer lassen, um alle Patienten zu exportieren.
 bulk-export-patient-options-empty = Keine passenden Patienten gefunden.
 bulk-export-patient-invalid = Geben Sie nur gültige logische Patient-IDs ein, getrennt durch Kommas oder Zeilenumbrüche.
-bulk-export-patients-required = Wählen Sie mindestens einen Patienten aus. Um alle Patienten zu exportieren, wählen Sie den Bereich „Alles“.
 bulk-export-field-name = Name
 bulk-export-field-name-placeholder = Diabetes-Register 2024
 bulk-export-name-required = Geben Sie einen Namen für diesen Export ein.
@@ -769,10 +776,15 @@ bulk-export-until-before-since = „Bis“ darf nicht vor „Seit“ liegen.
 bulk-export-window-since = Seit
 bulk-export-window-until = Bis
 bulk-export-start = Export starten
-bulk-export-running = laufend
 bulk-export-clear = Leeren
-bulk-export-files-word = Dateien
-bulk-export-exports-word = Exporte
+bulk-export-files-count = { $count ->
+    [one] { $count } Datei
+   *[other] { $count } Dateien
+}
+bulk-export-summary-count = { $count ->
+    [one] { $count } Export
+   *[other] { $count } Exporte
+} · { $running } laufend
 bulk-export-none = Noch keine Exporte. Wählen Sie „Neuer Export“, um einen zu starten.
 bulk-export-status-in-progress = Läuft
 bulk-export-status-complete = Abgeschlossen
@@ -879,6 +891,8 @@ vd-saved = Gespeichert.
 vd-run-failed = Die View konnte nicht ausgeführt werden.
 vd-save = Speichern
 vd-duplicate = Duplizieren
+sql-duplicate-read-failed = Die vorhandenen Artefakte konnten vor dem Duplizieren nicht geprüft werden: { $reason }
+sql-duplicate-incomplete = Es konnten nicht alle vorhandenen Artefakte geprüft werden. Die Kopie wurde nicht gespeichert; versuchen Sie es erneut, sobald der Katalog vollständig gelesen werden kann.
 vd-delete = Löschen
 vd-delete-confirm = View-Definition „{ $name }" löschen? Das kann nicht rückgängig gemacht werden.
 vd-delete-failed = Die View-Definition konnte nicht gelöscht werden.
@@ -1107,8 +1121,10 @@ sql-export-new = Neuer SQL-Export
 sql-export-unavailable = Das Storage-Backend hostet keinen Settings-Store; SQL-Exportaufträge können nicht verfolgt werden.
 sql-export-none = Noch keine SQL-Exporte. Wählen Sie „Neuer SQL-Export", um einen zu starten.
 sql-export-store-error = Der Export wurde gestartet, konnte dieser Liste aber nicht hinzugefügt werden. Auftrags-ID:
-sql-export-exports-word = Exporte
-sql-export-running = laufend
+sql-export-summary-count = { $count ->
+    [one] { $count } Export
+   *[other] { $count } Exporte
+} · { $running } laufend
 sql-export-select-subject = Wählen Sie mindestens ein Element aus.
 sql-export-unknown-subject = Ein oder mehrere ausgewählte Elemente sind nicht mehr verfügbar. Aktualisieren Sie die Seite und versuchen Sie es erneut.
 sql-export-cancelled-reason = der Server kennt diesen Auftrag nicht mehr

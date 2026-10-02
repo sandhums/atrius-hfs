@@ -50,13 +50,20 @@ that is a failure.
 | Transaction Bundles | yes | yes | yes | yes | yes (replica set) | yes (replica set) | **no** (batch only) | **no** (batch only) |
 | Bulk Data `$export` (job store) | yes | yes | yes | yes | yes | no (501) | no (501) | yes (SQLite sidecar) |
 | `$bulk-submit` ingestion (Import page) | yes | yes | yes | yes | yes | yes | yes¹ | yes¹ |
-| `$sql-run` / `$sql-export` runner | in-DB | in-DB (primary) | in-DB | in-DB (primary) | in-DB (aggregation) | in-DB (primary) | in-process scan | in-process scan |
+| `$sql-run` / `$sql-export` ViewDefinition runner² | in-DB | in-DB (primary) | in-DB | in-DB (primary) | in-DB (aggregation) | in-DB (primary) | in-process scan | in-process scan |
 | Subscriptions engine | yes | yes | yes | yes | yes | yes | yes | yes |
 | `$reindex` | yes | yes | yes | yes | yes | yes | no (501) | yes |
 | Per-user UI settings (saved queries, export job lists) | yes | yes | yes | yes | yes | yes | yes¹ | yes¹ |
 
 ¹ S3 in prefix-per-tenant mode (the default, `HFS_S3_BUCKET`). Bucket-per-tenant
 mode with no system bucket returns `501` for `$bulk-submit` and user settings.
+
+² The ViewDefinition runner is in-DB (SQL or an aggregation pipeline) on the
+non-S3 backends. A SQL Query or SQL View subject is different: each of its
+dependencies is first materialized into an embedded per-request SQLite by this
+runner, and the query's joins and `WHERE` then run in that SQLite, on every
+backend. The per-dependency row cap (`HFS_SOF_SQLQUERY_MAX_SOURCE_ROWS_PER_VD`)
+applies to that materialization.
 
 The `near` (geo) search parameter is not implemented on any backend, so it is not
 part of T4.
@@ -756,7 +763,8 @@ issues a `PUT` and the ids are known in advance.
    ```
 
    Click **Edit raw** again (the guided form re-renders and the chip reads **No
-   issues.**), then **Save Changes** → status line **Saved.**
+   issues.**), then **Save Changes** → the **Unsaved changes** pill disappears and no
+   error line appears
 2. Open `$HFS/ui/editor?type=ValueSet`, **Edit raw**, paste, save:
 
    ```json
@@ -833,7 +841,8 @@ S3 output backend.
 
 ### 9.1 Group fixture
 
-Open `$HFS/ui/editor?type=Group`, **Edit raw**, paste, **Save Changes** (**Saved.**):
+Open `$HFS/ui/editor?type=Group`, **Edit raw**, paste, **Save Changes** (the **Unsaved changes** pill
+disappears):
 
 ```json
 {"resourceType":"Group","id":"manual-group","type":"person","actual":true,
@@ -983,16 +992,30 @@ the id as `VD2`.
 
 - Type `patient` into **Filter views**: only `patient_demographics` remains.
 - With `patient_demographics` selected click **Duplicate**: a `patient_demographics_copy`
-  is created and selected. Click **Delete** → confirm
+  is created and selected, with its own canonical URL
+  `http://example.org/ViewDefinition/patient_demographics_copy`; the original's
+  URL remains unchanged. Select the original again and click **Duplicate**:
+  `patient_demographics_copy_2` receives a second distinct name and canonical
+  ending in `_copy_2`. A definition without `url` duplicates without gaining one.
+- Before deleting the copies, create a SQL View depending on the original
+  `patient_demographics` canonical (alias `pd`, SQL `SELECT id FROM pd`). Its
+  **Reads from** row still names and links to the original. Change a copy's
+  `where` to `[{"path":"false"}]` and **Save**: that copy returns zero rows,
+  while the dependent SQL View still returns the original's rows. Duplicating
+  a SQL View or SQL Query Library likewise assigns its own canonical when one
+  exists; a SQL Query depending on the original SQL View keeps reading from
+  that original after its copy is edited.
+- Select `patient_demographics_copy`, click **Delete** → confirm
   *Delete view definition "patient_demographics_copy"? This cannot be undone.* → it
-  disappears from the rail.
+  disappears from the rail. Delete `patient_demographics_copy_2` as well.
 - Negative: in a new definition set `"resource": "Nope"` — the lint panel flags it and
   the Results card shows *"Could not run the view. …"* while the previous table stays
   labelled *last successful run*. Click **Save** anyway: the prompt *"This view
   definition still has 1 error(s). Save it anyway?"* appears; choose Cancel.
 
 Pass criteria: both definitions save and run; lint, fix, and completion behave as
-described; the cross-check row matches the stored Patient; duplicate/delete work.
+described; the cross-check row matches the stored Patient; duplicate/delete work,
+copies have distinct canonicals, and dependencies continue to use their originals.
 This step is expected to pass on all eight backends.
 
 ---
@@ -1158,7 +1181,9 @@ Pass criteria: every kick-off in 7.a–7.d, 7.g–7.k, and 7.m–7.q produces a 
 reaches **Complete**; the files parse in their declared format with the stated contents and
 row counts; 7.e cancels; 7.f and 7.l are rejected; the subjects table controls,
 Run again / Retry / Remove / Copy job id, and the restart behave as described. This step is expected to
-pass on **all eight backends** (in-DB on SQLite/Postgres/Mongo, in-process on S3).
+pass on **all eight backends**. The ViewDefinition runner is in-DB on
+SQLite/Postgres/Mongo and in-process on S3; SQL Query joins run in embedded SQLite
+on every backend, after each dependency has been materialized.
 
 ---
 
@@ -1191,7 +1216,7 @@ PY
 
 1. Open `$HFS/ui/editor?type=Basic`, click **Edit raw**, paste, click **Edit raw**
    again (the extension rows render; unknown extension URLs are not errors), then
-   **Save Changes** → **Saved.**
+   **Save Changes** → the **Unsaved changes** pill disappears.
 
    ```json
    {"resourceType":"Basic","id":"manual-topic",
@@ -1384,3 +1409,11 @@ For each backend row, attach to the release issue:
   never `git commit -a` after building.
 - Auth stays off for this pass; when auth is on, `$export`, `$bulk-submit`,
   `$sql-export`, `$purge`, and `$reindex` need their `system/*` scopes.
+- **A pass with auth on needs the browser login for T3 and the Tenants page.**
+  With `HFS_AUTH_ENABLED=true` and no `HFS_UI_LOGIN_CLIENT_ID`, the Import
+  (`/ui/bulk-import`) and Tenants (`/ui/tenants`) routes and the sidebar tenant
+  selector answer `401` (#1619). Set `HFS_UI_LOGIN_CLIENT_ID=hfs-web` and sign in
+  (see the auth README). The Import page then submits `$bulk-submit` as the
+  signed-in user, whose token must carry `system/bulk-submit`: the bundled
+  `docker/keycloak` realm grants it to `hfs-web` (#1633); on another IdP, grant
+  it to the user running the pass.

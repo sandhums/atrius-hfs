@@ -726,7 +726,6 @@ struct BulkExportPage {
     name_error: Option<String>,
     since_custom_error: Option<String>,
     until_error: Option<String>,
-    patients_error: Option<String>,
     form: StartForm,
     rejected: bool,
     patient_value: String,
@@ -740,17 +739,36 @@ struct ActiveExportsPage {
     i18n: I18n,
     active_page: &'static str,
     available: bool,
-    total: usize,
-    running: usize,
+    summary: ExportSummary,
     cards: Vec<JobCard>,
     delete_error: bool,
 }
 
 #[derive(Template)]
-#[template(path = "partials/bulk_export_card.html")]
+#[template(path = "partials/bulk_export_card_response.html")]
 struct JobCardFragment {
     i18n: I18n,
     card: JobCard,
+    summary: Option<ExportSummary>,
+}
+
+/// The same user/tenant job set supplies the page and a terminal card's OOB
+/// summary. Loading it never polls any other job.
+struct ExportSummary {
+    total: usize,
+    running: usize,
+    oob: bool,
+}
+
+fn export_summary(jobs: &serde_json::Map<String, Value>, oob: bool) -> ExportSummary {
+    ExportSummary {
+        total: jobs.len(),
+        running: jobs
+            .values()
+            .filter(|value| parse_job(value).status == "in-progress")
+            .count(),
+        oob,
+    }
 }
 
 #[derive(Default, Deserialize)]
@@ -815,7 +833,6 @@ async fn bulk_export_page(
         name_error: errors.name,
         since_custom_error: errors.since_custom,
         until_error: errors.until,
-        patients_error: errors.patients,
         form,
         rejected,
         patient_value,
@@ -875,9 +892,6 @@ struct StartErrors {
     name: Option<String>,
     since_custom: Option<String>,
     until: Option<String>,
-    /// Set when the effective scope is `patient` and the reference list
-    /// parsed cleanly but came out empty (no selection at all).
-    patients: Option<String>,
     rejected: bool,
 }
 
@@ -947,8 +961,6 @@ pub async fn start(
             }
             _ => None,
         },
-        patients: (scope == "patient" && matches!(patient_refs, Ok(ref refs) if refs.is_empty()))
-            .then(|| i18n.t("bulk-export-patients-required")),
         rejected: true,
     };
     let patient_error = patient_refs
@@ -957,7 +969,6 @@ pub async fn start(
     if errors.name.is_some()
         || errors.since_custom.is_some()
         || errors.until.is_some()
-        || errors.patients.is_some()
         || patient_error.is_some()
     {
         let mut response =
@@ -1313,10 +1324,6 @@ pub async fn active(
         .map(|(id, v)| (id.clone(), parse_job(v)))
         .collect();
     entries.sort_by(|a, b| b.1.started_at.cmp(&a.1.started_at));
-    let running = entries
-        .iter()
-        .filter(|(_, j)| j.status == "in-progress")
-        .count();
     let cards = entries
         .iter()
         .map(|(id, j)| job_card(&i18n, id, j, &state, &rt.id))
@@ -1326,8 +1333,7 @@ pub async fn active(
         i18n: I18n::new(locale),
         active_page: "bulk-export",
         available,
-        total: entries.len(),
-        running,
+        summary: export_summary(&jobs.jobs, false),
         cards,
         delete_error: matches!(
             query.delete_error.as_deref(),
@@ -1352,7 +1358,10 @@ pub async fn card(
 ) -> Response {
     let i18n = I18n::new(locale);
     let user_key = settings_user_key(principal.as_deref());
-    let snapshot = load_jobs(&state, &user_key, &rt.id).await;
+    let mut snapshot = match load_jobs_checked(&state, &user_key, &rt.id).await {
+        Ok(snapshot) => snapshot,
+        Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    };
     let Some(original) = snapshot.jobs.get(&id) else {
         return StatusCode::NOT_FOUND.into_response();
     };
@@ -1369,9 +1378,25 @@ pub async fn card(
             MemberExpectation::Unchanged(original),
         )
         .await;
+        // Never render a polled state that lost its CAS race. A checked read
+        // also prevents a terminal swap from stopping retries after a store
+        // outage, or resurrecting a concurrently removed job in the browser.
+        snapshot = match load_jobs_checked(&state, &user_key, &rt.id).await {
+            Ok(snapshot) => snapshot,
+            Err(_) => return StatusCode::SERVICE_UNAVAILABLE.into_response(),
+        };
+        let Some(persisted) = snapshot.jobs.get(&id) else {
+            return StatusCode::NOT_FOUND.into_response();
+        };
+        job = parse_job(persisted);
     }
     let card = job_card(&i18n, &id, &job, &state, &rt.id);
-    render(JobCardFragment { i18n, card })
+    let summary = (job.status != "in-progress").then(|| export_summary(&snapshot.jobs, true));
+    render(JobCardFragment {
+        i18n,
+        card,
+        summary,
+    })
 }
 
 /// One poll of the export status endpoint. A `202`'s body is read as the

@@ -403,6 +403,7 @@ plain-include = Also returning the {"{param}"} of each {"{type}"}{"{target}"}
 plain-revinclude = Plus every {"{type}"} whose {"{param}"} points here
 plain-iterate = (repeatedly)
 plain-count = Showing {"{n}"} per page
+plain-unknown-param = "{"{param}"}" is not a search parameter for {"{type}"}
 plain-sort = Sorted by {"{sort}"}
 plain-verb-is = is
 plain-verb-contains = contains
@@ -455,6 +456,8 @@ queries-has-via = linked via
 queries-has-where = where its
 queries-add-has = ⧉ Filter a resource that links here
 queries-param-placeholder = parameter
+queries-param-none = No matching parameters
+queries-param-unknown = Not a search parameter for {"{type}"}. Pick one from the list.
 queries-value-placeholder = value
 queries-results = Results
 queries-results-total = { $count } results
@@ -462,6 +465,11 @@ queries-results-total-partial = { $count }+ results
 queries-results-included = { $count } included
 queries-results-empty = No results.
 queries-searching = Searching…
+queries-search-elapsed = { $seconds } seconds elapsed
+queries-search-cancel = Cancel
+queries-search-slow = This search is taking longer than expected. You can keep waiting or cancel it.
+queries-search-keep-waiting = Keep waiting
+queries-results-previous = Previous results
 queries-col-updated = Updated
 queries-copy-id = Copy id
 queries-copied = Copied
@@ -768,20 +776,19 @@ bulk-export-scope = What are you exporting?
 bulk-export-scope-system = Everything
 bulk-export-scope-system-hint = The whole server — every resource type you select below.
 bulk-export-scope-patient = Patients
-bulk-export-scope-patient-hint = Every patient and the records that belong to them. Nothing patient-unrelated.
+bulk-export-scope-patient-hint = Every patient, or only the ones you pick, with the records that belong to them. Nothing patient-unrelated.
 bulk-export-scope-group = Group
 bulk-export-scope-group-hint = Just the members of a cohort you've already defined.
 bulk-export-field-group-id = Group ID
 bulk-export-field-group-id-hint = Required for the Group scope: the id of the FHIR Group to export.
 bulk-export-field-patients = Patients
 bulk-export-field-patients-placeholder = Search patients
-bulk-export-field-patients-hint = Search by name, surname or exact identifier. At least one patient is required.
+bulk-export-field-patients-hint = Search by name, surname or exact identifier. Leave empty to export every patient.
 bulk-export-field-patients-fallback-placeholder = Patient FHIR IDs
-bulk-export-field-patients-fallback-hint = Enter exact logical FHIR IDs separated by commas or new lines. At least one is required.
-bulk-export-field-patients-id-only-hint = Search by exact FHIR ID. At least one patient is required.
+bulk-export-field-patients-fallback-hint = Enter exact logical FHIR IDs separated by commas or new lines. Leave empty to export every patient.
+bulk-export-field-patients-id-only-hint = Search by exact FHIR ID. Leave empty to export every patient.
 bulk-export-patient-options-empty = No matching patients found.
 bulk-export-patient-invalid = Enter only valid logical Patient IDs, separated by commas or new lines.
-bulk-export-patients-required = Select at least one patient. To export every patient, choose the Everything scope.
 bulk-export-field-name = Name
 bulk-export-field-name-placeholder = Diabetes registry 2024
 bulk-export-name-required = Enter a name for this export.
@@ -804,10 +811,15 @@ bulk-export-until-before-since = Until must not be earlier than Since.
 bulk-export-window-since = Since
 bulk-export-window-until = Until
 bulk-export-start = Start Export
-bulk-export-running = running
 bulk-export-clear = Clear
-bulk-export-files-word = files
-bulk-export-exports-word = exports
+bulk-export-files-count = { $count ->
+    [one] { $count } file
+   *[other] { $count } files
+}
+bulk-export-summary-count = { $count ->
+    [one] { $count } export
+   *[other] { $count } exports
+} · { $running } running
 bulk-export-none = No exports yet. Use New Export to start one.
 bulk-export-status-in-progress = In progress
 bulk-export-status-complete = Complete
@@ -914,6 +926,8 @@ vd-saved = Saved.
 vd-run-failed = Could not run the view.
 vd-save = Save
 vd-duplicate = Duplicate
+sql-duplicate-read-failed = Could not check existing artifacts before duplicating: { $reason }
+sql-duplicate-incomplete = Could not check all existing artifacts. The copy was not saved; try again after the catalog can be fully read.
 vd-delete = Delete
 vd-delete-confirm = Delete view definition "{ $name }"? This cannot be undone.
 vd-delete-failed = Could not delete the view definition.
@@ -1204,8 +1218,10 @@ sql-export-new = New SQL Export
 sql-export-unavailable = The storage backend does not host the settings store, so SQL export jobs cannot be tracked.
 sql-export-none = No SQL exports yet. Use New SQL Export to start one.
 sql-export-store-error = The export started, but could not be added to this list. Job id:
-sql-export-exports-word = exports
-sql-export-running = running
+sql-export-summary-count = { $count ->
+    [one] { $count } export
+   *[other] { $count } exports
+} · { $running } running
 sql-export-select-subject = Select at least one subject.
 sql-export-unknown-subject = One or more selected subjects are no longer available. Refresh the page and try again.
 sql-export-cancelled-reason = the server no longer knows this job

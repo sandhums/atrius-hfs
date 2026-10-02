@@ -344,17 +344,43 @@ pub trait ReindexSource: Send + Sync {
 /// Elasticsearch serves search would leave search untouched by `$reindex`.
 #[async_trait]
 pub trait ReindexTarget: Send + Sync {
-    /// Deletes this writer's search index entries for a single resource.
+    /// Deletes this writer's search index entries for a single resource, and
+    /// returns how many were removed.
     ///
-    /// Backends whose [`write_search_entries`](Self::write_search_entries) is a
-    /// full replace (Elasticsearch, where the indexed document *is* the search
-    /// entry) have nothing to do here and return `Ok(0)`.
+    /// This is a real delete in every writer, Elasticsearch included: it is
+    /// what a run named by resource IDs with `clearExisting` uses to clear its
+    /// scope, and there a named resource may be gone from the source (so the
+    /// rebuild never overwrites it) or may have dropped a `contained[]` entry
+    /// (#1629). A writer whose page rebuild replaces documents wholesale need
+    /// not call this from [`Self::write_search_entries_page`].
     async fn delete_search_entries(
         &self,
         tenant: &TenantContext,
         resource_type: &str,
         resource_id: &str,
     ) -> StorageResult<u64>;
+
+    /// Deletes this writer's search index entries for each of `resource_ids`
+    /// of one type, and returns how many were removed in total — the clear of a
+    /// run named by resource IDs with `clearExisting` (#1624).
+    ///
+    /// The default calls [`Self::delete_search_entries`] once per ID and stops
+    /// at the first error. A writer that can delete many resources in one
+    /// request (Elasticsearch) overrides it.
+    async fn delete_search_entries_for_resources(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        resource_ids: &[String],
+    ) -> StorageResult<u64> {
+        let mut total = 0;
+        for id in resource_ids {
+            total += self
+                .delete_search_entries(tenant, resource_type, id)
+                .await?;
+        }
+        Ok(total)
+    }
 
     /// Writes this writer's search index entries for a single resource, and
     /// returns how many entries were written.
@@ -965,6 +991,10 @@ struct EnqueueGeneration {
     op: Arc<ReindexOperation>,
     tenant: TenantContext,
     resource_types: Vec<String>,
+    /// Individual resources to rebuild, next to (or instead of) whole types:
+    /// what an ingest-time index sink could not index (#939). A whole type
+    /// pending for the same tenant covers its resources here.
+    resources: Vec<ResourceRef>,
     context: DeferredReindexContext,
     options: AutomaticRunOptions,
     max_concurrency: usize,
@@ -1378,15 +1408,20 @@ impl ReindexOperation {
             // Terminal audit event, read back from whatever state the run left
             // the job in.
             if let Some(audit) = audit {
-                let (status, processed) = {
+                let (status, processed, has_errors) = {
                     let guard = jobs.read();
                     let progress = guard.get(&job_id_clone);
                     (
                         progress.map(|p| p.status).unwrap_or(ReindexStatus::Failed),
                         progress.map(|p| p.processed_resources).unwrap_or(0),
+                        progress.is_some_and(ReindexProgress::has_errors),
                     )
                 };
                 let (phase, outcome) = match status {
+                    // Completed means the traversal finished, not that every
+                    // resource was indexed: resource errors make it a minor
+                    // failure.
+                    ReindexStatus::Completed if has_errors => ("complete", "4"),
                     ReindexStatus::Completed => ("complete", "0"),
                     ReindexStatus::Cancelled => ("cancel", "4"),
                     // Queued/InProgress are not reachable once the driver has
@@ -1667,13 +1702,15 @@ impl AutomaticReindexCoordinator {
             op,
             tenant,
             resource_types,
+            resources,
             context,
             options,
             max_concurrency,
             ledger,
         } = request;
         let requested_types: BTreeSet<_> = resource_types.into_iter().collect();
-        if requested_types.is_empty() {
+        let requested_resources: BTreeSet<ResourceRef> = resources.into_iter().collect();
+        if requested_types.is_empty() && requested_resources.is_empty() {
             return;
         }
         let tenant_id = tenant.tenant_id().to_string();
@@ -1685,6 +1722,7 @@ impl AutomaticReindexCoordinator {
             let mut tenants = self.tenants.lock().await;
             if let Some(state) = tenants.get_mut(&tenant_id) {
                 state.pending_types.extend(requested_types);
+                state.pending_resources.extend(requested_resources);
                 state.owe_manifest(&context);
                 state.context = context.clone();
                 state.options = options;
@@ -1710,6 +1748,9 @@ impl AutomaticReindexCoordinator {
                 let mut tenants = self.tenants.lock().await;
                 if let Some(state) = tenants.get_mut(&tenant_id) {
                     state.pending_types.extend(requested_types.clone());
+                    state
+                        .pending_resources
+                        .extend(requested_resources.iter().cloned());
                     state.owe_manifest(&context);
                     state.context = context.clone();
                     state.options = options;
@@ -1739,6 +1780,7 @@ impl AutomaticReindexCoordinator {
             let mut tenants = self.tenants.lock().await;
             if let Some(state) = tenants.get_mut(&tenant_id) {
                 state.pending_types.extend(requested_types);
+                state.pending_resources.extend(requested_resources);
                 state.owe_manifest(&context);
                 state.context = context;
                 state.options = options;
@@ -1749,6 +1791,7 @@ impl AutomaticReindexCoordinator {
                 tenant_id.clone(),
                 AutomaticTenantState {
                     pending_types: requested_types,
+                    pending_resources: requested_resources,
                     owed_manifests: context.manifest_id.iter().cloned().collect(),
                     context,
                     options,
@@ -2763,21 +2806,19 @@ async fn run_reindex(
             let cleared = match &named_resources {
                 Some(named) => {
                     let mut result = Ok(0);
-                    'named: for (resource_type, ids) in named {
-                        for id in ids {
-                            match writer
-                                .delete_search_entries(&tenant, resource_type, id)
-                                .await
-                            {
-                                Ok(count) => {
-                                    if let Ok(total) = &mut result {
-                                        *total += count;
-                                    }
+                    for (resource_type, ids) in named {
+                        match writer
+                            .delete_search_entries_for_resources(&tenant, resource_type, ids)
+                            .await
+                        {
+                            Ok(count) => {
+                                if let Ok(total) = &mut result {
+                                    *total += count;
                                 }
-                                Err(error) => {
-                                    result = Err(error);
-                                    break 'named;
-                                }
+                            }
+                            Err(error) => {
+                                result = Err(error);
+                                break;
                             }
                         }
                     }
@@ -3207,6 +3248,7 @@ impl ReindexOnFinish {
         &self,
         tenant: &crate::tenant::TenantContext,
         resource_types: Vec<String>,
+        resources: Vec<ResourceRef>,
         context: DeferredReindexContext,
     ) {
         self.op
@@ -3216,6 +3258,7 @@ impl ReindexOnFinish {
                 op: self.op.clone(),
                 tenant: tenant.clone(),
                 resource_types,
+                resources,
                 context,
                 options: self.options,
                 max_concurrency: self.max_concurrency,
@@ -3232,8 +3275,13 @@ impl crate::core::DeferredReindexHook for ReindexOnFinish {
         tenant: &crate::tenant::TenantContext,
         resource_types: Vec<String>,
     ) {
-        self.enqueue(tenant, resource_types, DeferredReindexContext::default())
-            .await;
+        self.enqueue(
+            tenant,
+            resource_types,
+            Vec::new(),
+            DeferredReindexContext::default(),
+        )
+        .await;
     }
 
     async fn reindex_types_with_context(
@@ -3242,7 +3290,17 @@ impl crate::core::DeferredReindexHook for ReindexOnFinish {
         resource_types: Vec<String>,
         context: DeferredReindexContext,
     ) {
-        self.enqueue(tenant, resource_types, context).await;
+        self.enqueue(tenant, resource_types, Vec::new(), context)
+            .await;
+    }
+
+    async fn reindex_resources_with_context(
+        &self,
+        tenant: &crate::tenant::TenantContext,
+        resources: Vec<ResourceRef>,
+        context: DeferredReindexContext,
+    ) {
+        self.enqueue(tenant, Vec::new(), resources, context).await;
     }
 }
 
@@ -6235,6 +6293,79 @@ mod tests {
         assert!(!error.retryable);
         assert!(error.error.contains("invalid JSON"), "{}", error.error);
         assert!(progress.has_only_permanent_errors());
+    }
+
+    /// The outcome of the terminal (`complete`) audit event in `sink`, once the
+    /// job's background task has recorded it.
+    #[cfg(feature = "R4")]
+    async fn terminal_audit_outcome(sink: &crate::test_audit::CollectorSink) -> Option<String> {
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let terminal = sink.events().into_iter().find(|event| {
+                    crate::test_audit::detail_map(event)
+                        .get("phase")
+                        .map(String::as_str)
+                        == Some("complete")
+                });
+                if let Some(event) = terminal {
+                    return event.outcome.and_then(|o| o.value);
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("no terminal audit event")
+    }
+
+    #[cfg(feature = "R4")]
+    fn audited_operation(
+        source: Arc<dyn ReindexSource>,
+        sink: &crate::test_audit::CollectorSink,
+    ) -> Arc<ReindexOperation> {
+        Arc::new(
+            ReindexOperation::with_parts(
+                source,
+                vec![Arc::new(RecordingTarget::default())],
+                Arc::new(crate::search::TenantSearchRegistries::base_only()),
+            )
+            .with_audit(Arc::new(sink.clone()), "Device/test"),
+        )
+    }
+
+    /// A job that finished its traversal with resource errors is audited as a
+    /// minor failure, not a success.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn a_completed_job_with_resource_errors_audits_as_a_minor_failure() {
+        let sink = crate::test_audit::CollectorSink::new();
+        let op = audited_operation(Arc::new(SkippingSource), &sink);
+
+        let job = op
+            .start(named_tenant("audit-errors"), ReindexRequest::all(), None)
+            .await
+            .unwrap();
+        let progress = await_finished(&op, &job).await;
+        assert_eq!(progress.status, ReindexStatus::Completed);
+        assert_eq!(progress.errors.len(), 1);
+
+        assert_eq!(terminal_audit_outcome(&sink).await.as_deref(), Some("4"));
+    }
+
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn a_clean_completed_job_audits_as_a_success() {
+        let sink = crate::test_audit::CollectorSink::new();
+        let op = audited_operation(Arc::new(PagedSource::new(3)), &sink);
+
+        let job = op
+            .start(named_tenant("audit-clean"), ReindexRequest::all(), None)
+            .await
+            .unwrap();
+        let progress = await_finished(&op, &job).await;
+        assert_eq!(progress.status, ReindexStatus::Completed);
+        assert!(!progress.has_errors());
+
+        assert_eq!(terminal_audit_outcome(&sink).await.as_deref(), Some("0"));
     }
 
     #[tokio::test]
