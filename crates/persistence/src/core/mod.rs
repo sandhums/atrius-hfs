@@ -142,9 +142,9 @@ pub use bulk_submit::{
     BulkProcessingOptions, BulkSubmitProvider, BulkSubmitRollbackProvider, ChangeType,
     EntryCountSummary, EntryResultContinuation, EntryResultCursor, EntryResultPage,
     IMPORT_MODE_PARAMETER_URL, ImportMode, IngestValidator, ManifestPhase, ManifestStatus,
-    NdjsonEntry, PagedEntryResult, StreamProcessingResult, StreamingBulkSubmitProvider,
-    SubmissionChange, SubmissionId, SubmissionManifest, SubmissionStatus, SubmissionSummary,
-    UnindexedEntry, merge_resource,
+    NdjsonEntry, PagedEntryResult, ReceiptListingCursor, StreamProcessingResult,
+    StreamingBulkSubmitProvider, SubmissionChange, SubmissionId, SubmissionManifest,
+    SubmissionStatus, SubmissionSummary, UnindexedEntry, merge_resource,
 };
 pub use bulk_submit_input::{
     FileTokenProvider, RemoteFile, RemoteManifest, SubmitInputFetcher, submission_output_job_id,
