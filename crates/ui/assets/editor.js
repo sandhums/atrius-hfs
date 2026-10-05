@@ -75,27 +75,40 @@
 
   /* Posts the document plus one mutation, and swaps in the re-rendered body.
    * `op` is empty for a plain re-render (first load, or after a source edit). */
-  function send(op, fields) {
-    /* URLSearchParams, not FormData: fetch sends FormData as multipart, and the
-     * server takes an urlencoded form. */
-    var form = new URLSearchParams();
-    form.set("doc", currentDocument());
-    form.set("op", op || "");
-    Object.keys(fields || {}).forEach(function (key) {
-      form.set(key, fields[key]);
-    });
-
-    return fetch("/ui/editor/render", { method: "POST", body: form })
-      .then(function (response) {
-        return response.text();
-      })
-      .then(function (html) {
-        var state = captureUiState();
-        body.innerHTML = html;
-        applyView();
-        restoreUiState(state);
-        if (unsaved) unsaved.check();
-      });
+  function send(op, fields, operation) {
+    var picker = window.HfsEditorAdd;
+    if (op && picker.projectionBusy(body)) return Promise.resolve();
+    var version = picker.documentVersion(body);
+    function work() {
+      var form = new URLSearchParams();
+      // Read after earlier queued mutations have applied their server swap.
+      form.set("doc", currentDocument());
+      form.set("op", op || "");
+      Object.keys(fields || {}).forEach(function (key) { form.set(key, fields[key]); });
+      return fetch("/ui/editor/render", { method: "POST", body: form })
+        .then(function (response) {
+          if (!response.ok) throw new Error(String(response.status));
+          return response.text();
+        })
+        .then(function (html) {
+          if (!op && version !== picker.documentVersion(body)) return;
+          var state = captureUiState();
+          var fresh = new DOMParser().parseFromString(html, "text/html");
+          if (!fresh.querySelector("#editor-form")) throw new Error("Invalid editor render response");
+          body.innerHTML = html;
+          picker.projectionSwapped(body, op);
+          applyView();
+          restoreUiState(state, operation);
+          if (unsaved) unsaved.check();
+        });
+    }
+    var request;
+    if (op) request = picker.queueMutation(body, work, function () { picker.failedMutation(body, op, fields); }, op);
+    else {
+      var finish = picker.beginRequest(body);
+      request = work().finally(finish);
+    }
+    return request.catch(function (error) { console.debug("Editor render failed", error); });
   }
 
   /* ---- keeping the user's place across the swap (#547) ------------------ */
@@ -130,7 +143,7 @@
     return null;
   }
 
-  function restoreUiState(state) {
+  function restoreUiState(state, operation) {
     // Raw mode survives the swap: the fresh textarea already carries the
     // updated document, so a guided edit refreshes the JSON in place instead
     // of kicking the user back to the fold view.
@@ -144,32 +157,22 @@
         if (toggle) toggle.classList.add("editor-json__act--on");
       }
     }
-    // The server names the node the mutation created; the picker that
-    // created it clears its filter and shows the added signal, #1239.
     var formEl = body.querySelector("#editor-form");
     var createdPath = formEl && formEl.dataset ? formEl.dataset.focus : null;
-    window.HfsEditorAdd.restorePickers(body, state.pickers, createdPath);
+    window.HfsEditorAdd.restorePickers(body, state.pickers, createdPath, operation);
+    if (window.HfsEditorAdd.revealCreated(body, createdPath, operation)) return;
 
-    // The caret goes to the node the mutation created. Otherwise it
-    // returns to the field that was focused before the swap.
-    var target = createdPath ? inputByPath(createdPath) : null;
+    var target = state.focus ? inputByPath(state.focus.path) : null;
     if (target) {
-      target.focus();
-      if (target.select) target.select();
-    } else if (state.focus) {
-      target = inputByPath(state.focus.path);
-      if (target) {
-        target.focus();
-        if (target.setSelectionRange && state.focus.start !== null) {
-          try {
-            target.setSelectionRange(state.focus.start, state.focus.end);
-          } catch (ignored) {}
-        }
+      target.focus({ preventScroll: true });
+      if (target.setSelectionRange && state.focus.start !== null) {
+        try { target.setSelectionRange(state.focus.start, state.focus.end); } catch (ignored) {}
       }
     }
 
     var tree = body.querySelector(".editor-tree");
     if (tree) tree.scrollTop = state.scroll;
+    window.HfsEditorAdd.restoreUndoFocus(body, operation);
   }
 
   /* The in-flight document. Normally the server's fragment (the hidden field),
@@ -244,13 +247,7 @@
         return response.json();
       })
       .then(function (resource) {
-        subject.textContent =
-          resourceType +
-          "/" +
-          (resource.id || "") +
-          (resource.meta && resource.meta.lastUpdated
-            ? " · " + new Date(resource.meta.lastUpdated).toLocaleString()
-            : "");
+        showSubject(resource);
         loadVersions();
         return renderDocument(resource).then(function () {
           trackUnsaved();
@@ -260,6 +257,17 @@
       .catch(function () {
         say(messages.msgLoadError, "error");
       });
+  }
+
+  /* The `Type/id · lastUpdated` line above the editor. */
+  function showSubject(resource) {
+    subject.textContent =
+      resourceType +
+      "/" +
+      (resource.id || "") +
+      (resource.meta && resource.meta.lastUpdated
+        ? " · " + new Date(resource.meta.lastUpdated).toLocaleString()
+        : "");
   }
 
   /* Renders a document into the editor body (JSON + form). */
@@ -373,20 +381,23 @@
 
     var add = event.target.closest("[data-add]");
     if (add) {
-      send("add", { path: add.dataset.add, name: add.dataset.name, slice: add.dataset.slice || "" });
+      send("add", { path: add.dataset.add, name: add.dataset.name, slice: add.dataset.slice || "" }, window.HfsEditorAdd.operationFrom(add));
       return;
     }
 
     var remove = event.target.closest("[data-remove]");
     if (remove) {
-      send("remove", { path: remove.dataset.remove });
+      var removal = remove.hasAttribute("data-add-undo")
+        ? window.HfsEditorAdd.undoOperation(body, remove, currentDocument()) : null;
+      if (remove.hasAttribute("data-add-undo") && !removal) return;
+      send("remove", { path: remove.dataset.remove }, removal);
       return;
     }
 
     var extension = event.target.closest("[data-extension]");
     if (extension) {
       var url = window.HfsEditorAdd.extensionUrl(extension);
-      send("extension", { path: extension.dataset.extension, url: url });
+      send("extension", { path: extension.dataset.extension, url: url }, window.HfsEditorAdd.operationFrom(extension));
       return;
     }
 
@@ -402,7 +413,7 @@
         path: choose.dataset.choose,
         name: choose.dataset.declarer,
         arm: choose.value,
-      });
+      }, window.HfsEditorAdd.operationFrom(choose));
     }
   });
 
@@ -574,8 +585,20 @@
           say("");
           announce(messages.msgSaved);
           if (unsaved) unsaved.reset();
-          if (result.payload && result.payload.id && !parsed.id) {
-            resourceId = result.payload.id;
+          /* #1667: the editor now edits the saved resource — a PUT with a
+             caller-chosen id included, not only a POST — so the Versions card,
+             the subject line and Delete all follow it. A POST's body carries
+             the server-assigned id the document still lacks: render it back,
+             or a second Save would create another resource. */
+          var saved =
+            result.payload && result.payload.resourceType ? result.payload : null;
+          resourceId = (saved && saved.id) || parsed.id || resourceId;
+          showSubject(saved || parsed);
+          loadVersions();
+          if (saved && !parsed.id) {
+            renderDocument(saved).then(function () {
+              if (unsaved) unsaved.reset();
+            });
           }
         })
         .catch(function (error) {
@@ -587,18 +610,20 @@
   function remove_resource() {
     var parsed = JSON.parse(currentDocument() || "{}");
     if (!parsed.id) return;
-    if (!window.confirm(messages.msgConfirmDelete)) return;
-
-    fetch("/" + resourceType + "/" + parsed.id, { method: "DELETE", headers: fhirHeaders() })
-      .then(function (response) {
-        if (response.ok) {
-          if (window.HfsUnsaved) window.HfsUnsaved.suspend();
-          window.location.href = "/ui/queries";
-        }
-      })
-      .catch(function (error) {
-        say(String(error), "error");
-      });
+    /* The shared in-page confirmation (#1667), not the browser's own box. */
+    window.HfsConfirm.ask(messages.msgConfirmDelete, { danger: true }).then(function (confirmed) {
+      if (!confirmed) return;
+      fetch("/" + resourceType + "/" + parsed.id, { method: "DELETE", headers: fhirHeaders() })
+        .then(function (response) {
+          if (response.ok) {
+            if (window.HfsUnsaved) window.HfsUnsaved.suspend();
+            window.location.href = "/ui/queries";
+          }
+        })
+        .catch(function (error) {
+          say(String(error), "error");
+        });
+    });
   }
 
   load();
