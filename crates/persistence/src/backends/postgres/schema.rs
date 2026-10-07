@@ -17,7 +17,7 @@ use crate::core::schema_ledger::{
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 50;
+pub const SCHEMA_VERSION: i32 = 51;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -47,7 +47,9 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// and `dead_at`. Helios v45 maps through the patient-reference function
 /// (index 44) and still runs the completed flag, slot-2, phase, and
 /// `dead_at`. Helios v46 maps through the completed flag (index 45) and still
-/// runs slot-2, phase, and `dead_at`.
+/// runs the reindex-id index, slot-2, phase, and `dead_at`. Helios v47 maps
+/// through `resources_reindex_id` (index 46, `#1767`) and still runs slot-2,
+/// phase, and `dead_at`.
 const PG_STEPS: &[&str] = &[
     "search_index_enhanced_columns",
     "resource_fts",
@@ -95,6 +97,7 @@ const PG_STEPS: &[&str] = &[
     "login_sessions",
     "patient_export_references",
     "bulk_manifest_file_progress_completed",
+    "resources_reindex_id",
     "search_index_slot2_columns",
     "bulk_manifests_phase_progress",
     OUTBOX_DEAD_LETTER_STEP,
@@ -483,6 +486,7 @@ async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> Stor
         "login_sessions" => migrate_v43_to_v44(client).await,
         "patient_export_references" => migrate_v44_to_v45(client).await,
         "bulk_manifest_file_progress_completed" => migrate_v45_to_v46(client).await,
+        "resources_reindex_id" => migrate_v46_to_v47(client).await,
         "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
         "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
         OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
@@ -4484,6 +4488,44 @@ async fn migrate_v45_to_v46(client: &deadpool_postgres::Client) -> StorageResult
         )
         .await
         .map_err(|e| pg_error(format!("Migration v45->v46 failed: {e}")))?;
+    Ok(())
+}
+
+/// v46 -> v47: `idx_resources_reindex_id`, the id-range `$reindex` walk's
+/// index (#1767).
+///
+/// A ranged `$reindex` (`idStart` / `idEnd`, #1739) walks one type's live
+/// resources in id order, with the range and the cursor as bounds of an index
+/// rather than filters over the whole type. The primary key would serve that,
+/// except that `resources.id` compares in the database's collation, and a
+/// locale collation (`en_US.UTF-8`, the `postgres` image's default) ignores
+/// `-` and `.` and folds case at the first level. The range contract is byte
+/// order, as on SQLite, MongoDB, Elasticsearch and in Rust, so the walk
+/// compares `id COLLATE "C"`, which needs its own index.
+///
+/// Measured on PostgreSQL 16 over 1M random-UUID resources of one type: 83 MB
+/// next to a 977 MB heap and a 108 MB primary key, built in about a second,
+/// and about 2 µs added per inserted row. It is partial on live rows, as the
+/// walk reads only those, so the new row version a soft delete writes adds no
+/// entry to it.
+async fn migrate_v46_to_v47(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
+    let tx = client
+        .transaction()
+        .await
+        .map_err(|e| pg_error(format!("begin v47 migration: {e}")))?;
+    tx.execute("SET LOCAL statement_timeout = 0", &[])
+        .await
+        .map_err(|e| pg_error(format!("disable statement timeout for v47 migration: {e}")))?;
+    tx.batch_execute(
+        "CREATE INDEX IF NOT EXISTS idx_resources_reindex_id
+         ON resources (tenant_id, resource_type, id COLLATE \"C\")
+         WHERE is_deleted = FALSE",
+    )
+    .await
+    .map_err(|e| pg_error(format!("Migration v46->v47 failed: {e}")))?;
+    tx.commit()
+        .await
+        .map_err(|e| pg_error(format!("commit v47 migration: {e}")))?;
     Ok(())
 }
 
