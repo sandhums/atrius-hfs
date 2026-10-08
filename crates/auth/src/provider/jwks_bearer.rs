@@ -9,7 +9,7 @@ use crate::config::AuthConfig;
 use crate::error::AuthError;
 use crate::jti::JtiRevocation;
 use crate::jwks::JwksCache;
-use crate::principal::Principal;
+use crate::principal::{LaunchContext, Principal};
 use crate::scope::ScopeSet;
 
 /// Authentication provider that validates Bearer tokens as JWTs
@@ -20,6 +20,9 @@ pub struct JwksBearerAuthProvider {
     expected_audience: Option<String>,
     expected_issuer: Option<String>,
     tenant_claim: String,
+    patient_claim: String,
+    encounter_claim: String,
+    fhir_user_claim: String,
     allowed_algorithms: Vec<Algorithm>,
 }
 
@@ -42,6 +45,9 @@ impl JwksBearerAuthProvider {
             expected_audience: config.expected_audience.clone(),
             expected_issuer: config.expected_issuer.clone(),
             tenant_claim: config.tenant_claim.clone(),
+            patient_claim: config.patient_claim.clone(),
+            encounter_claim: config.encounter_claim.clone(),
+            fhir_user_claim: config.fhir_user_claim.clone(),
             allowed_algorithms,
         }
     }
@@ -189,10 +195,21 @@ impl AuthProvider for JwksBearerAuthProvider {
             .and_then(|v| v.as_str())
             .map(String::from);
 
+        // 10. SMART launch context from the configured claims. The claims also
+        // stay in `custom_claims` below, where callers found them before.
+        let launch_context = claims.as_object().and_then(|map| {
+            LaunchContext::from_claims(
+                map,
+                &self.patient_claim,
+                &self.encounter_claim,
+                &self.fhir_user_claim,
+            )
+        });
+
         // 11. Build custom claims map (excluding standard claims)
         let custom_claims = if let serde_json::Value::Object(map) = claims {
             let standard = [
-                "sub", "iss", "exp", "iat", "nbf", "aud", "jti", "scope", "scp", "fhirUser",
+                "sub", "iss", "exp", "iat", "nbf", "aud", "jti", "scope", "scp",
             ];
             map.into_iter()
                 .filter(|(k, _)| !standard.contains(&k.as_str()) && k != &self.tenant_claim)
@@ -218,6 +235,7 @@ impl AuthProvider for JwksBearerAuthProvider {
             jti,
             expires_at,
             custom_claims,
+            launch_context,
         })
     }
 
