@@ -19,6 +19,9 @@ Use this when working in `helios-sof`, `sof-cli`, `sof-server`, or ViewDefinitio
 | `SOF_ENABLE_CORS` | `true` | Enable CORS |
 | `SOF_CORS_ORIGINS` | `*` | Allowed origins |
 | `SOF_TERMINOLOGY_SERVER` | none | Terminology server URL for FHIRPath memberOf and subsumes |
+| `FHIRPATH_TERMINOLOGY_MAX_CALLS` | `1000` | (helios-fhirpath setting) Max distinct terminology calls per ViewDefinition run (`0` disables) |
+
+All rows, where clauses, forEach/repeat items and streamed chunks of one view run share one FHIRPath `TerminologySession` (held by the public `PreparedViewDefinition`), so identical `memberOf()` lookups are sent once per run and the cap bounds the run, not each row. Raise the cap or set it to `0` for views that check many distinct codes. Other terminology failures (no server, server error) in columns evaluated on forEach/forEachOrNull/unionAll/repeat items still yield null rather than an error, and the cached failure yields null in every later row of the run.
 
 ## API Endpoints
 
@@ -134,6 +137,7 @@ in-process fallback.
 | `HFS_EXPORT_S3_REGION` | *(AWS chain)* | AWS region override for the `s3` sink |
 | `HFS_EXPORT_PRESIGN_TTL_SECS` | `86400` | Pre-signed download-URL lifetime for `s3`, seconds (spec requires ≥ 24h) |
 | `HFS_EXPORT_MAX_CONCURRENCY` | `4` | Maximum concurrent export jobs |
+| `HFS_EXPORT_MAX_JOBS_PER_TENANT` | `8` | Maximum queued + running export jobs per tenant; beyond it `$sql-export` returns `429` with `Retry-After: 5` |
 | `HFS_EXPORT_SHARD_ROWS` | `500000` | Target rows per output shard; larger results split across files |
 | `HFS_EXPORT_CONTROLLER` | `memory` | Job-controller backend (`memory` in-process; `kafka`/`sqs` reserved) |
 | `HFS_EXPORT_OUTPUT_TTL` | `86400` | Retention (seconds) for a finished job's output + bookkeeping; the cleanup reaper then deletes shards and drops the job (later polls/downloads → `404`) |
@@ -146,7 +150,10 @@ slot. A SQL statement already executing is not interrupted;
 `HFS_SOF_SQLQUERY_TIMEOUT_SECS` bounds it. A mid-run failure also deletes the
 partial shards. The reaper reclaims every finished job (completed, failed or
 cancelled) once it ages past `HFS_EXPORT_OUTPUT_TTL`; a failed delete leaves the
-job unreachable (404) and is retried, with a warning, on every sweep. Full
+job unreachable (404) and is retried, with a warning, on every sweep. Request
+inputs have fixed limits, each a `400` naming the limit: 64 `subject` entries,
+1000 `patient` plus `group` values, 256 `context` entries, and 4 ×
+`HFS_SOF_SQLQUERY_MAX_VDS` `depends-on` entries per Library. Full
 `HFS_EXPORT_*` reference lives in the
 [helios-rest README](../../../crates/rest/README.md#sql-on-fhir-async-export).
 

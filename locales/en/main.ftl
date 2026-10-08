@@ -269,6 +269,7 @@ sp-lede = Browse the parameters this server resolves searches against, filtered 
 sp-version-label = FHIR version
 sp-degraded = Search parameters could not be loaded from this server right now — the self-call to /SearchParameter failed (with authentication enabled this usually means the outbound service token is missing or invalid). The page retries on the next request.
 sp-degraded-unsupported = Search parameters cannot be listed on this storage backend — the self-call to /SearchParameter answered 501 Not Implemented because the backend has no search for this type.
+sp-empty = No search parameters are stored on this server for this FHIR version, so there is nothing to list.
 sp-rail-label = Resource filter
 sp-rail-search = Filter types
 sp-rail-recent = Recently used
@@ -330,6 +331,7 @@ cmp-rail-label = Compartment definitions
 cmp-rail-heading = Compartments
 cmp-degraded = Compartment definitions could not be loaded from this server right now — the self-call to /CompartmentDefinition failed (with authentication enabled this usually means the outbound service token is missing or invalid). The page retries on the next request.
 cmp-degraded-unsupported = Compartment definitions cannot be listed on this storage backend — the self-call to /CompartmentDefinition answered 501 Not Implemented because the backend has no search for this type.
+cmp-empty = No compartment definitions are stored on this server for this FHIR version, so there is nothing to list.
 cmp-rail-note = Definitions are stored resources, seeded from the FHIR spec at startup. Edits and deletions here are tenant-scoped.
 cmp-tabs-label = Compartment sections
 cmp-tab-definition = Definition
@@ -528,6 +530,9 @@ editor-load-error = Could not load that resource.
 editor-confirm-delete = Delete this resource? This cannot be undone.
 editor-invalid-json = That is not valid JSON, so it cannot be edited as a form. Your text is untouched.
 editor-source-hint = Edit the source directly. Switching back to the guided form parses it.
+editor-format = Format
+editor-format-title = Format the document (Shift+Alt+F)
+editor-format-invalid = Fix the JSON syntax errors before formatting.
 
 editor-add = Add Element
 editor-add-close = Close
@@ -844,14 +849,25 @@ bulk-export-error = Error
 bulk-export-cancel = Cancel
 bulk-export-cancel-refused = The server refused the cancel:
 bulk-export-retry = Retry
+bulk-export-run-again = Run again
 bulk-export-download-all = Download All Resources
 bulk-export-download-all-aria = Download all resources from { $name }
+bulk-export-view-files = View files
+bulk-export-more-actions = More actions
 bulk-export-delete = Delete
 bulk-export-delete-aria = Delete export { $name }
 bulk-export-delete-warning = Delete { $name } and its output files from the server? This cannot be undone.
 bulk-export-delete-confirm = Delete export
 bulk-export-delete-cancel = Keep export
 bulk-export-delete-error = The export could not be deleted safely. Its card was kept so you can try again.
+bulk-export-detail-job-heading = Job
+bulk-export-detail-field-scope = Scope
+bulk-export-detail-field-started = Started
+bulk-export-detail-field-duration = Duration
+bulk-export-detail-outputs-heading = Output files
+bulk-export-detail-col-type = Resource type
+bulk-export-detail-col-files = Files
+bulk-export-detail-outputs-empty = The export produced no output files.
 
 # CapabilityStatement page (#653)
 cap-title = Capability Statement
@@ -989,6 +1005,10 @@ vd-fix-set-string = Set to "{ $value }"
 ## structural key's completion item carries, appended to its `detail` text
 ## client-side (never sent by `/complete` itself, which is not locale-aware).
 vd-complete-required = required
+
+## `data-msg-quickfix` on `#vd-editor-grid`: the accessible name of the quick-fix
+## menu Ctrl+. opens next to the cursor when several fixes apply.
+vd-quickfix-menu = Quick fixes
 
 ## ViewDefinition editor save-with-errors confirmation (#821): `vd-editor.js`
 ## picks whichever of these renders `#vd-editor-grid`'s own
