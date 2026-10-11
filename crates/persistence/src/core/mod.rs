@@ -113,6 +113,7 @@ pub mod search;
 pub mod sof_runner;
 pub mod storage;
 pub mod subscription_outbox;
+pub mod tenant_discovery;
 pub mod transaction;
 pub mod user_settings;
 pub mod versioned;
@@ -200,10 +201,15 @@ pub use subscription_outbox::{
     OUTBOX_EVENT_TYPE, OutboxEventType, SubscriptionOutboxEntry, SubscriptionOutboxStore,
     subscription_outbox_source, subscription_outbox_writes_enabled,
 };
+pub use tenant_discovery::{
+    CountBasis, DiscoveredTenant, DiscoveryCoverage, DiscoveryCursor, DiscoveryRequest,
+    PresenceBasis, TenantDataEvidence, TenantDiscovery,
+};
 pub use transaction::{
-    BundleEntry, BundleEntryEffect, BundleEntryResult, BundleMethod, BundleProvider, BundleResult,
-    BundleType, ConditionalTransaction, IsolationLevel, LockingStrategy, PatchCandidateValidator,
-    Transaction, TransactionOptions, TransactionProvider,
+    BundleEntry, BundleEntryEffect, BundleEntryResult, BundleEntryTarget, BundleMethod,
+    BundleProvider, BundleResult, BundleType, ConditionalTransaction, IsolationLevel,
+    LockingStrategy, PatchCandidateValidator, Transaction, TransactionOptions, TransactionProvider,
+    parse_bundle_entry_target,
 };
 pub use user_settings::{
     BY_TENANT_KEY, GLOBAL_SETTINGS_KEYS, SettingsStore, StoredUserSettings, apply_merge_patch,

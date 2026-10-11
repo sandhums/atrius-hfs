@@ -54,8 +54,27 @@ fn map_term(err: HtsError, op: &str) -> FhirPathError {
             let status_text = reqwest::StatusCode::from_u16(status)
                 .map(|s| s.to_string())
                 .unwrap_or_else(|_| status.to_string());
-            FhirPathError::TerminologyError(format!("{op} failed with status {status_text}: {body}"))
+            FhirPathError::TerminologyHttpError {
+                status,
+                message: format!("{op} failed with status {status_text}: {body}"),
+            }
         }
+    }
+}
+
+/// HTTP statuses after which the same request may succeed later: 408, 429 and every 5xx
+/// except 501 Not Implemented.
+fn is_transient_status(status: u16) -> bool {
+    matches!(status, 408 | 429) || ((500..=599).contains(&status) && status != 501)
+}
+
+/// Whether a failed terminology request may succeed if sent again later: a transport failure
+/// or a transient status. Other 4xx, 501, and a non-JSON body are deterministic.
+pub(crate) fn is_transient(error: &FhirPathError) -> bool {
+    match error {
+        FhirPathError::NetworkError(_) => true,
+        FhirPathError::TerminologyHttpError { status, .. } => is_transient_status(*status),
+        _ => false,
     }
 }
 
@@ -522,6 +541,28 @@ fn build_translate_body(
 mod tests {
     use super::*;
 
+    #[test]
+    fn is_transient_classifies_failures() {
+        assert!(is_transient(&FhirPathError::NetworkError("x".into())));
+        for status in [408u16, 429, 500, 502, 503, 504, 530] {
+            let error = FhirPathError::TerminologyHttpError {
+                status,
+                message: String::new(),
+            };
+            assert!(is_transient(&error), "HTTP {status}");
+        }
+        for status in [400u16, 401, 403, 404, 422, 501] {
+            let error = FhirPathError::TerminologyHttpError {
+                status,
+                message: String::new(),
+            };
+            assert!(!is_transient(&error), "HTTP {status}");
+        }
+        assert!(!is_transient(&FhirPathError::ParseError("x".into())));
+        assert!(!is_transient(&FhirPathError::ConfigError("x".into())));
+        assert!(!is_transient(&FhirPathError::TerminologyError("x".into())));
+    }
+
     async fn call_operation(client: &TerminologyClient, operation: &str) -> FhirPathResult<Value> {
         match operation {
             "expand" => client.expand("http://example.org/vs", None).await,
@@ -640,8 +681,10 @@ mod tests {
             .expand("http://example.org/vs", None)
             .await
             .unwrap_err();
-        assert!(matches!(&error, FhirPathError::TerminologyError(message)
-            if message.contains("530") && message.contains(body)));
+        assert!(
+            matches!(&error, FhirPathError::TerminologyHttpError { status: 530, message }
+            if message.contains("530") && message.contains(body))
+        );
         assert_eq!(server.received_requests().await.unwrap().len(), 4);
     }
 
@@ -653,8 +696,10 @@ mod tests {
             .expand("http://example.org/vs", None)
             .await
             .unwrap_err();
-        assert!(matches!(&error, FhirPathError::TerminologyError(message)
-            if message.contains("504 Gateway Timeout") && message.contains("gateway unavailable")));
+        assert!(
+            matches!(&error, FhirPathError::TerminologyHttpError { status: 504, message }
+            if message.contains("504 Gateway Timeout") && message.contains("gateway unavailable"))
+        );
         assert_eq!(server.received_requests().await.unwrap().len(), 4);
     }
 
@@ -665,7 +710,7 @@ mod tests {
             let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
             assert!(matches!(
                 client.expand("http://example.org/vs", None).await,
-                Err(FhirPathError::TerminologyError(_))
+                Err(FhirPathError::TerminologyHttpError { status: got, .. }) if got == status
             ));
             assert_eq!(
                 server.received_requests().await.unwrap().len(),

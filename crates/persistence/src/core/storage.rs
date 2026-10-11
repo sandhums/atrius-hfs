@@ -949,6 +949,24 @@ pub trait ResourceStorage: Send + Sync {
         false
     }
 
+    /// What the [`count_all_types`](Self::count_all_types) figures count, or
+    /// `None` when [`supports_type_counts`](Self::supports_type_counts) is
+    /// `false` (#1850).
+    ///
+    /// Lets a consumer that reuses those figures (the Home dashboard's held
+    /// totals) label their provenance honestly: an authoritative store counts
+    /// [`LiveResources`](crate::core::CountBasis::LiveResources), while a
+    /// search index counts
+    /// [`IndexedLiveDocuments`](crate::core::CountBasis::IndexedLiveDocuments),
+    /// exact only relative to the index. The default derives the answer from
+    /// `supports_type_counts`; Elasticsearch overrides it, composite storage
+    /// answers for the backend its counts come from, and a wrapper that
+    /// delegates the count methods must delegate this too.
+    fn type_count_basis(&self) -> Option<crate::core::CountBasis> {
+        self.supports_type_counts()
+            .then_some(crate::core::CountBasis::LiveResources)
+    }
+
     /// The tenant's [`WriteMarker`], or `None` when this backend cannot provide
     /// one cheaply (#1078).
     ///
@@ -972,8 +990,44 @@ pub trait ResourceStorage: Send + Sync {
     /// request handling — hence it takes no [`TenantContext`]. The default
     /// implementation returns an empty list; the SQL and document backends
     /// override it with a single `GROUP BY tenant_id`.
+    ///
+    /// Its cost grows with the whole store, so a backend may bound it with a
+    /// server execution budget (MongoDB sends `maxTimeMS`, #1828). An expired
+    /// budget surfaces as [`BackendError::Timeout`](crate::error::BackendError::Timeout),
+    /// which callers must treat as "counts unavailable", never as zero.
     async fn count_by_tenant(&self) -> StorageResult<Vec<(String, u64)>> {
         Ok(Vec::new())
+    }
+
+    /// Discovers which tenants hold data, across the entire backend (#1672).
+    ///
+    /// Like [`count_by_tenant`](Self::count_by_tenant) this spans tenants and
+    /// takes no [`TenantContext`]; it exists for background consumers (the web
+    /// UI's Tenants inventory, #1848). Contract:
+    ///
+    /// - `Err(_)`: discovery failed (transport, permission, timeout, pool).
+    ///   Never reported as an empty or partial success.
+    /// - [`DiscoveryCoverage::Unsupported`](crate::core::DiscoveryCoverage::Unsupported):
+    ///   a capability boundary, never an empty store.
+    /// - [`DiscoveryCoverage::Partial`](crate::core::DiscoveryCoverage::Partial):
+    ///   the request budget ran out; absent ids are unknown.
+    /// - A number is never derived from presence evidence.
+    /// - Backends that need many round trips honour `req.max_requests`.
+    /// - No cache and no scheduler here: the caller owns single-flight and TTL.
+    ///
+    /// The default is `Unsupported`, so a backend or wrapper that does not
+    /// implement it degrades honestly instead of reporting an empty store. The
+    /// SQLite, PostgreSQL and MongoDB backends override it with their grouped
+    /// [`count_by_tenant`](Self::count_by_tenant), composite storage forwards
+    /// to its primary, and a wrapper that delegates `count_by_tenant` must
+    /// delegate this too.
+    async fn discover_tenants(
+        &self,
+        _req: &crate::core::DiscoveryRequest,
+    ) -> StorageResult<crate::core::TenantDiscovery> {
+        Ok(crate::core::TenantDiscovery::unsupported(
+            "tenant-discovery",
+        ))
     }
 
     /// How many concurrent storage calls this backend absorbs well when a
@@ -995,6 +1049,10 @@ pub trait ResourceStorage: Send + Sync {
     /// should be trusted to bound request-scoped traffic on its own. The batch
     /// caller additionally caps this with `HFS_BATCH_MAX_CONCURRENCY`, so the
     /// number returned here is a tolerance an operator may lower, never a floor.
+    ///
+    /// A composite delegates to its primary, except that with a synchronous
+    /// search secondary it returns at least 8: each write then also waits on
+    /// the secondary, and those waits overlap even over a single-writer primary.
     fn bulk_write_concurrency(&self) -> usize {
         1
     }

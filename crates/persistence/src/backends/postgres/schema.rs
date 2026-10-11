@@ -17,7 +17,7 @@ use crate::core::schema_ledger::{
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 51;
+pub const SCHEMA_VERSION: i32 = 52;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -48,8 +48,10 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// (index 44) and still runs the completed flag, slot-2, phase, and
 /// `dead_at`. Helios v46 maps through the completed flag (index 45) and still
 /// runs the reindex-id index, slot-2, phase, and `dead_at`. Helios v47 maps
-/// through `resources_reindex_id` (index 46, `#1767`) and still runs slot-2,
-/// phase, and `dead_at`.
+/// through `resources_reindex_id` (index 46, `#1767`) and still runs
+/// `search_index_composite_slot`, slot-2, phase, and `dead_at`. Helios v48
+/// maps through `search_index_composite_slot` (index 47) and still runs
+/// slot-2, phase, and `dead_at`.
 const PG_STEPS: &[&str] = &[
     "search_index_enhanced_columns",
     "resource_fts",
@@ -98,6 +100,7 @@ const PG_STEPS: &[&str] = &[
     "patient_export_references",
     "bulk_manifest_file_progress_completed",
     "resources_reindex_id",
+    "search_index_composite_slot",
     "search_index_slot2_columns",
     "bulk_manifests_phase_progress",
     OUTBOX_DEAD_LETTER_STEP,
@@ -151,6 +154,7 @@ pub async fn initialize_schema_with_patient_export_index(
 
     let result = async {
         run_migrations(client).await?;
+        ensure_legacy_composite_index(client).await?;
         if build_patient_export_index {
             ensure_patient_export_index(client).await
         } else {
@@ -487,6 +491,7 @@ async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> Stor
         "patient_export_references" => migrate_v44_to_v45(client).await,
         "bulk_manifest_file_progress_completed" => migrate_v45_to_v46(client).await,
         "resources_reindex_id" => migrate_v46_to_v47(client).await,
+        "search_index_composite_slot" => migrate_v47_to_v48(client).await,
         "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
         "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
         OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
@@ -4529,6 +4534,72 @@ async fn migrate_v46_to_v47(client: &mut deadpool_postgres::Client) -> StorageRe
     Ok(())
 }
 
+/// v47 -> v48: nullable component ordinals for unfolded composite rows.
+/// Existing positions cannot be reconstructed from the old index alone.
+async fn migrate_v47_to_v48(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
+    let tx = client
+        .transaction()
+        .await
+        .map_err(|e| pg_error(format!("begin v48 migration: {e}")))?;
+    tx.execute("SET LOCAL statement_timeout = 0", &[])
+        .await
+        .map_err(|e| pg_error(format!("disable statement timeout for v48 migration: {e}")))?;
+    tx.batch_execute(
+        "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS composite_slot INTEGER;
+         CREATE INDEX IF NOT EXISTS idx_search_contained_composite_legacy
+         ON search_index (tenant_id, contained_type, param_name)
+         WHERE is_contained = TRUE AND composite_group IS NOT NULL AND composite_slot IS NULL",
+    )
+    .await
+    .map_err(|e| pg_error(format!("Migration v47->v48 failed: {e}")))?;
+    tx.commit()
+        .await
+        .map_err(|e| pg_error(format!("commit v48 migration: {e}")))?;
+    Ok(())
+}
+
+/// Fresh denormalized databases do not create ordinary legacy probes. Legacy
+/// writers populate slots; its nullable rows may be folded during a transition,
+/// so family-specific predicates distinguish those from ambiguous unfolded rows.
+/// Ensure these under the startup advisory lock, including a switch to Legacy.
+async fn ensure_legacy_composite_index(
+    client: &mut deadpool_postgres::Client,
+) -> StorageResult<()> {
+    if read_index_layout(client).await != IndexLayout::Legacy {
+        return Ok(());
+    }
+    let tx = client
+        .transaction()
+        .await
+        .map_err(|e| pg_error(format!("begin legacy composite probe indexes: {e}")))?;
+    tx.execute("SET LOCAL statement_timeout = 0", &[])
+        .await
+        .map_err(|e| {
+            pg_error(format!(
+                "disable statement timeout for legacy composite probe indexes: {e}"
+            ))
+        })?;
+    tx.batch_execute(
+        "CREATE INDEX IF NOT EXISTS idx_search_composite_legacy
+             ON search_index (tenant_id, resource_type, param_name)
+             WHERE is_contained = FALSE AND composite_group IS NOT NULL AND composite_slot IS NULL;
+             CREATE INDEX IF NOT EXISTS idx_search_composite_legacy_token
+             ON search_index (tenant_id, resource_type, param_name)
+             WHERE is_contained = FALSE AND composite_group IS NOT NULL AND composite_slot IS NULL
+               AND value_token_code_2 IS NULL AND value_token_system_2 IS NULL;
+             CREATE INDEX IF NOT EXISTS idx_search_composite_legacy_number
+             ON search_index (tenant_id, resource_type, param_name)
+             WHERE is_contained = FALSE AND composite_group IS NOT NULL AND composite_slot IS NULL
+               AND value_number_2 IS NULL",
+    )
+    .await
+    .map_err(|e| pg_error(format!("ensure legacy composite probe index: {e}")))?;
+    tx.commit()
+        .await
+        .map_err(|e| pg_error(format!("commit legacy composite probe indexes: {e}")))?;
+    Ok(())
+}
+
 const PATIENT_EXPORT_INDEX_NAME: &str = "idx_resources_patient_refs_v1";
 
 /// Verify the exact expression and live-row predicate before the export path
@@ -5534,6 +5605,176 @@ mod postgres_integration_migrations {
         assert_eq!(
             patient_export_index_state(&client).await.unwrap(),
             Some(true)
+        );
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_composite_slot_migration_and_layout_probe_index() {
+        let _guard = POSTGRES_TEST_LOCK.lock().await;
+        let backend = create_database(
+            shared_pg().await,
+            &format!("hfs1407_r1_slots_{}", uuid::Uuid::new_v4().simple()),
+        )
+        .await;
+        let mut client = backend.get_client().await.unwrap();
+        initialize_schema(&mut client).await.unwrap();
+        assert_eq!(read_index_layout(&client).await, IndexLayout::Denormalized);
+        for name in [
+            "idx_search_composite_legacy_token",
+            "idx_search_composite_legacy_number",
+        ] {
+            assert!(index_definition(&client, name).await.is_none());
+        }
+        assert!(
+            index_definition(&client, "idx_search_composite_legacy")
+                .await
+                .is_none()
+        );
+        assert!(
+            index_definition(&client, "idx_search_contained_composite_legacy")
+                .await
+                .is_some()
+        );
+        client.batch_execute(
+            "ALTER TABLE search_index DROP COLUMN composite_slot CASCADE;
+             INSERT INTO search_index (tenant_id, resource_type, resource_id, param_name,
+                 composite_group, value_token_code)
+             VALUES ('t', 'Observation', 'old', 'pair', 7, 'A');
+             INSERT INTO search_index (tenant_id, resource_type, resource_id, param_name,
+                 composite_group, value_token_code, is_contained, contained_type, contained_local_id)
+             VALUES ('t', 'Observation', 'container', 'pair', 7, 'A', TRUE, 'Observation', 'child');",
+        ).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'search_index_composite_slot'",
+                &[],
+            )
+            .await
+            .unwrap();
+        initialize_schema(&mut client).await.unwrap();
+        assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
+        assert_eq!(client.query_one("SELECT COUNT(*) FROM search_index WHERE composite_group = 7 AND value_token_code = 'A' AND composite_slot IS NULL", &[]).await.unwrap().get::<_, i64>(0), 2);
+        assert!(
+            index_definition(&client, "idx_search_composite_legacy")
+                .await
+                .is_none()
+        );
+        client
+            .execute(
+                "UPDATE search_index SET composite_slot = 2 WHERE resource_id = 'old'",
+                &[],
+            )
+            .await
+            .unwrap();
+        migrate_v47_to_v48(&mut client).await.unwrap();
+        assert_eq!(
+            client
+                .query_one(
+                    "SELECT composite_slot FROM search_index WHERE resource_id = 'old'",
+                    &[]
+                )
+                .await
+                .unwrap()
+                .get::<_, i32>(0),
+            2
+        );
+
+        // Changing the recorded layout after migration must acquire the
+        // ordinary probe index on the next locked initialization.
+        let timeout_before: String = client
+            .query_one("SHOW statement_timeout", &[])
+            .await
+            .unwrap()
+            .get(0);
+        client
+            .batch_execute(
+                "CREATE TABLE probe_ddl_timeouts (setting TEXT NOT NULL);
+             CREATE FUNCTION capture_probe_timeout() RETURNS event_trigger LANGUAGE plpgsql AS $$
+             BEGIN
+                INSERT INTO probe_ddl_timeouts SELECT current_setting('statement_timeout')
+                FROM pg_event_trigger_ddl_commands()
+                WHERE object_identity LIKE 'public.idx_search_composite_legacy%';
+             END $$;
+             CREATE EVENT TRIGGER capture_probe_timeout ON ddl_command_end
+             WHEN TAG IN ('CREATE INDEX') EXECUTE FUNCTION capture_probe_timeout()",
+            )
+            .await
+            .unwrap();
+        client
+            .execute("UPDATE search_index_layout SET layout = 'legacy'", &[])
+            .await
+            .unwrap();
+        initialize_schema(&mut client).await.unwrap();
+        let timeout_after: String = client
+            .query_one("SHOW statement_timeout", &[])
+            .await
+            .unwrap()
+            .get(0);
+        let ddl_timeouts: Vec<String> = client
+            .query("SELECT setting FROM probe_ddl_timeouts", &[])
+            .await
+            .unwrap()
+            .iter()
+            .map(|row| row.get(0))
+            .collect();
+        assert_eq!(
+            ddl_timeouts,
+            vec!["0"; 3],
+            "all three ordinary DDL scans must be outside the query timeout"
+        );
+        assert_eq!(
+            timeout_after, timeout_before,
+            "SET LOCAL restores the caller's timeout"
+        );
+        eprintln!(
+            "legacy probe DDL timeouts={ddl_timeouts:?}; restored statement_timeout={timeout_after}"
+        );
+        let definition = index_definition(&client, "idx_search_composite_legacy")
+            .await
+            .unwrap();
+        for predicate in [
+            "composite_slot IS NULL",
+            "composite_group IS NOT NULL",
+            "is_contained = false",
+        ] {
+            assert!(
+                definition.contains(predicate),
+                "missing {predicate}: {definition}"
+            );
+        }
+        for (name, predicates) in [
+            (
+                "idx_search_composite_legacy_token",
+                vec!["value_token_code_2 IS NULL", "value_token_system_2 IS NULL"],
+            ),
+            (
+                "idx_search_composite_legacy_number",
+                vec!["value_number_2 IS NULL"],
+            ),
+        ] {
+            let definition = index_definition(&client, name).await.unwrap();
+            for predicate in predicates {
+                assert!(definition.contains(predicate), "{definition}");
+            }
+        }
+        let oid: u32 = client
+            .query_one("SELECT 'idx_search_composite_legacy'::regclass::oid", &[])
+            .await
+            .unwrap()
+            .get(0);
+        initialize_schema(&mut client).await.unwrap();
+        assert_eq!(
+            client
+                .query_one("SELECT 'idx_search_composite_legacy'::regclass::oid", &[])
+                .await
+                .unwrap()
+                .get::<_, u32>(0),
+            oid
+        );
+        assert!(
+            index_definition(&client, "idx_search_contained_composite_legacy")
+                .await
+                .is_some()
         );
     }
 

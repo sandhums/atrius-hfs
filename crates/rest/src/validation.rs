@@ -228,7 +228,16 @@ impl ValidationService {
         tenant: Option<&str>,
         use_meta_profiles: bool,
     ) -> Vec<ValidationError> {
-        let resolution_resources = self.prefetch_resolve(version, resource, tenant).await;
+        let resolution_resources = match self.prefetch_resolve(version, resource, tenant).await {
+            Ok(resources) => resources,
+            Err(error) => {
+                return vec![ValidationError::new(
+                    ErrorKind::ReferenceTarget,
+                    String::new(),
+                    format!("Could not resolve referenced resources: {error}"),
+                )];
+            }
+        };
         let resolver = self.resolver_for(version, tenant);
         let validator = Validator::new(resolver);
         let opts = ValidationOptions {
@@ -259,13 +268,13 @@ impl ValidationService {
         version: FhirVersion,
         resource: &Value,
         tenant: Option<&str>,
-    ) -> Vec<Value> {
+    ) -> Result<Vec<Value>, helios_persistence::core::SofError> {
         let (Some(resolver), Some(tenant_id)) = (&self.reference_resolver, tenant) else {
-            return Vec::new();
+            return Ok(Vec::new());
         };
         let refs = collect_missing_references(std::slice::from_ref(resource));
         if refs.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
         let ctx = TenantContext::new(TenantId::new(tenant_id), TenantPermissions::full_access());
         resolver.resolve(&ctx, version, &refs).await
