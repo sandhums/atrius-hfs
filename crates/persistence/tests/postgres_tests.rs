@@ -35,6 +35,11 @@ mod if_match_suite;
 #[path = "transactions/conditional_url_suite.rs"]
 mod conditional_url_suite;
 
+/// Backend-agnostic bundle identity scenarios (#1894, #1934): forward
+/// references, the overlap rule, no-op conditional deletes.
+#[path = "transactions/bundle_identity_suite.rs"]
+mod bundle_identity_suite;
+
 /// The backend-agnostic tenant-id fidelity scenarios (issue #447), shared
 /// verbatim with the SQLite and MongoDB suites. Declared at the top level for
 /// the same `#[path]` resolution reason as `if_match_suite` above.
@@ -128,6 +133,12 @@ mod large_id_set_suite;
 /// `#[path]` arrangement.
 #[path = "search/contained_suite.rs"]
 mod contained_suite;
+
+#[path = "search/sql_composite_slots_suite.rs"]
+mod sql_composite_slots_suite;
+
+#[path = "search/postgres_composite_slots_tests.rs"]
+mod postgres_composite_slots_tests;
 
 /// The backend-agnostic number / quantity validation suite (#1319, #1340).
 /// Same `#[path]` arrangement.
@@ -4878,6 +4889,125 @@ mod postgres_integration {
         let map: std::collections::HashMap<String, u64> = counts.into_iter().collect();
         assert_eq!(map.get(tenant_a.tenant_id().as_str()), Some(&3));
         assert_eq!(map.get(tenant_b.tenant_id().as_str()), Some(&2));
+
+        // The aggregate counts live rows only, across registered and
+        // unregistered tenants alike; the registry alone lists empty tenants
+        // (#1826). tenant-c is registered and has a live row plus a
+        // soft-deleted one; tenant-a and tenant-b were never registered.
+        let tenant_c = create_tenant("console-count-by-tenant-c");
+        let id_c = tenant_c.tenant_id().as_str();
+        backend.register_tenant(id_c, None).await.unwrap();
+        backend
+            .create(&tenant_c, "Patient", json!({}), FhirVersion::default())
+            .await
+            .unwrap();
+        let deleted = backend
+            .create(&tenant_c, "Patient", json!({}), FhirVersion::default())
+            .await
+            .unwrap();
+        backend
+            .delete(&tenant_c, "Patient", deleted.id())
+            .await
+            .unwrap();
+        let empty = create_tenant("console-count-by-tenant-empty");
+        let id_empty = empty.tenant_id().as_str();
+        backend.register_tenant(id_empty, None).await.unwrap();
+
+        async fn live_counts(backend: &PostgresBackend) -> std::collections::HashMap<String, u64> {
+            backend
+                .count_by_tenant()
+                .await
+                .unwrap()
+                .into_iter()
+                .collect()
+        }
+        let map = live_counts(&backend).await;
+        assert_eq!(map.get(id_c), Some(&1), "soft-deleted rows are not counted");
+        assert_eq!(map.get(tenant_a.tenant_id().as_str()), Some(&3));
+        assert_eq!(map.get(tenant_b.tenant_id().as_str()), Some(&2));
+        assert!(
+            !map.contains_key(id_empty),
+            "a registered tenant without live rows is absent from the aggregate"
+        );
+        assert!(
+            backend
+                .list_tenants()
+                .await
+                .unwrap()
+                .iter()
+                .any(|t| t.id == id_empty),
+            "the registry still lists the empty tenant"
+        );
+
+        // Deregistering removes only the registry row; the data stays counted.
+        assert!(backend.deregister_tenant(id_c).await.unwrap());
+        assert_eq!(live_counts(&backend).await.get(id_c), Some(&1));
+
+        // Purging removes the data, so the tenant leaves the aggregate.
+        backend
+            .purge_tenant_data(tenant_a.tenant_id().as_str())
+            .await
+            .unwrap();
+        let map = live_counts(&backend).await;
+        assert!(!map.contains_key(tenant_a.tenant_id().as_str()));
+        assert_eq!(map.get(tenant_b.tenant_id().as_str()), Some(&2));
+        assert_eq!(map.get(id_c), Some(&1));
+
+        backend.deregister_tenant(id_empty).await.unwrap();
+    }
+
+    /// #1672: PostgreSQL discovery is its grouped live count, complete in one
+    /// query, so deleted resources do not count.
+    #[tokio::test]
+    async fn postgres_integration_discover_tenants_reports_live_counts() {
+        use helios_persistence::core::{
+            CountBasis, DiscoveryCoverage, DiscoveryRequest, TenantDataEvidence,
+        };
+        let backend = create_backend().await;
+        let tenant_a = create_tenant("discover-tenants-a");
+        let tenant_gone = create_tenant("discover-tenants-gone");
+
+        for resource_type in ["Patient", "Patient", "Observation"] {
+            backend
+                .create(&tenant_a, resource_type, json!({}), FhirVersion::default())
+                .await
+                .unwrap();
+        }
+        let deleted = backend
+            .create(&tenant_a, "Patient", json!({}), FhirVersion::default())
+            .await
+            .unwrap();
+        backend
+            .delete(&tenant_a, "Patient", deleted.id())
+            .await
+            .unwrap();
+        let only = backend
+            .create(&tenant_gone, "Patient", json!({}), FhirVersion::default())
+            .await
+            .unwrap();
+        backend
+            .delete(&tenant_gone, "Patient", only.id())
+            .await
+            .unwrap();
+
+        let discovery = backend
+            .discover_tenants(&DiscoveryRequest::default())
+            .await
+            .unwrap();
+        assert_eq!(discovery.coverage, DiscoveryCoverage::Complete);
+        let found: std::collections::HashMap<String, TenantDataEvidence> = discovery
+            .tenants
+            .into_iter()
+            .map(|t| (t.id, t.evidence))
+            .collect();
+        assert_eq!(
+            found.get(tenant_a.tenant_id().as_str()),
+            Some(&TenantDataEvidence::Counted {
+                resources: 3,
+                basis: CountBasis::LiveResources,
+            })
+        );
+        assert!(!found.contains_key(tenant_gone.tenant_id().as_str()));
     }
 
     #[tokio::test]
@@ -10756,6 +10886,44 @@ mod postgres_integration {
     /// `search_index` and `resource_fts` tables and can deadlock parallel tests.
     async fn isolated_reindex_backend() -> (PostgresBackend, String) {
         isolated_reindex_backend_with_max_connections(5).await
+    }
+
+    /// UUID databases keep layout marker changes out of the shared backend's
+    /// OnceLock. A fresh handle reads Legacy after the marker is written.
+    pub(super) async fn hfs1407_backend(legacy: bool) -> PostgresBackend {
+        let pg = shared_pg().await;
+        let dbname = format!("hfs1407_r1_{}", uuid::Uuid::new_v4().simple());
+        reindex_test_client()
+            .await
+            .batch_execute(&format!("CREATE DATABASE {dbname}"))
+            .await
+            .unwrap();
+        let config = PostgresConfig {
+            host: pg.host.clone(),
+            port: pg.port,
+            dbname,
+            user: "postgres".into(),
+            password: Some("postgres".into()),
+            max_connections: 5,
+            data_dir: Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data")),
+            ..Default::default()
+        };
+        let backend = PostgresBackend::new(config.clone()).await.unwrap();
+        backend.init_schema().await.unwrap();
+        if !legacy {
+            return backend;
+        }
+        backend
+            .get_client()
+            .await
+            .unwrap()
+            .execute("UPDATE search_index_layout SET layout='legacy'", &[])
+            .await
+            .unwrap();
+        drop(backend);
+        let backend = PostgresBackend::new(config).await.unwrap();
+        backend.init_schema().await.unwrap();
+        backend
     }
 
     async fn isolated_reindex_backend_with_max_connections(
@@ -30680,6 +30848,50 @@ mod postgres_integration {
         conditional_patch_overlapping_an_instance_entry_fails
     );
 
+    macro_rules! pg_bundle_identity_test {
+        ($test_name:ident, $scenario:ident) => {
+            #[tokio::test]
+            async fn $test_name() {
+                let backend = create_backend().await;
+                let tenant = create_tenant(concat!("identity_", stringify!($scenario)));
+                super::bundle_identity_suite::$scenario(&backend, &tenant).await;
+            }
+        };
+    }
+
+    pg_bundle_identity_test!(
+        postgres_integration_post_resolves_a_later_instance_put,
+        post_resolves_a_later_instance_put
+    );
+    pg_bundle_identity_test!(
+        postgres_integration_post_resolves_a_later_conditional_put_that_creates,
+        post_resolves_a_later_conditional_put_that_creates
+    );
+    pg_bundle_identity_test!(
+        postgres_integration_post_resolves_a_later_post,
+        post_resolves_a_later_post
+    );
+    pg_bundle_identity_test!(
+        postgres_integration_post_resolves_a_later_if_none_exist_match,
+        post_resolves_a_later_if_none_exist_match
+    );
+    pg_bundle_identity_test!(
+        postgres_integration_put_then_patch_on_one_id_rolls_back,
+        put_then_patch_on_one_id_rolls_back
+    );
+    pg_bundle_identity_test!(
+        postgres_integration_two_puts_on_one_id_roll_back,
+        two_puts_on_one_id_roll_back
+    );
+    pg_bundle_identity_test!(
+        postgres_integration_conditional_delete_without_a_match_reports_not_found,
+        conditional_delete_without_a_match_reports_not_found
+    );
+    pg_bundle_identity_test!(
+        postgres_integration_changed_conditional_target_after_a_written_reference_rolls_back,
+        changed_conditional_target_after_a_written_reference_rolls_back
+    );
+
     pg_if_match_test!(
         postgres_integration_multi_valued_if_match_matches_any_member,
         multi_valued_if_match_matches_any_member
@@ -31632,12 +31844,11 @@ mod postgres_integration {
         .await;
     }
 
-    /// #1407: equal-type contained composites are refused before either
-    /// branch of Both; mixed composite pairing continues to succeed.
+    /// #1407: repeated-type composites retain their component order and entity.
     #[tokio::test]
-    async fn postgres_integration_contained_repeated_type_composites_are_rejected() {
+    async fn postgres_integration_contained_repeated_type_composite_slots_pair_entities() {
         let backend = create_backend().await;
-        super::contained_suite::contained_repeated_type_composites_are_rejected(
+        super::sql_composite_slots_suite::repeated_slots_and_entity_pairing(
             &backend,
             &unique_base("contained_same_type"),
         )

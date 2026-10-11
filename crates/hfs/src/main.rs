@@ -456,6 +456,9 @@ where
     config
         .apply_search_env(&env)
         .map_err(|message| anyhow::anyhow!(message))?;
+    config
+        .apply_count_env(&env)
+        .map_err(|message| anyhow::anyhow!(message))?;
     Ok(config)
 }
 
@@ -709,7 +712,7 @@ async fn create_audit_mongodb_storage(
 
 #[cfg(feature = "s3")]
 async fn create_audit_s3_storage(
-    _server_config: &ServerConfig,
+    server_config: &ServerConfig,
     audit_config: &AuditConfig,
     dedicated: bool,
 ) -> anyhow::Result<Arc<dyn ResourceStorage>> {
@@ -767,7 +770,9 @@ async fn create_audit_s3_storage(
         )
     })?;
 
-    Ok(Arc::new(backend))
+    Ok(Arc::new(
+        backend.with_fhir_version(server_config.default_fhir_version),
+    ))
 }
 
 #[cfg(not(feature = "s3"))]
@@ -2794,6 +2799,7 @@ async fn start_sqlite_elasticsearch(
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
+        reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
     };
 
@@ -3136,6 +3142,7 @@ async fn start_postgres_elasticsearch(
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
+        reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
     };
 
@@ -3367,6 +3374,7 @@ async fn start_mongodb_elasticsearch(
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
+        reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
     };
 
@@ -3590,7 +3598,7 @@ async fn start_s3(
         )
     })?;
 
-    let backend = Arc::new(backend);
+    let backend = Arc::new(backend.with_fhir_version(config.default_fhir_version));
     if backend.supports_user_settings() {
         attach_login_sessions(auth_state.as_ref(), backend.clone());
     } else {
@@ -3762,14 +3770,19 @@ async fn start_s3_elasticsearch(
         ..Default::default()
     };
 
-    let s3 = Arc::new(S3Backend::from_env_async(s3_config).await.map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to initialize S3 backend (bucket={}, region={:?}): {}",
-            bucket,
-            std::env::var("AWS_REGION").ok(),
-            e
-        )
-    })?);
+    let s3 = Arc::new(
+        S3Backend::from_env_async(s3_config)
+            .await
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to initialize S3 backend (bucket={}, region={:?}): {}",
+                    bucket,
+                    std::env::var("AWS_REGION").ok(),
+                    e
+                )
+            })?
+            .with_fhir_version(config.default_fhir_version),
+    );
     if s3.supports_user_settings() {
         attach_login_sessions(auth_state.as_ref(), s3.clone());
     } else {
@@ -3812,6 +3825,7 @@ async fn start_s3_elasticsearch(
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
+        reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
     };
 
@@ -3823,8 +3837,8 @@ async fn start_s3_elasticsearch(
 
     // Populate S3's own per-tenant registry container with the shared base
     // (embedded + spec + custom, e.g. the SQL-on-FHIR `ViewDefinition` params) —
-    // S3 has no `data_dir`/FHIR version of its own to load these from, so a
-    // composite starter does it once here, the same three tiers the SQLite,
+    // S3 has no `data_dir` and does not load base params during construction,
+    // so a composite starter does it once here, the same three tiers the SQLite,
     // PostgreSQL, and MongoDB primaries load into theirs. Omitting the custom
     // tier left ES blind to `ViewDefinition?name:contains=…` (#1070). Unlike
     // before, this container is *S3's real registries* (`s3.tenant_registries()`),
@@ -4390,6 +4404,35 @@ mod tests {
             .expect_err("invalid value must fail startup");
             assert!(
                 format!("{err}").contains("HFS_MONGODB_BROAD_SEARCH_CONCURRENCY"),
+                "{invalid}: {err}"
+            );
+        }
+    }
+
+    #[cfg(feature = "mongodb")]
+    #[test]
+    fn test_build_mongodb_config_reads_count_by_tenant_max_time_and_rejects_invalid_values() {
+        let config = ServerConfig::default();
+
+        let mongo_config = build_mongodb_config_with_env(&config, false, |name| match name {
+            "HFS_MONGODB_COUNT_BY_TENANT_MAX_TIME_MS" => Some(" 120000 ".to_string()),
+            _ => None,
+        })
+        .expect("valid config");
+        assert_eq!(mongo_config.count_by_tenant_max_time_ms, 120_000);
+
+        let default_config =
+            build_mongodb_config_with_env(&config, false, |_| None).expect("valid config");
+        assert_eq!(default_config.count_by_tenant_max_time_ms, 25_000);
+
+        for invalid in ["0", "-1", "soon", "2147483648"] {
+            let err = build_mongodb_config_with_env(&config, false, |name| match name {
+                "HFS_MONGODB_COUNT_BY_TENANT_MAX_TIME_MS" => Some(invalid.to_string()),
+                _ => None,
+            })
+            .expect_err("invalid value must fail startup");
+            assert!(
+                format!("{err}").contains("HFS_MONGODB_COUNT_BY_TENANT_MAX_TIME_MS"),
                 "{invalid}: {err}"
             );
         }
