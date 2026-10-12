@@ -1928,6 +1928,9 @@ impl ResourceStorage for MongoBackend {
         // budget (#1828); the server stops it with `MaxTimeMSExpired`, which
         // `or_query_error` classifies as `BackendError::Timeout`. The budget
         // covers server execution only, not selection, pool or socket time.
+        // The planner serves it from `idx_resources_live_tenant` as a covered
+        // scan of the live keys (#1910); no hint, so a store still building
+        // that index falls back to a collection scan under the same budget.
         let db = self.get_database().await?;
         let resources = db.collection::<Document>(MongoBackend::RESOURCES_COLLECTION);
         let pipeline = vec![
@@ -1954,6 +1957,23 @@ impl ResourceStorage for MongoBackend {
             self.count_by_tenant().await?,
             crate::core::CountBasis::LiveResources,
         ))
+    }
+
+    async fn tenant_has_resources(&self, tenant: &TenantContext) -> StorageResult<bool> {
+        // One `findOne` on a `tenant_id`-leading index, projected to `_id`, in
+        // place of the cross-tenant `$group` of `count_by_tenant` (#1912). The
+        // filter matches `count`, so a tombstone-only tenant answers `false`.
+        let db = self.get_database().await?;
+        let resources = db.collection::<Document>(MongoBackend::RESOURCES_COLLECTION);
+        let found = resources
+            .find_one(doc! {
+                "tenant_id": tenant.tenant_id().as_str(),
+                "is_deleted": false,
+            })
+            .projection(doc! { "_id": 1_i32 })
+            .await
+            .or_query_error("Failed to probe tenant resources")?;
+        Ok(found.is_some())
     }
 
     fn supports_type_counts(&self) -> bool {
