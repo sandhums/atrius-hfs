@@ -19,6 +19,10 @@ mod container_cleanup;
 #[path = "common/sof_prefix_matrix.rs"]
 mod sof_prefix_matrix;
 
+#[cfg(feature = "R4")]
+#[path = "common/sof_pr410_views.rs"]
+mod sof_pr410_views;
+
 mod sof_pg_runner_tests {
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -1592,6 +1596,113 @@ mod sof_pg_runner_tests {
         assert_codes_are_strings(json!({"name": "code", "path": "code.coding.first().code"})).await;
     }
 
+    // =========================================================================
+    // HL7/sql-on-fhir PR #410 example views match the in-process engine
+    // =========================================================================
+
+    /// Seeds the PR #410 resources and asserts each named case returns
+    /// exactly its expected rows (order-insensitive).
+    #[cfg(feature = "R4")]
+    async fn assert_pr410_cases(names: &[&str]) {
+        use super::sof_pr410_views as pr410;
+        let backend = create_backend().await;
+        let tenant = test_tenant();
+        for (resource_type, resource) in pr410::resources() {
+            backend
+                .create(&tenant, &resource_type, resource, FhirVersion::R4)
+                .await
+                .expect("seed PR #410 resource");
+        }
+        let runner = backend.sof_runner().expect("in-DB runner");
+        for name in names {
+            let case = pr410::case_named(name);
+            let got = collect_rows(runner.as_ref(), &tenant, case.view).await;
+            let mut want: Vec<BTreeMap<String, Value>> = case
+                .expected
+                .iter()
+                .map(|r| r.as_object().expect("row").clone().into_iter().collect())
+                .collect();
+            want.sort_by_key(|r| serde_json::to_string(r).unwrap_or_default());
+            assert_eq!(got, want, "{name}");
+        }
+    }
+
+    /// `exists(criteria)` in a top-level `where` and inside a
+    /// `component.where(...).first()` forEach.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_pr410_exists_with_criteria() {
+        assert_pr410_cases(&["UsCoreBloodPressures"]).await;
+    }
+
+    /// `forEach: "name.where(use = 'official').first()"`.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_pr410_for_each_where_first() {
+        assert_pr410_cases(&[
+            "PatientDemographics",
+            "ShareablePatientDemographics",
+            "ForEachOrNullWhereFirst",
+        ])
+        .await;
+    }
+
+    /// `join()` relative to a forEach focus returns one joined string.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_pr410_join_relative_to_for_each_focus() {
+        assert_pr410_cases(&["PatientAddresses", "PatientNamesWithIndex"]).await;
+    }
+
+    /// `path: "true"` / `"false"` columns are JSON booleans (PostgreSQL would
+    /// otherwise project a native boolean the text row reader can't read).
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_pr410_boolean_literal_columns() {
+        assert_pr410_cases(&["PatientAndContactAddressUnion"]).await;
+    }
+
+    /// Under `repeat`, `linkId` stays a string and `value.ofType(boolean)` is
+    /// a boolean.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_pr410_repeat_columns_keep_fhir_types() {
+        assert_pr410_cases(&["QuestionnaireResponseItems"]).await;
+    }
+
+    /// Sibling multi-step `forEachOrNull`s keep the resource and emit a null
+    /// row only when the whole flattened collection is empty.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_pr410_for_each_or_null_multi_step() {
+        assert_pr410_cases(&[
+            "ConditionFlat",
+            "EncounterFlat",
+            "ForEachOrNullFlattens",
+            "ForEachThroughSingleton",
+        ])
+        .await;
+    }
+
+    /// Columns whose FHIR type can't be resolved keep strings as strings.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_untyped_unknown_fields_keep_json_types() {
+        assert_pr410_cases(&["UntypedUnknownFields"]).await;
+    }
+
+    /// Every PR #410 example view returns the in-process engine's rows.
+    #[cfg(feature = "R4")]
+    #[tokio::test]
+    async fn test_pg_pr410_all_views_match_in_process_reference() {
+        let names: Vec<&str> = super::sof_pr410_views::pr410_cases()
+            .iter()
+            .map(|c| c.name)
+            .collect();
+        assert_eq!(names.len(), 10);
+        assert_pr410_cases(&names).await;
+    }
+
     #[tokio::test]
     async fn test_pg_sql_null_keeps_its_key_as_null() {
         let backend = create_backend().await;
@@ -1877,6 +1988,437 @@ mod sof_pg_runner_tests {
         .await;
         let ids: Vec<&str> = rows.iter().map(|r| r["id"].as_str().unwrap()).collect();
         assert_eq!(ids, ["p1"]);
+    }
+}
+
+/// #1752: the export reader (`SofRunner::for_export_job`) reads a view in
+/// keyset pages over `id COLLATE "C"` instead of one `ORDER BY last_updated`
+/// statement. Each test builds its own container and a runner with a tiny
+/// page size so a handful of resources spans many pages.
+mod export_paging {
+    use std::collections::BTreeMap;
+
+    use futures::StreamExt;
+    use helios_fhir::FhirVersion;
+    use helios_persistence::backends::postgres::{PostgresBackend, PostgresConfig};
+    use helios_persistence::core::ResourceStorage;
+    use helios_persistence::core::sof_runner::{SofRunner, ViewFilters};
+    use helios_persistence::sof::postgres::PgInDbRunner;
+    use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
+    use serde_json::{Value, json};
+    use testcontainers::ImageExt;
+    use testcontainers::runners::AsyncRunner;
+    use testcontainers_modules::postgres::Postgres;
+
+    struct Fixture {
+        backend: PostgresBackend,
+        pool: deadpool_postgres::Pool,
+        observer: tokio_postgres::Client,
+        _connection: tokio::task::JoinHandle<()>,
+        _container: testcontainers::ContainerAsync<Postgres>,
+    }
+
+    /// A dedicated PostgreSQL with `pg_stat_statements`, a backend, a pool for
+    /// the paged runner and a raw observer connection.
+    async fn start() -> Fixture {
+        let container = super::container_cleanup::with_cleanup_label(
+            Postgres::default()
+                .with_tag("16-alpine")
+                .with_label(
+                    "github.run_id",
+                    std::env::var("GITHUB_RUN_ID").unwrap_or_default(),
+                )
+                .with_cmd([
+                    "postgres",
+                    "-c",
+                    "fsync=off",
+                    "-c",
+                    "shared_preload_libraries=pg_stat_statements",
+                    "-c",
+                    "compute_query_id=on",
+                ]),
+        )
+        .start()
+        .await
+        .expect("start export paging PostgreSQL");
+        let host = container.get_host().await.unwrap().to_string();
+        let port = container.get_host_port_ipv4(5432).await.unwrap();
+        let backend = PostgresBackend::new(PostgresConfig {
+            host: host.clone(),
+            port,
+            dbname: "postgres".into(),
+            user: "postgres".into(),
+            password: Some("postgres".into()),
+            data_dir: Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data")),
+            ..Default::default()
+        })
+        .await
+        .expect("create backend");
+        backend.init_schema().await.expect("initialize schema");
+
+        let mut pool_config = deadpool_postgres::Config::new();
+        pool_config.host = Some(host.clone());
+        pool_config.port = Some(port);
+        pool_config.user = Some("postgres".into());
+        pool_config.password = Some("postgres".into());
+        pool_config.dbname = Some("postgres".into());
+        let pool = pool_config
+            .create_pool(
+                Some(deadpool_postgres::Runtime::Tokio1),
+                tokio_postgres::NoTls,
+            )
+            .expect("create export pool");
+
+        let mut config = tokio_postgres::Config::new();
+        config
+            .host(&host)
+            .port(port)
+            .user("postgres")
+            .password("postgres")
+            .dbname("postgres");
+        let (observer, connection) = config.connect(tokio_postgres::NoTls).await.unwrap();
+        let handle = tokio::spawn(async move {
+            connection.await.expect("observer connection");
+        });
+        observer
+            .batch_execute("CREATE EXTENSION pg_stat_statements")
+            .await
+            .unwrap();
+        Fixture {
+            backend,
+            pool,
+            observer,
+            _connection: handle,
+            _container: container,
+        }
+    }
+
+    fn tenant() -> TenantContext {
+        TenantContext::new(
+            TenantId::new(format!("sof_pg_export_{}", uuid::Uuid::new_v4().simple())),
+            TenantPermissions::full_access(),
+        )
+    }
+
+    /// Ids whose bytewise order differs from a locale-aware one (uppercase
+    /// sorts before lowercase under `COLLATE "C"`), created in scrambled order.
+    fn scrambled_ids(count: usize) -> Vec<String> {
+        (0..count)
+            .map(|i| {
+                let letter = if i % 2 == 0 { 'b' } else { 'B' };
+                format!("p-{letter}{:03}", (i * 7) % count)
+            })
+            .collect()
+    }
+
+    async fn seed(backend: &PostgresBackend, tenant: &TenantContext, ids: &[String]) {
+        for (i, id) in ids.iter().enumerate() {
+            let names: Vec<Value> = (0..(i % 3) + 1)
+                .map(|n| json!({"family": format!("F{i}-{n}"), "given": [format!("G{i}")]}))
+                .collect();
+            backend
+                .create(
+                    tenant,
+                    "Patient",
+                    json!({"resourceType":"Patient","id":id,"gender":"female",
+                        "birthDate":"1990-01-01","name":names}),
+                    FhirVersion::R4,
+                )
+                .await
+                .expect("seed patient");
+        }
+    }
+
+    async fn run(runner: &dyn SofRunner, tenant: &TenantContext, view: &Value) -> Vec<Value> {
+        let mut stream = runner
+            .run_view(tenant, view.clone(), ViewFilters::default())
+            .await
+            .expect("run_view");
+        let mut rows = Vec::new();
+        while let Some(row) = stream.next().await {
+            rows.push(row.expect("row must succeed"));
+        }
+        rows
+    }
+
+    fn views() -> Vec<(&'static str, Value)> {
+        vec![
+            (
+                "flat",
+                json!({"resourceType":"ViewDefinition","resource":"Patient",
+                    "select":[{"column":[{"path":"id","name":"id"},
+                        {"path":"gender","name":"gender"}]}]}),
+            ),
+            (
+                "foreach",
+                json!({"resourceType":"ViewDefinition","resource":"Patient",
+                    "select":[{"column":[{"path":"id","name":"id"}]},
+                        {"forEach":"name","column":[{"path":"family","name":"family"}]}]}),
+            ),
+            (
+                "unionall",
+                json!({"resourceType":"ViewDefinition","resource":"Patient",
+                "select":[{"unionAll":[
+                    {"column":[{"path":"id","name":"id"},{"path":"gender","name":"v"}]},
+                    {"column":[{"path":"id","name":"id"},{"path":"birthDate","name":"v"}]}
+                ]}]}),
+            ),
+        ]
+    }
+
+    fn multiset(rows: &[Value]) -> BTreeMap<String, usize> {
+        let mut counts = BTreeMap::new();
+        for row in rows {
+            *counts.entry(row.to_string()).or_default() += 1;
+        }
+        counts
+    }
+
+    #[tokio::test]
+    async fn export_paging_matches_unlimited_run_in_bytewise_id_order() {
+        let fx = start().await;
+        let tenant = tenant();
+        let ids = scrambled_ids(23);
+        seed(&fx.backend, &tenant, &ids).await;
+        let plain = fx.backend.sof_runner().unwrap();
+        // 23 resources at 4 per page: six pages, the last one short.
+        let paged = PgInDbRunner::new(fx.pool.clone()).with_export_page_size(4);
+        // The default hook also yields a paging runner.
+        assert!(plain.for_export_job().is_some());
+
+        let mut sorted = ids.clone();
+        sorted.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+
+        for (name, view) in views() {
+            let expected = run(plain.as_ref(), &tenant, &view).await;
+            let actual = run(&paged, &tenant, &view).await;
+            assert!(!expected.is_empty(), "{name}: fixture must produce rows");
+            assert_eq!(
+                multiset(&actual),
+                multiset(&expected),
+                "{name}: paged export must return the same rows as the unlimited run"
+            );
+            if name == "unionall" {
+                // Union views end in `ORDER BY 1`; global order is not part of
+                // the contract, only the multiset.
+                continue;
+            }
+            let got: Vec<&str> = actual.iter().map(|r| r["id"].as_str().unwrap()).collect();
+            // Non-decreasing bytewise ids, and each resource's rows contiguous
+            // (a resource is never split across a page boundary or revisited).
+            assert!(
+                got.windows(2).all(|w| w[0].as_bytes() <= w[1].as_bytes()),
+                "{name}: rows must come out in bytewise id order: {got:?}"
+            );
+            let mut distinct = got.clone();
+            distinct.dedup();
+            assert_eq!(distinct, sorted, "{name}: each resource appears in one run");
+            // Within a resource the row sequence equals the unlimited run's.
+            for id in &sorted {
+                let rows_of = |rows: &[Value]| -> Vec<Value> {
+                    rows.iter()
+                        .filter(|r| r["id"].as_str() == Some(id.as_str()))
+                        .cloned()
+                        .collect()
+                };
+                assert_eq!(rows_of(&actual), rows_of(&expected), "{name}: {id}");
+            }
+        }
+    }
+
+    /// #1752 reproduction: the same view over a large type, under a tight
+    /// `statement_timeout`. The unpaged runner (what an export used before the
+    /// fix) sorts the whole type before its first row and is cancelled; the
+    /// paged export runner finishes. Heavy (1M rows), so run on demand:
+    /// `cargo test -p helios-persistence --features postgres --test
+    /// sof_pg_runner export_paging_large_type -- --ignored`.
+    #[tokio::test]
+    #[ignore = "seeds 1M rows; run on demand to reproduce #1752"]
+    async fn export_paging_large_type_survives_a_statement_timeout_the_unpaged_read_does_not() {
+        const ROWS: usize = 1_000_000;
+        let fx = start().await;
+        let tenant = tenant();
+        fx.observer
+            .execute(
+                "INSERT INTO resources (tenant_id, resource_type, id, version_id, data, last_updated)
+                 SELECT $1, 'Observation', md5(g::text) || g::text, '1',
+                        jsonb_build_object('resourceType','Observation','id',md5(g::text) || g::text,'status','final'),
+                        now() - (random() * 1e7 || ' seconds')::interval
+                 FROM generate_series(1, $2::int) g",
+                &[&tenant.tenant_id().as_str(), &(ROWS as i32)],
+            )
+            .await
+            .expect("seed observations");
+        fx.observer
+            .batch_execute("VACUUM ANALYZE resources")
+            .await
+            .unwrap();
+        // New connections (the pool has made none yet) inherit the timeout.
+        fx.observer
+            .batch_execute("ALTER DATABASE postgres SET statement_timeout = '200ms'")
+            .await
+            .unwrap();
+
+        let view = json!({"resourceType":"ViewDefinition","resource":"Observation",
+            "select":[{"column":[{"path":"id","name":"id"},{"path":"status","name":"status"}]}]});
+
+        // Before the fix: one statement ordered by (last_updated, id).
+        let unpaged = PgInDbRunner::new(fx.pool.clone());
+        let mut stream = unpaged
+            .run_view(&tenant, view.clone(), ViewFilters::default())
+            .await
+            .expect("run_view starts");
+        let mut failure = None;
+        while let Some(row) = stream.next().await {
+            if let Err(e) = row {
+                failure = Some(e.to_string());
+                break;
+            }
+        }
+        let failure = failure.expect("the unpaged read must hit the statement timeout");
+        assert!(
+            failure.contains("statement timeout"),
+            "expected a statement timeout, got: {failure}"
+        );
+
+        // After the fix: the export runner reads the same view in id pages.
+        let paged = unpaged
+            .for_export_job()
+            .expect("PostgreSQL provides a paged export runner");
+        let mut stream = paged
+            .run_view(&tenant, view, ViewFilters::default())
+            .await
+            .expect("paged run_view starts");
+        let mut count = 0usize;
+        while let Some(row) = stream.next().await {
+            row.expect("every page stays inside the statement timeout");
+            count += 1;
+        }
+        assert_eq!(count, ROWS);
+    }
+
+    #[tokio::test]
+    async fn export_paging_honours_the_row_limit_across_pages() {
+        let fx = start().await;
+        let tenant = tenant();
+        seed(&fx.backend, &tenant, &scrambled_ids(12)).await;
+        let paged = PgInDbRunner::new(fx.pool.clone()).with_export_page_size(3);
+        let (_, view) = views().remove(1);
+        let all = run(&paged, &tenant, &view).await;
+        let mut stream = paged
+            .run_view(
+                &tenant,
+                view,
+                ViewFilters {
+                    limit: Some(7),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        let mut limited = Vec::new();
+        while let Some(row) = stream.next().await {
+            limited.push(row.unwrap());
+        }
+        assert_eq!(limited, all[..7]);
+    }
+
+    #[tokio::test]
+    async fn export_paging_statements_never_sort_by_last_updated_and_stop_on_drop() {
+        let fx = start().await;
+        let tenant = tenant();
+        // More rows than the channel buffer (256) so a producer whose receiver
+        // is gone is observable: it must stop instead of reading every page.
+        let ids = scrambled_ids(400);
+        seed(&fx.backend, &tenant, &ids).await;
+        let paged = PgInDbRunner::new(fx.pool.clone()).with_export_page_size(5);
+
+        let alias = format!("sof_pg_export_{}", uuid::Uuid::new_v4().simple());
+        let full_view = json!({"resourceType":"ViewDefinition","resource":"Patient",
+            "select":[{"column":[{"path":"id","name":alias}]}]});
+        let rows = run(&paged, &tenant, &full_view).await;
+        assert_eq!(rows.len(), 400);
+
+        let pattern = format!("%\"{alias}\"%");
+        let fetch = || async {
+            fx.observer
+                .query(
+                    "SELECT query, calls FROM pg_stat_statements \
+                     WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) \
+                     AND toplevel AND query LIKE $1",
+                    &[&pattern],
+                )
+                .await
+                .unwrap()
+                .iter()
+                .map(|r| (r.get::<_, String>(0), r.get::<_, i64>(1)))
+                .collect::<Vec<_>>()
+        };
+        let mut statements = Vec::new();
+        for _ in 0..20 {
+            statements = fetch().await;
+            if statements.iter().map(|(_, c)| *c).sum::<i64>() >= 80 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        assert!(!statements.is_empty(), "page statement must be recorded");
+        for (sql, _) in &statements {
+            assert!(
+                !sql.contains("ORDER BY r.last_updated"),
+                "export must not sort by last_updated: {sql}"
+            );
+            assert!(
+                sql.contains("ORDER BY r.id COLLATE \"C\""),
+                "page must be served in id order: {sql}"
+            );
+        }
+        let full_calls: i64 = statements.iter().map(|(_, c)| *c).sum();
+        assert!(
+            full_calls >= 80,
+            "400 resources at 5 per page need at least 80 page statements, saw {full_calls}"
+        );
+
+        // Drop the stream after the first row: the producer must stop soon.
+        let alias2 = format!("{alias}_dropped");
+        let view2 = json!({"resourceType":"ViewDefinition","resource":"Patient",
+            "select":[{"column":[{"path":"id","name":alias2}]}]});
+        let mut stream = paged
+            .run_view(&tenant, view2, ViewFilters::default())
+            .await
+            .unwrap();
+        stream.next().await.expect("first row").expect("row ok");
+        drop(stream);
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        let pattern2 = format!("%\"{alias2}\"%");
+        let active: i64 = fx
+            .observer
+            .query_one(
+                "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() \
+                 AND pid <> pg_backend_pid() AND state = 'active' AND query LIKE $1",
+                &[&pattern2],
+            )
+            .await
+            .unwrap()
+            .get(0);
+        assert_eq!(active, 0, "no page statement may keep running after drop");
+        let dropped_calls: i64 = fx
+            .observer
+            .query(
+                "SELECT calls FROM pg_stat_statements \
+                 WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) \
+                 AND toplevel AND query LIKE $1",
+                &[&pattern2],
+            )
+            .await
+            .unwrap()
+            .iter()
+            .map(|r| r.get::<_, i64>(0))
+            .sum();
+        assert!(
+            dropped_calls < 80,
+            "a dropped export must not read every page; saw {dropped_calls} of 80"
+        );
     }
 }
 

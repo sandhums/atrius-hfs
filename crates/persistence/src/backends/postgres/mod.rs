@@ -92,5 +92,9 @@ mod user_settings;
 mod write_tx;
 
 pub use backend::{PostgresBackend, PostgresConfig};
+/// The connection pool snapshot returned by
+/// [`PostgresBackend::pool_status`], re-exported so callers need no direct
+/// deadpool dependency.
+pub use deadpool_postgres::Status as PoolStatus;
 pub use schema::SCHEMA_VERSION;
 pub use subscription_outbox::PostgresSubscriptionOutbox;

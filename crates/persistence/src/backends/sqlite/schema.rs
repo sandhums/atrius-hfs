@@ -243,6 +243,9 @@ pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
         applied.insert(BASE_STEP.to_string());
     }
 
+    // #1961: an existing database can spend minutes building an index before
+    // the server listens. A fresh database stays quiet.
+    let mut migration_started: Option<std::time::Instant> = None;
     for &(name, migrate) in SQLITE_STEPS {
         let present = if name == OUTBOX_STEP {
             table_exists(conn, "subscription_outbox")?
@@ -252,9 +255,33 @@ pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
         if applied.contains(name) && present {
             continue;
         }
+        if current_version > 0 && migration_started.is_none() {
+            tracing::info!(
+                from = current_version,
+                to = SCHEMA_VERSION,
+                "Migrating the SQLite schema; on a large database this can take minutes"
+            );
+            migration_started = Some(std::time::Instant::now());
+        }
+        let step_started = std::time::Instant::now();
         migrate(conn)?;
         record_step(conn, name)?;
         applied.insert(name.to_string());
+        if current_version > 0 {
+            tracing::info!(
+                to = SCHEMA_VERSION,
+                elapsed_ms = step_started.elapsed().as_millis() as u64,
+                "SQLite schema migration step applied"
+            );
+        }
+    }
+    if let Some(started) = migration_started {
+        tracing::info!(
+            from = current_version,
+            to = SCHEMA_VERSION,
+            elapsed_ms = started.elapsed().as_millis() as u64,
+            "SQLite schema migrated"
+        );
     }
 
     // Safety net for the tenant registry (schema v14). A pre-release build could
@@ -3656,6 +3683,31 @@ mod tests {
     /// A database upgraded through the ladder must end up with exactly the
     /// index set a fresh one gets — otherwise a long-lived server keeps paying
     /// for indexes new installs no longer create.
+    /// #1961: upgrading an existing database logs the migration at `info` —
+    /// a start line, one line per step with its duration, and a finish line —
+    /// while creating a fresh database stays quiet.
+    #[test]
+    #[tracing_test::traced_test]
+    fn upgrading_an_existing_database_logs_the_migration() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        assert!(!logs_contain("Migrating the SQLite schema"));
+        assert!(!logs_contain("SQLite schema migration step applied"));
+
+        set_schema_version(&conn, SCHEMA_VERSION - 1).unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = ?1",
+            [OUTBOX_DEAD_LETTER_STEP],
+        )
+        .unwrap();
+        initialize_schema(&conn).unwrap();
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        assert!(logs_contain("Migrating the SQLite schema"));
+        assert!(logs_contain("SQLite schema migration step applied"));
+        assert!(logs_contain("SQLite schema migrated"));
+        assert!(logs_contain("elapsed_ms"));
+    }
+
     #[test]
     fn upgraded_database_has_the_same_search_index_indexes_as_a_fresh_one() {
         let index_set = |conn: &Connection| -> Vec<(String, Option<String>)> {

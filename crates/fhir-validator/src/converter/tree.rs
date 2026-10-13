@@ -515,12 +515,19 @@ fn parse_numeric_max(max: Option<&str>) -> Option<u64> {
 /// element id in the target and so always names the target's type, which is
 /// what the resolver keys on.
 fn parse_content_reference(reference: &str) -> Option<Vec<String>> {
-    let (_canonical, path) = reference.rsplit_once('#')?;
+    // `#A.b` names an element of the base type `A`; `<canonical>#A.b` (as the
+    // SQL on FHIR ViewDefinition uses) names one of that canonical's schema.
+    let (canonical, path) = reference.split_once('#')?;
     let mut parts = path.split('.');
     let root = parts.next()?;
     if root.is_empty() {
         return None;
     }
+    let root = if canonical.is_empty() {
+        root
+    } else {
+        canonical
+    };
     let mut segments = vec![root.to_string()];
     for part in parts {
         if part.is_empty() {

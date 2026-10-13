@@ -177,8 +177,8 @@ fn converts_content_reference() {
 }
 
 /// Snapshot generation rewrites a base `#Composition.section` fragment into
-/// the absolute form when the element is copied into a derived profile, since
-/// a bare fragment would resolve against the profile's own canonical.
+/// `<canonical>#Composition.section`. That absolute form names the canonical's
+/// schema, the same way a ViewDefinition content reference does.
 #[test]
 fn converts_absolute_content_reference() {
     let sd = load_sd("profile-content-reference-absolute.json");
@@ -204,7 +204,11 @@ fn converts_absolute_content_reference() {
                     "section": {
                         "array": true,
                         "short": "Nested Section",
-                        "elementReference": ["Composition", "elements", "section"]
+                        "elementReference": [
+                            "http://hl7.org/fhir/StructureDefinition/Composition",
+                            "elements",
+                            "section"
+                        ]
                     }
                 }
             }
@@ -781,4 +785,53 @@ fn converts_mixed_kind_slice_discriminators() {
     let kinds: Vec<&str> = parts.iter().map(|p| p["type"].as_str().unwrap()).collect();
     assert!(kinds.contains(&"type"), "{slicing}");
     assert!(kinds.contains(&"pattern"), "{slicing}");
+}
+
+#[test]
+fn converts_canonical_content_reference_and_additional_resource() {
+    // The SQL on FHIR ViewDefinition, trimmed: an additional resource whose
+    // recursive elements reference `ViewDefinition.select` through its
+    // canonical URL rather than a bare `#` path.
+    let url = "http://hl7.org/fhir/StructureDefinition/ViewDefinition";
+    let sd = json!({
+        "resourceType": "StructureDefinition",
+        "extension": [{
+            "url": "http://hl7.org/fhir/tools/StructureDefinition/additional-resource",
+            "valueBoolean": true
+        }],
+        "url": url,
+        "name": "ViewDefinition",
+        "kind": "resource",
+        "type": "ViewDefinition",
+        "derivation": "specialization",
+        "snapshot": { "element": [
+            { "id": "ViewDefinition", "path": "ViewDefinition", "min": 0, "max": "*" },
+            { "id": "ViewDefinition.select", "path": "ViewDefinition.select",
+              "min": 1, "max": "*", "type": [{ "code": "BackboneElement" }] },
+            { "id": "ViewDefinition.select.select", "path": "ViewDefinition.select.select",
+              "min": 0, "max": "*",
+              "contentReference": format!("{url}#ViewDefinition.select") }
+        ]}
+    });
+    let conversion = convert(&sd).expect("converts");
+    assert!(conversion.warnings.is_empty(), "{:?}", conversion.warnings);
+    let schema = serde_json::to_value(&conversion.schema).unwrap();
+    assert_eq!(
+        schema["elements"]["resourceDefinition"]["type"],
+        json!("canonical"),
+        "{schema:#}"
+    );
+    assert_eq!(
+        schema["elements"]["select"]["elements"]["select"]["elementReference"],
+        json!([url, "elements", "select"]),
+        "{schema:#}"
+    );
+    // Core resources carry no `resourceDefinition`.
+    let mut core = sd.clone();
+    core.as_object_mut().unwrap().remove("extension");
+    let core = serde_json::to_value(convert(&core).unwrap().schema).unwrap();
+    assert!(
+        core["elements"].get("resourceDefinition").is_none(),
+        "{core:#}"
+    );
 }
