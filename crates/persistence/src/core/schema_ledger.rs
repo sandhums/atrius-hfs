@@ -396,36 +396,49 @@ mod tests {
 
     #[test]
     fn upstream_sqlite_v36_runs_completed_after_login_sessions() {
-        let idx = implied_applied_indices(36, Numbering::Upstream, 39);
+        let idx = implied_applied_indices(36, Numbering::Upstream, 40);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&33), "secondary_sync is Helios v34");
         assert!(idx.contains(&34), "date range is Helios v35");
         assert!(idx.contains(&35), "login sessions are Helios v36");
         assert!(!idx.contains(&36), "completed is Helios v37");
         assert!(!idx.contains(&37), "composite slot is Helios v38");
-        assert!(!idx.contains(&38), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 35, "all Helios steps through v36 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v37_runs_dead_letter_after_file_progress_completed() {
-        let idx = implied_applied_indices(37, Numbering::Upstream, 39);
+        let idx = implied_applied_indices(37, Numbering::Upstream, 40);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&35), "login sessions are Helios v36");
         assert!(idx.contains(&36), "completed is Helios v37");
         assert!(!idx.contains(&37), "composite slot is Helios v38");
-        assert!(!idx.contains(&38), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 36, "all Helios steps through v37 except outbox");
     }
 
     #[test]
     fn upstream_sqlite_v38_runs_dead_letter_after_composite_slot() {
-        let idx = implied_applied_indices(38, Numbering::Upstream, 39);
+        let idx = implied_applied_indices(38, Numbering::Upstream, 40);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&36), "completed is Helios v37");
         assert!(idx.contains(&37), "composite slot is Helios v38");
-        assert!(!idx.contains(&38), "dead_letter is fork-only tip");
+        assert!(!idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "dead_letter is fork-only tip");
         assert_eq!(idx.len(), 37, "all Helios steps through v38 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v39_runs_dead_letter_after_date_start() {
+        let idx = implied_applied_indices(39, Numbering::Upstream, 40);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&37), "composite slot is Helios v38");
+        assert!(idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 38, "all Helios steps through v39 except outbox");
     }
 
     #[test]

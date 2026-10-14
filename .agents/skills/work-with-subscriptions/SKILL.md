@@ -32,8 +32,7 @@ Use this when working in `helios-subscriptions`, the FHIR topic-based Subscripti
 | `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS` | Allow rest-hook delivery to private/loopback URLs (opt-in) |
 | `HFS_SUBSCRIPTION_MAX_RETRIES` / `RETRY_*` / `ERROR_THRESHOLD` / `OFF_THRESHOLD` | Delivery retry and status thresholds |
 | `HFS_SUBSCRIPTION_OUTBOX_*` | Outbox poll interval, batch size, claim lease, process timeout |
-| `HFS_BASE_URL` | Base URL used in notification links / CloudEvents `source` |
-| `HFS_SUBSCRIPTION_PERSIST_STATUS` | Write server-driven status transitions back into the stored `Subscription` (default `true`) |
+| `HFS_BASE_URL` | Base URL used in notification links / CloudEvents `source` || `HFS_SUBSCRIPTION_PERSIST_STATUS` | Write server-driven status transitions back into the stored `Subscription` (default `true`) |
 | `HFS_SUBSCRIPTION_STATUS_WRITE_TIMEOUT_MS` | Per-write timeout for that write-back (default `5000`) |
 | `HFS_SUBSCRIPTION_REHYDRATE` | Replay stored topics/subscriptions into the engine at startup (default `true`) |
 | `HFS_SUBSCRIPTION_REHYDRATE_HANDSHAKE` | Re-run activation for stored `requested`/`error` subscriptions (default `true`) |
