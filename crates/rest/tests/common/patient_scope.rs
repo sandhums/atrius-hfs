@@ -59,17 +59,14 @@ impl AuthProvider for StubProvider {
             MIXED => ("user/Observation.rs patient/*.rs", Some("p1")),
             _ => return Err(AuthError::InvalidSignature),
         };
-        Ok(Principal {
-            subject: format!("sub-{token}"),
-            issuer: "https://idp.example.com".to_string(),
-            scopes: ScopeSet::parse(scopes),
-            expires_at: chrono::Utc::now() + chrono::Duration::minutes(5),
-            launch_context: patient.map(|p| LaunchContext {
-                patient: Some(p.to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
+        Ok(
+            Principal::stub(format!("sub-{token}"), ScopeSet::parse(scopes))
+                .with_issuer("https://idp.example.com")
+                .with_launch_context(patient.map(|p| LaunchContext {
+                    patient: Some(p.to_string()),
+                    ..Default::default()
+                })),
+        )
     }
 
     fn name(&self) -> &str {

@@ -599,12 +599,10 @@ pub(super) fn nearest_left_scope(parent: &PlanNode, root: &str) -> Option<(Strin
         let mut cur = parent;
         let step = loop {
             match cur {
-                PlanNode::LateralUnnest {
-                    out_alias, parent, ..
-                } if *out_alias == alias => break Some(cur),
-                PlanNode::Recurse {
-                    out_alias, parent, ..
-                } if *out_alias == alias => break Some(cur),
+                PlanNode::LateralUnnest { out_alias, .. } if *out_alias == alias => {
+                    break Some(cur);
+                }
+                PlanNode::Recurse { out_alias, .. } if *out_alias == alias => break Some(cur),
                 PlanNode::LateralUnnest { parent: p, .. }
                 | PlanNode::Recurse { parent: p, .. }
                 | PlanNode::Filter { parent: p, .. } => cur = p,

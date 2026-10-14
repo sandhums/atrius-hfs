@@ -1822,13 +1822,10 @@ async fn inject_rail_user(
         .and_then(|h| h.to_str().ok())
         .map(str::to_string)
     {
-        request.extensions_mut().insert(helios_auth::Principal {
-            subject: user,
-            issuer: "test".to_string(),
-            scopes: helios_auth::scope::ScopeSet::empty(),
-            expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
-            ..Default::default()
-        });
+        request.extensions_mut().insert(
+            helios_auth::Principal::stub(user, helios_auth::scope::ScopeSet::empty())
+                .with_issuer("test"),
+        );
     }
     next.run(request).await
 }
