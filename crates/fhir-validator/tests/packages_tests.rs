@@ -302,6 +302,102 @@ fn package_layers_overlay_core_for_meta_profile() {
     );
 }
 
+/// IGs built with `pin-canonicals` name extension slices `url|version`;
+/// instances carry the bare `extension.url` and must still fill the slice.
+#[test]
+fn pinned_extension_slice_matches_unversioned_instance_url() {
+    let ext_url = "http://example.org/fhir/StructureDefinition/example-ext";
+    let profile_url = "http://example.org/fhir/StructureDefinition/pinned-patient";
+    let profile = json!({
+        "resourceType": "StructureDefinition",
+        "url": profile_url,
+        "name": "PinnedPatient",
+        "status": "active",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient|4.0.1",
+        "derivation": "constraint",
+        "differential": {
+            "element": [
+                { "id": "Patient", "path": "Patient" },
+                {
+                    "id": "Patient.extension",
+                    "path": "Patient.extension",
+                    "slicing": {
+                        "discriminator": [{ "type": "value", "path": "url" }],
+                        "rules": "open"
+                    }
+                },
+                {
+                    "id": "Patient.extension:flag",
+                    "path": "Patient.extension",
+                    "sliceName": "flag",
+                    "min": 1,
+                    "max": "1",
+                    "type": [{ "code": "Extension", "profile": [format!("{ext_url}|1.0.0")] }]
+                }
+            ]
+        }
+    });
+    let tmp = tempfile::tempdir().unwrap();
+    fs::write(
+        tmp.path().join("StructureDefinition-pinned-patient.json"),
+        serde_json::to_vec(&profile).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        tmp.path().join("StructureDefinition-example-ext.json"),
+        dep_extension_sd(),
+    )
+    .unwrap();
+    let (registry, report) = materialize_package(tmp.path()).unwrap();
+    assert!(
+        report.convert_errors.is_empty(),
+        "{:?}",
+        report.convert_errors
+    );
+    let resolver = Arc::new(CompositeResolver::new(vec![
+        Arc::new(registry) as Arc<dyn SchemaResolver>,
+        packs::core_registry(FhirVersion::R4),
+    ]));
+    let validator = Validator::new(resolver);
+    let opts = ValidationOptions {
+        use_meta_profiles: true,
+        ..Default::default()
+    };
+    let patient = |extension: serde_json::Value| {
+        json!({
+            "resourceType": "Patient",
+            "meta": { "profile": [profile_url] },
+            "extension": extension
+        })
+    };
+
+    let filled = validator.validate_sync(
+        &patient(json!([{ "url": ext_url, "valueBoolean": true }])),
+        &opts,
+    );
+    assert!(
+        filled.errors.is_empty(),
+        "unversioned url must fill the pinned slice: {:?}",
+        filled.errors
+    );
+
+    let missing = validator.validate_sync(
+        &patient(json!([{ "url": "http://example.org/other", "valueBoolean": true }])),
+        &opts,
+    );
+    assert!(
+        missing
+            .errors
+            .iter()
+            .any(|e| e.kind == helios_fhir_validator::ErrorKind::SliceCardinality),
+        "absent required extension must still fail: {:?}",
+        missing.errors
+    );
+}
+
 /// Materialize the seeded Atrius IG package and assert zero converter warnings.
 ///
 /// Looks at `ATRIUS_IG_PACKAGE`, then `manifests/atrius-ig-package` relative to

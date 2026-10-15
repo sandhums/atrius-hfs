@@ -5,15 +5,17 @@
 //! evaluates against typed resources, not raw JSON. Each constraint is then
 //! evaluated as one combined expression: for a constraint attached below
 //! the root, the validator path is rendered as a relative FHIRPath and the
-//! invariant is wrapped in `.all(...)`:
+//! invariant becomes a `where(...)` filter for nodes on which it is false:
 //!
 //! ```text
 //! path Patient.contact.0, expr "name.exists() or telecom.exists()"
-//!   → contact[0].all(name.exists() or telecom.exists())
+//!   → contact[0].where((name.exists() or telecom.exists()) = false).empty()
 //! ```
 //!
-//! `all()` gives the correct per-node focus *and* the FHIR invariant
-//! semantics for absent nodes (empty collection → pass). Root-attached
+//! `where()` gives the correct per-node focus and the FHIR invariant
+//! semantics on each node: only `false` fails, and an empty result passes
+//! (core `ref-1` is empty on a display-only Reference). `all()` would treat
+//! an empty per-node result as `false`. Absent nodes pass. Root-attached
 //! constraints evaluate as-is.
 //!
 //! Result coercion (FHIRPath 5.1.1 / FHIR invariant semantics): empty →
@@ -28,7 +30,7 @@
 //! Known limitation (documented in the plan): helios-fhirpath resolves
 //! `%resource`/`%rootResource` to the root resource, so constraints that
 //! depend on nested-resource `%resource` semantics may misfire; and the
-//! `.all()` wrapping makes `%context` the root rather than the node.
+//! `.where()` wrapping makes `%context` the root rather than the node.
 
 use crate::effects::{ConstraintEvaluator, ConstraintOutcome, DeferredConstraint};
 use helios_fhir::{FhirResource, FhirVersion};
@@ -120,7 +122,7 @@ impl FhirPathConstraintEvaluator {
 }
 
 /// Build the combined focus+invariant expression from a dotted validator
-/// path (`Patient.contact.0` → `contact[0].all(<expr>)`).
+/// path (`Patient.contact.0` → `contact[0].where((<expr>) = false).empty()`).
 fn combine(path: &str, expression: &str) -> String {
     let mut relative = String::new();
     for segment in path.split('.').skip(1) {
@@ -138,7 +140,7 @@ fn combine(path: &str, expression: &str) -> String {
     if relative.is_empty() {
         expression.to_string()
     } else {
-        format!("{relative}.all({expression})")
+        format!("{relative}.where(({expression}) = false).empty()")
     }
 }
 
@@ -207,11 +209,11 @@ mod tests {
         assert_eq!(combine("Patient", "name.exists()"), "name.exists()");
         assert_eq!(
             combine("Patient.contact.0", "name.exists() or telecom.exists()"),
-            "contact[0].all(name.exists() or telecom.exists())"
+            "contact[0].where((name.exists() or telecom.exists()) = false).empty()"
         );
         assert_eq!(
             combine("Patient.name.2.given", "length() < 10"),
-            "name[2].given.all(length() < 10)"
+            "name[2].given.where((length() < 10) = false).empty()"
         );
     }
 

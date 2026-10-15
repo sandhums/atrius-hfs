@@ -8,6 +8,7 @@
 //! branch element per type.
 
 use super::{Ed, EdConstraint, EdDiscriminator};
+use crate::resolver::strip_canonical_version;
 use crate::schema::{Binding, Constraint, FhirSchema};
 use indexmap::IndexMap;
 use std::sync::Arc;
@@ -143,7 +144,9 @@ pub(super) fn apply(root: &mut Node, segments: &[Segment], ed: &Ed, warnings: &m
             && first.code == "Extension"
             && let Some(profile) = first.profile.first()
         {
-            slice.extension_profile = Some(profile.clone());
+            // Matched against instance `extension.url`, which never carries
+            // the `|version` a pinned profile (`pin-canonicals`) adds.
+            slice.extension_profile = Some(strip_canonical_version(profile).to_string());
         }
         // Value-level keywords on the slice ED itself apply to the slice
         // schema (shape/cardinality were consumed above as slice bounds).

@@ -119,3 +119,72 @@ async fn absent_nodes_pass_invariants() {
         serde_json::to_string_pretty(&errors).unwrap()
     );
 }
+
+#[tokio::test]
+async fn ref1_fails_only_on_a_dangling_local_reference() {
+    // ref-1 evaluates to empty on a Reference without `reference` (R4 allows
+    // display-only); empty on a node is a pass, only `false` fails.
+    let validator = Validator::new(core_registry(FhirVersion::R4));
+    let evaluator = FhirPathConstraintEvaluator::new();
+    let suppress = suppress();
+    let mut h = handlers(&evaluator);
+    h.suppress_constraints = &suppress;
+
+    let observation = |subject: serde_json::Value, contained: Option<serde_json::Value>| {
+        let mut obs = json!({
+            "resourceType": "Observation",
+            "status": "final",
+            "code": { "text": "x" },
+            "subject": subject
+        });
+        if let Some(c) = contained {
+            obs["contained"] = json!([c]);
+        }
+        obs
+    };
+    let cases = [
+        (
+            "display only",
+            observation(json!({ "display": "x" }), None),
+            false,
+        ),
+        (
+            "literal",
+            observation(json!({ "reference": "Patient/1" }), None),
+            false,
+        ),
+        (
+            "local, contained",
+            observation(
+                json!({ "reference": "#p1" }),
+                Some(json!({ "resourceType": "Patient", "id": "p1" })),
+            ),
+            false,
+        ),
+        (
+            "local, missing",
+            observation(json!({ "reference": "#p1" }), None),
+            true,
+        ),
+    ];
+    for (label, resource, fires) in cases {
+        let errors = validator
+            .validate(
+                &resource,
+                FhirVersion::R4,
+                &ValidationOptions::default(),
+                &h,
+            )
+            .await;
+        let ref1 = errors.iter().any(|e| {
+            e.kind == ErrorKind::FhirpathConstraint
+                && e.extra.get("constraint") == Some(&json!("ref-1"))
+        });
+        assert_eq!(
+            ref1,
+            fires,
+            "{label}: {}",
+            serde_json::to_string_pretty(&errors).unwrap()
+        );
+    }
+}
