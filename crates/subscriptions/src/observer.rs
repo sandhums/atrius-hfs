@@ -5,8 +5,10 @@
 //! adapter subscribes the engine to it. It turns each resource write that
 //! carries a [`WriteNotice`] into the [`ResourceEvent`] the handlers used to
 //! build by hand, and hands it to
-//! [`SubscriptionEngine::enqueue_resource_event`] (durable outbox when attached,
-//! otherwise `on_resource_event` on a spawned task).
+//! adapter subscribes the engine to it. Lifecycle changes and data notices
+//! go through the bounded engine ingress. When a durable outbox is attached,
+//! the resource transaction already wrote the row, so [`SubscriptionEngine::enqueue_resource_event`]
+//! only wakes the worker.
 //!
 //! What gets announced is decided by the write path, not here: a write whose
 //! notice is `None` (for example a conditional create) is deliberately silent,
@@ -15,10 +17,12 @@
 
 use std::sync::Arc;
 
-use helios_persistence::core::{WriteEvent, WriteKind, WriteObserver};
-use tracing::debug;
+#[cfg(test)]
+use helios_persistence::core::WriteKind;
+use helios_persistence::core::{WriteEvent, WriteObserver};
 
 use crate::engine::SubscriptionEngine;
+#[cfg(test)]
 use crate::event::{ResourceEvent, ResourceEventType};
 
 /// Feeds committed resource writes to a [`SubscriptionEngine`].
@@ -42,6 +46,7 @@ impl std::fmt::Debug for SubscriptionWriteObserver {
 /// The engine event a write announces, or `None` when it announces nothing:
 /// an aggregate or purge event, a write without a notice, or a notice with no
 /// resource id.
+#[cfg(test)]
 fn resource_event(event: &WriteEvent) -> Option<ResourceEvent> {
     let WriteEvent::Resource(write) = event else {
         return None;
@@ -69,19 +74,15 @@ fn resource_event(event: &WriteEvent) -> Option<ResourceEvent> {
 
 impl WriteObserver for SubscriptionWriteObserver {
     fn on_write(&self, event: &WriteEvent) {
-        let Some(event) = resource_event(event) else {
+        let WriteEvent::Resource(write) = event else {
             return;
         };
-        debug!(
-            resource_type = %event.resource_type,
-            resource_id = %event.resource_id,
-            event_type = %event.event_type,
-            "Emitting subscription event"
-        );
-        // Durable outbox (when attached) already wrote the row in the same
-        // resource TX; enqueue only wakes the worker. Without an outbox this
-        // falls back to `on_resource_event` on a spawned task.
-        self.engine.enqueue_resource_event(event);
+        if self.engine.has_outbox() {
+            // The SQL backend wrote the outbox row in this resource transaction.
+            self.engine.enqueue_resource_event();
+            return;
+        }
+        self.engine.observe_write(write);
     }
 }
 

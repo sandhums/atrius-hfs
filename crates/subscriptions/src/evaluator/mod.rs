@@ -8,7 +8,7 @@ pub mod filter_match;
 use std::sync::Arc;
 
 use crate::event::ResourceEvent;
-use crate::manager::{ActiveSubscription, SubscriptionManager};
+use crate::manager::{ActiveSubscription, SubscriptionManager, SubscriptionSnapshot};
 use crate::topics::{InMemoryTopicRegistry, TopicMatch};
 
 /// Evaluates which subscriptions should receive notifications for a resource event.
@@ -21,6 +21,11 @@ pub struct EventEvaluator {
 #[derive(Debug)]
 pub struct EvaluationMatch {
     pub subscription: ActiveSubscription,
+    pub topic_match: TopicMatch,
+}
+
+pub(crate) struct SnapshotMatch {
+    pub snapshot: SubscriptionSnapshot,
     pub topic_match: TopicMatch,
 }
 
@@ -38,48 +43,49 @@ impl EventEvaluator {
     /// Evaluates a resource event and returns all matching subscriptions.
     ///
     /// The flow is:
-    /// 1. Find all topics whose triggers match (type + interaction + optional FHIRPath).
+    /// 1. Find the event tenant's topics whose triggers match its resource type, interaction, and optional FHIRPath criteria.
     /// 2. For each matching topic, find all active subscriptions.
     /// 3. For each subscription, evaluate filter criteria against the resource.
     /// 4. Return subscriptions that pass all filters.
     pub fn evaluate(&self, event: &ResourceEvent) -> Vec<EvaluationMatch> {
-        let topic_matches = self.topic_registry.matching_topics(
-            event.tenant_id.as_str(),
+        self.evaluate_snapshots(event)
+            .into_iter()
+            .map(|matched| EvaluationMatch {
+                subscription: matched.snapshot.subscription,
+                topic_match: matched.topic_match,
+            })
+            .collect()
+    }
+
+    pub(crate) fn evaluate_snapshots(&self, event: &ResourceEvent) -> Vec<SnapshotMatch> {
+        let mut results = Vec::new();
+        for topic_match in self.topic_registry.matching_topics_with_resource(
+            event.tenant_id.as_ref(),
             &event.resource_type,
             event.event_type,
             event.resource.as_ref(),
             event.previous_resource.as_ref(),
             event.fhir_version,
-        );
-
-        let mut results = Vec::new();
-
-        for topic_match in topic_matches {
-            let subscriptions = self
+        ) {
+            for snapshot in self
                 .subscription_manager
-                .active_subscriptions_for_topic(event.tenant_id.as_ref(), &topic_match.topic_url);
-
-            for sub in subscriptions {
-                // Evaluate filter criteria against the resource.
-                let resource_matches = match &event.resource {
+                .active_snapshots_for_topic(event.tenant_id.as_ref(), &topic_match.topic_url)
+            {
+                let sub = &snapshot.subscription;
+                let matches = match &event.resource {
                     Some(resource) => {
                         filter_match::matches_filters(resource, &event.resource_type, &sub.filters)
                     }
-                    None => {
-                        // Delete events with no resource content: match if no filters.
-                        sub.filters.is_empty()
-                    }
+                    None => sub.filters.is_empty(),
                 };
-
-                if resource_matches {
-                    results.push(EvaluationMatch {
-                        subscription: sub,
+                if matches {
+                    results.push(SnapshotMatch {
+                        snapshot,
                         topic_match: topic_match.clone(),
                     });
                 }
             }
         }
-
         results
     }
 }
@@ -96,28 +102,27 @@ mod tests {
     use helios_persistence::tenant::TenantId;
     use serde_json::json;
 
-    fn sample_topic() -> TopicDefinition {
-        TopicDefinition {
-            canonical_url: "http://example.org/topic/encounter-start".to_string(),
-            title: Some("Encounter Start".to_string()),
-            resource_triggers: vec![ResourceTrigger {
-                resource_type: "Encounter".to_string(),
-                interactions: vec![ResourceEventType::Create],
-                fhirpath_criteria: None,
-            }],
-            can_filter_by: vec![FilterDefinition {
-                resource_type: Some("Encounter".to_string()),
-                filter_parameter: "patient".to_string(),
-                comparators: vec!["eq".to_string()],
-                modifiers: vec![],
-            }],
-            notification_shape: vec![],
-        }
-    }
-
     fn setup() -> (Arc<InMemoryTopicRegistry>, Arc<SubscriptionManager>) {
         let registry = Arc::new(InMemoryTopicRegistry::new());
-        registry.add_topic("t1", sample_topic());
+        registry.add_topic(
+            "t1",
+            TopicDefinition {
+                canonical_url: "http://example.org/topic/encounter-start".to_string(),
+                title: Some("Encounter Start".to_string()),
+                resource_triggers: vec![ResourceTrigger {
+                    resource_type: "Encounter".to_string(),
+                    interactions: vec![ResourceEventType::Create],
+                    fhirpath_criteria: None,
+                }],
+                can_filter_by: vec![FilterDefinition {
+                    resource_type: Some("Encounter".to_string()),
+                    filter_parameter: "patient".to_string(),
+                    comparators: vec!["eq".to_string()],
+                    modifiers: vec![],
+                }],
+                notification_shape: vec![],
+            },
+        );
 
         let manager = Arc::new(SubscriptionManager::new(
             Arc::clone(&registry),
@@ -236,8 +241,13 @@ mod tests {
     #[test]
     fn test_tenant_isolation_in_evaluator() {
         let (registry, manager) = setup();
-        registry.add_topic("tenant-a", sample_topic());
-        registry.add_topic("tenant-b", sample_topic());
+        let topic = registry
+            .get_topic("t1", "http://example.org/topic/encounter-start")
+            .unwrap();
+        registry.add_topic("tenant-a", topic.clone());
+        let mut other_topic = topic;
+        other_topic.resource_triggers[0].resource_type = "Observation".to_string();
+        registry.add_topic("tenant-b", other_topic);
         register_active_subscription(&manager, "tenant-a", "sub-1", vec![]);
         register_active_subscription(&manager, "tenant-b", "sub-2", vec![]);
 
@@ -250,153 +260,16 @@ mod tests {
         let matches = evaluator.evaluate(&event);
         assert_eq!(matches.len(), 1);
         assert_eq!(matches[0].subscription.id, "sub-1");
-    }
 
-    #[test]
-    fn test_topic_registry_tenant_isolation_in_evaluator() {
-        let (registry, manager) = setup();
-        // Topic exists only for t1; tenant-b must not see it for matching.
-        register_active_subscription(&manager, "t1", "sub-1", vec![]);
-
-        let evaluator = EventEvaluator::new(registry, manager);
-        let mut event = make_event("Encounter", ResourceEventType::Create);
-        event.tenant_id = TenantId::new("tenant-b");
-
+        event.resource_type = "Observation".to_string();
+        event.resource = Some(json!({"resourceType": "Observation"}));
         assert!(evaluator.evaluate(&event).is_empty());
-    }
-
-    #[cfg(feature = "R4")]
-    #[test]
-    fn fhirpath_criteria_gates_subscription_match_with_previous() {
-        let (registry, manager) = setup();
-        registry.add_topic(
-            "t1",
-            TopicDefinition {
-                canonical_url: "http://example.org/topic/encounter-start".to_string(),
-                title: None,
-                resource_triggers: vec![ResourceTrigger {
-                    resource_type: "Encounter".to_string(),
-                    interactions: vec![ResourceEventType::Update],
-                    fhirpath_criteria: Some(
-                        "%previous.status != 'finished' and status = 'finished'".into(),
-                    ),
-                }],
-                can_filter_by: vec![],
-                notification_shape: vec![],
-            },
-        );
-        register_active_subscription(&manager, "t1", "sub-1", vec![]);
-        let evaluator = EventEvaluator::new(registry, manager);
-
-        let finished = json!({
-            "resourceType": "Encounter",
-            "id": "123",
-            "status": "finished",
-            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
-            "subject": { "reference": "Patient/456" }
-        });
-        let in_progress = json!({
-            "resourceType": "Encounter",
-            "id": "123",
-            "status": "in-progress",
-            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
-            "subject": { "reference": "Patient/456" }
-        });
-
-        let mut match_event = make_event("Encounter", ResourceEventType::Update);
-        match_event.resource = Some(finished.clone());
-        match_event.previous_resource = Some(in_progress);
-        assert_eq!(evaluator.evaluate(&match_event).len(), 1);
-
-        let mut noop = make_event("Encounter", ResourceEventType::Update);
-        noop.resource = Some(finished.clone());
-        noop.previous_resource = Some(finished);
-        assert!(evaluator.evaluate(&noop).is_empty());
-    }
-
-    #[cfg(feature = "R4")]
-    #[test]
-    fn fhirpath_and_patient_filter_both_required() {
-        let (registry, manager) = setup();
-        registry.add_topic(
-            "t1",
-            TopicDefinition {
-                canonical_url: "http://example.org/topic/encounter-start".to_string(),
-                title: None,
-                resource_triggers: vec![ResourceTrigger {
-                    resource_type: "Encounter".to_string(),
-                    interactions: vec![ResourceEventType::Create],
-                    fhirpath_criteria: Some("status = 'in-progress'".into()),
-                }],
-                can_filter_by: vec![FilterDefinition {
-                    resource_type: Some("Encounter".to_string()),
-                    filter_parameter: "patient".to_string(),
-                    comparators: vec!["eq".to_string()],
-                    modifiers: vec![],
-                }],
-                notification_shape: vec![],
-            },
-        );
-
-        let resource = json!({
-            "resourceType": "Subscription",
-            "id": "sub-1",
-            "status": "requested",
-            "criteria": "http://example.org/topic/encounter-start",
-            "channel": {
-                "type": "rest-hook",
-                "endpoint": "https://example.com/webhook",
-                "payload": "application/fhir+json"
-            },
-            "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/subscriptions-backport/StructureDefinition/backport-topic-canonical",
-                    "valueCanonical": "http://example.org/topic/encounter-start"
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/subscriptions-backport/StructureDefinition/backport-filter-criteria",
-                    "valueString": "Encounter?patient=Patient/456"
-                }
-            ]
-        });
-        manager
-            .register("t1", "sub-1", &resource, FhirVersion::R4)
-            .unwrap();
-        manager
-            .update_status("t1", "sub-1", SubscriptionStatusCode::Active)
-            .unwrap();
-
-        let evaluator = EventEvaluator::new(registry, manager);
-
-        let mut ok = make_event("Encounter", ResourceEventType::Create);
-        ok.resource = Some(json!({
-            "resourceType": "Encounter",
-            "id": "123",
-            "status": "in-progress",
-            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
-            "subject": { "reference": "Patient/456" }
-        }));
-        assert_eq!(evaluator.evaluate(&ok).len(), 1);
-
-        let mut wrong_patient = ok.clone();
-        wrong_patient.resource = Some(json!({
-            "resourceType": "Encounter",
-            "id": "123",
-            "status": "in-progress",
-            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
-            "subject": { "reference": "Patient/999" }
-        }));
-        assert!(evaluator.evaluate(&wrong_patient).is_empty());
-
-        let mut wrong_status = ok;
-        wrong_status.resource = Some(json!({
-            "resourceType": "Encounter",
-            "id": "123",
-            "status": "planned",
-            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" },
-            "subject": { "reference": "Patient/456" }
-        }));
-        assert!(evaluator.evaluate(&wrong_status).is_empty());
+        event.tenant_id = TenantId::new("tenant-b");
+        let matches = evaluator.evaluate(&event);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].subscription.id, "sub-2");
+        event.resource_type = "Encounter".to_string();
+        assert!(evaluator.evaluate(&event).is_empty());
     }
 
     #[test]

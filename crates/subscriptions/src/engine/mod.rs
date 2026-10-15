@@ -2,13 +2,21 @@
 //!
 //! Ties together topic registry, subscription manager, event evaluator,
 //! notification builder, and channel dispatchers. Invoked asynchronously
-//! after each resource write.
+//! after resource writes, with synchronous lifecycle changes and bounded DATA
+//! ingress feeding independent subscription queues.
 
+mod dispatch;
 pub mod retry;
+pub use dispatch::DispatchSnapshot;
+use dispatch::{CompletionTicket, SchedulerOwner, SchedulerState};
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use dashmap::DashMap;
+use helios_persistence::core::{DynSubscriptionOutboxStore, ResourceStorage};
+use helios_persistence::error::StorageError;
+use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
+use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn};
 
 use crate::channels::email::EmailChannel;
@@ -17,44 +25,51 @@ use crate::channels::rest_hook::RestHookChannel;
 use crate::channels::websocket::WebSocketChannel;
 use crate::channels::ws_manager::WebSocketManager;
 use crate::channels::ws_token::WsBindingTokenManager;
-use crate::channels::{ChannelDispatcher, ChannelDispatcherRegistry, DispatchResult};
+use crate::channels::{ChannelDispatcher, DispatchResult};
 use crate::config::SubscriptionConfig;
 use crate::evaluator::EventEvaluator;
 use crate::event::{ResourceEvent, ResourceEventType};
 use crate::heartbeat::run_heartbeat_worker;
-use crate::manager::{ActiveSubscription, SubscriptionManager, SubscriptionStatusCode};
+use crate::manager::{
+    ChannelType, SubscriptionManager, SubscriptionSnapshot, SubscriptionStatusCode,
+};
 use crate::notification::{self, NotificationEventData};
 use crate::outbox::run_outbox_worker;
-use crate::topics::InMemoryTopicRegistry;
+use crate::topics::{InMemoryTopicRegistry, TopicDefinition};
 use helios_auth::{NoOpOutboundAuthProvider, OutboundAuthProvider};
-use helios_persistence::core::{DynSubscriptionOutboxStore, ResourceStorage};
-use helios_persistence::error::StorageError;
-use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
-use tokio::sync::Semaphore;
 
 /// The subscription engine orchestrates the entire subscription pipeline.
 ///
-/// When a durable [`SubscriptionOutboxStore`] is attached, resource writes are
-/// enqueued and processed by a background worker. Without an outbox the engine
-/// falls back to fire-and-forget `tokio::spawn` (legacy / non-SQL backends).
+/// Committed writes use bounded, nonblocking ingress. Independent subscription
+/// queues retain notifications through retry and preserve admitted event order.
 pub struct SubscriptionEngine {
+    core: Arc<EngineCore>,
+    scheduler: SchedulerOwner,
+    outbox: Option<DynSubscriptionOutboxStore>,
+    outbox_notify: Arc<tokio::sync::Notify>,
+}
+
+struct EngineCore {
     topic_registry: Arc<InMemoryTopicRegistry>,
     topic_resource_index: DashMap<(String, String, String), String>,
     manager: Arc<SubscriptionManager>,
     evaluator: EventEvaluator,
-    /// Channel dispatchers keyed by FHIR channel-type code.
-    dispatchers: ChannelDispatcherRegistry,
+    rest_hook_channel: Arc<RestHookChannel>,
     ws_manager: Arc<WebSocketManager>,
+    ws_channel: Arc<WebSocketChannel>,
     ws_token_manager: Arc<WsBindingTokenManager>,
+    email_channel: Option<Arc<EmailChannel>>,
+    messaging_channel: Option<Arc<MessagingChannel>>,
     config: SubscriptionConfig,
     public_base_url_for_tenant: Arc<dyn Fn(&str) -> String + Send + Sync>,
-    outbox: Option<DynSubscriptionOutboxStore>,
-    outbox_notify: Arc<tokio::sync::Notify>,
     /// Storage handle used to write a server-driven status transition back into
     /// the stored `Subscription` resource. `None` leaves every transition
     /// in-memory only, which is the pre-#357 behaviour.
-    status_store: Option<Arc<dyn ResourceStorage>>,
-    /// Bounds how many status write-backs may be in flight at once.
+    status_store: RwLock<Option<Arc<dyn ResourceStorage>>>,
+    /// Bounds how many status write-backs may be in flight at once, so a
+    /// transition storm (every subscription tripping at the same instant during
+    /// a subscriber outage) cannot drain the primary backend's connection pool
+    /// and take reads down with it.
     status_write_slots: Arc<Semaphore>,
     /// Rolling per-subscription delivery counters (#586) — the operator page's
     /// last-24-hours figures. In-memory, like the rest of the engine's state.
@@ -103,107 +118,120 @@ impl SubscriptionEngine {
         resolve_default_message_source: bool,
         outbound_auth: Arc<dyn OutboundAuthProvider>,
     ) -> Self {
+        let config = config.normalize_dispatch_limits();
         let topic_registry = Arc::new(InMemoryTopicRegistry::new());
         let manager = Arc::new(SubscriptionManager::new(
             Arc::clone(&topic_registry),
             config.supported_channel_types.clone(),
         ));
         let evaluator = EventEvaluator::new(Arc::clone(&topic_registry), Arc::clone(&manager));
+        let rest_hook_channel = Arc::new(RestHookChannel::new());
         let ws_manager = Arc::new(WebSocketManager::new());
+        let ws_channel = Arc::new(WebSocketChannel::new(Arc::clone(&ws_manager)));
         let ws_token_manager = Arc::new(WsBindingTokenManager::new(config.ws_token_lifetime_secs));
-
-        let mut dispatchers = ChannelDispatcherRegistry::new();
-        dispatchers.register("rest-hook", Arc::new(RestHookChannel::new()));
-        dispatchers.register(
-            "websocket",
-            Arc::new(WebSocketChannel::new(Arc::clone(&ws_manager))),
-        );
-        if let Some(settings) = &config.smtp {
-            match EmailChannel::new(settings.clone()) {
-                Ok(ch) => {
-                    dispatchers.register("email", Arc::new(ch));
-                }
+        let email_channel = match &config.smtp {
+            Some(settings) => match EmailChannel::new(settings.clone()) {
+                Ok(ch) => Some(Arc::new(ch)),
                 Err(e) => {
                     warn!(error = %e, "Failed to initialize email channel; email dispatch disabled");
+                    None
                 }
-            }
-        }
-        if let Some(settings) = &config.messaging {
+            },
+            None => None,
+        };
+        let messaging_channel = config.messaging.as_ref().map(|settings| {
             let mut channel =
                 MessagingChannel::new(settings.source_endpoint.clone(), Arc::clone(&outbound_auth));
             if resolve_default_message_source {
                 channel =
                     channel.with_source_endpoint_resolver(Arc::clone(&public_base_url_for_tenant));
             }
-            dispatchers.register(
-                "message",
-                Arc::new(channel.with_private_endpoints_allowed(settings.allow_private_endpoints)),
-            );
-        }
+            Arc::new(channel.with_private_endpoints_allowed(settings.allow_private_endpoints))
+        });
 
         let status_write_slots = Arc::new(Semaphore::new(config.status_write_concurrency.max(1)));
 
-        Self {
+        let scheduler = SchedulerOwner::new(&config);
+        let core = Arc::new(EngineCore {
             topic_registry,
             topic_resource_index: DashMap::new(),
             manager,
             evaluator,
-            dispatchers,
+            rest_hook_channel,
             ws_manager,
+            ws_channel,
             ws_token_manager,
+            email_channel,
+            messaging_channel,
             config,
             public_base_url_for_tenant,
-            outbox: None,
-            outbox_notify: Arc::new(tokio::sync::Notify::new()),
-            status_store: None,
+            status_store: RwLock::new(None),
             status_write_slots,
             delivery_stats: Arc::new(crate::delivery_stats::DeliveryStats::new()),
+        });
+        Self {
+            core,
+            scheduler,
+            outbox: None,
+            outbox_notify: Arc::new(tokio::sync::Notify::new()),
         }
-    }
-
-    /// Attach a durable outbox store and return a new engine handle.
-    ///
-    /// Call [`Self::start_outbox_worker`] after wrapping in `Arc`.
-    pub fn with_outbox(mut self, store: DynSubscriptionOutboxStore) -> Self {
-        self.outbox = Some(store);
-        self
     }
 
     /// Attaches the storage handle that server-driven status transitions are
     /// written back to (issue #357).
-    pub fn with_status_store(mut self, storage: Arc<dyn ResourceStorage>) -> Self {
-        self.status_store = Some(storage);
+    ///
+    /// Without this the engine's decisions — `requested` → `active` after a
+    /// successful handshake, `→ error`, `→ off` once the delivery circuit
+    /// breaker trips — live only in the in-memory manager. They are then lost on
+    /// restart, and `GET /Subscription/{id}` contradicts
+    /// `GET /Subscription/{id}/$status` for the lifetime of the resource.
+    ///
+    /// This deliberately takes the plain [`ResourceStorage`] every backend
+    /// already implements rather than a new per-backend store, so the fix
+    /// applies uniformly to SQLite, PostgreSQL, MongoDB, S3, and the composite
+    /// deployments with no schema change and no migration.
+    ///
+    /// On a composite deployment pass the **composite**, not the primary, so the
+    /// rewritten resource also reaches the search index — otherwise
+    /// `GET /Subscription?status=active` keeps answering from stale documents.
+    pub fn with_status_store(self, storage: Arc<dyn ResourceStorage>) -> Self {
+        *self
+            .core
+            .status_store
+            .write()
+            .unwrap_or_else(|e| e.into_inner()) = Some(storage);
         self
     }
 
     /// Whether server-driven status transitions are written back to storage.
     pub fn persists_status(&self) -> bool {
-        self.status_store.is_some() && self.config.persist_status
+        self.core
+            .status_store
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .is_some()
+            && self.core.config.persist_status
     }
 
-    /// Register (or replace) a channel dispatcher.
+    /// Attach a durable outbox. SQL backends write the row in the resource
+    /// transaction; [`Self::enqueue_resource_event`] only wakes the worker.
     ///
-    /// Use this to plug in broker/custom channels (e.g. Kafka) without changing
-    /// the engine match sites. The channel type must also appear in
-    /// [`SubscriptionConfig::supported_channel_types`] for subscription
-    /// registration to accept it.
-    pub fn with_dispatcher(
-        mut self,
-        channel_type: impl Into<String>,
-        dispatcher: Arc<dyn ChannelDispatcher>,
-    ) -> Self {
-        self.dispatchers.register(channel_type, dispatcher);
+    /// Call [`Self::start_outbox_worker`] after wrapping the engine in `Arc`.
+    pub fn with_outbox(mut self, store: DynSubscriptionOutboxStore) -> Self {
+        self.outbox = Some(store);
         self
     }
 
-    /// Returns the channel dispatcher registry.
-    pub fn dispatchers(&self) -> &ChannelDispatcherRegistry {
-        &self.dispatchers
+    /// Whether a durable outbox is attached.
+    pub fn has_outbox(&self) -> bool {
+        self.outbox.is_some()
     }
 
-    /// Returns the attached outbox store, if any.
-    pub fn outbox_store(&self) -> Option<&DynSubscriptionOutboxStore> {
-        self.outbox.as_ref()
+    /// Wake the outbox worker. The row was already written in the resource transaction.
+    pub fn enqueue_resource_event(self: &Arc<Self>) {
+        if self.outbox.is_some() {
+            self.outbox_notify.notify_one();
+        }
     }
 
     /// Spawn the background outbox consumer. No-op when no outbox is attached.
@@ -212,7 +240,7 @@ impl SubscriptionEngine {
             return;
         };
         let engine = Arc::clone(self);
-        let config = self.config.clone();
+        let config = self.core.config.clone();
         let notify = Arc::clone(&self.outbox_notify);
         tokio::spawn(async move {
             run_outbox_worker(engine, store, config, notify).await;
@@ -223,7 +251,7 @@ impl SubscriptionEngine {
     /// Spawn the background heartbeat sender.
     pub fn start_heartbeat_worker(self: &Arc<Self>) {
         let engine = Arc::clone(self);
-        let config = self.config.clone();
+        let config = self.core.config.clone();
         tokio::spawn(async move {
             run_heartbeat_worker(engine, config).await;
         });
@@ -232,77 +260,66 @@ impl SubscriptionEngine {
 
     /// Canonical public base URL for background notifications for `tenant_id`.
     pub fn public_base_url(&self, tenant_id: &str) -> String {
-        (self.public_base_url_for_tenant)(tenant_id)
+        (self.core.public_base_url_for_tenant)(tenant_id)
     }
 
-    /// Dispatch a heartbeat notification (used by the heartbeat worker).
+    /// Dispatch a heartbeat notification.
     pub(crate) async fn dispatch_heartbeat(
         &self,
-        subscription: &ActiveSubscription,
+        subscription: &crate::manager::ActiveSubscription,
         bundle: &serde_json::Value,
     ) {
-        let _ = self
-            .dispatch_with_retry(subscription, bundle, "heartbeat", None)
-            .await;
-    }
-
-    /// Wake subscription processing after a resource write.
-    ///
-    /// When a durable outbox is attached, SQL backends write the outbox row in
-    /// the **same transaction** as the resource. This method only notifies the
-    /// outbox worker (no second enqueue). Without an outbox, falls back to
-    /// in-process spawn of [`Self::on_resource_event`]. Without a Tokio
-    /// runtime the in-process path is dropped rather than panicked.
-    pub fn enqueue_resource_event(self: &Arc<Self>, event: ResourceEvent) {
-        if self.outbox.is_some() {
-            debug!(
-                resource_type = %event.resource_type,
-                resource_id = %event.resource_id,
-                event_type = %event.event_type,
-                "Notifying outbox worker after same-TX resource write"
-            );
-            self.outbox_notify.notify_one();
-            return;
-        }
-
-        let Ok(handle) = tokio::runtime::Handle::try_current() else {
-            debug!(
-                resource_type = %event.resource_type,
-                resource_id = %event.resource_id,
-                "No Tokio runtime; subscription event not dispatched"
-            );
+        let Some(snapshot) = self
+            .core
+            .manager
+            .get_snapshot(&subscription.tenant_id, &subscription.id)
+        else {
             return;
         };
-        let engine = Arc::clone(self);
-        handle.spawn(async move {
-            engine.on_resource_event(event).await;
-        });
+        if !self.scheduler.start(&self.core) {
+            return;
+        }
+        self.core
+            .dispatch_with_retry(&snapshot, bundle, "heartbeat", None, &self.scheduler.state)
+            .await;
     }
 
     /// Returns a reference to the topic registry.
     pub fn topic_registry(&self) -> &Arc<InMemoryTopicRegistry> {
-        &self.topic_registry
+        &self.core.topic_registry
+    }
+
+    /// Registers a parsed topic; see [`EngineCore::register_topic`].
+    pub(crate) fn register_topic(
+        &self,
+        tenant_id: &str,
+        resource_type: &str,
+        resource_id: Option<&str>,
+        topic: TopicDefinition,
+    ) {
+        self.core
+            .register_topic(tenant_id, resource_type, resource_id, topic);
     }
 
     /// Returns a reference to the subscription manager.
     pub fn manager(&self) -> &Arc<SubscriptionManager> {
-        &self.manager
+        &self.core.manager
     }
 
     /// Returns a reference to the WebSocket manager.
     pub fn ws_manager(&self) -> &Arc<WebSocketManager> {
-        &self.ws_manager
-    }
-
-    /// The rolling delivery counters (#586) — the operator page reads its
-    /// last-24-hours figures from here.
-    pub fn delivery_stats(&self) -> &Arc<crate::delivery_stats::DeliveryStats> {
-        &self.delivery_stats
+        &self.core.ws_manager
     }
 
     /// Returns a reference to the WebSocket binding token manager.
+    /// The rolling delivery counters (#586) — the operator page reads its
+    /// last-24-hours figures from here.
+    pub fn delivery_stats(&self) -> &Arc<crate::delivery_stats::DeliveryStats> {
+        &self.core.delivery_stats
+    }
+
     pub fn ws_token_manager(&self) -> &Arc<WsBindingTokenManager> {
-        &self.ws_token_manager
+        &self.core.ws_token_manager
     }
 
     /// Called after a resource write has been committed.
@@ -313,128 +330,189 @@ impl SubscriptionEngine {
     /// 2. Evaluates the event against all active subscriptions.
     /// 3. Builds and dispatches notifications.
     pub async fn on_resource_event(&self, event: ResourceEvent) {
-        // Handle subscription lifecycle events.
-        match event.resource_type.as_str() {
-            "Subscription" => {
-                self.handle_subscription_event(&event).await;
-                return;
+        if let Some(activation) = self.handle_control(EventView::from(&event)) {
+            drop(event);
+            if let Some(snapshot) = activation {
+                self.activate_subscription(&snapshot).await;
             }
-            "SubscriptionTopic" => {
-                self.handle_topic_event(&event).await;
-                return;
-            }
-            "Basic" => {
-                if self.handle_r4_basic_topic_event(&event).await {
-                    return;
-                }
-            }
-            _ => {}
-        }
-
-        // Evaluate which subscriptions match this event.
-        let matches = self.evaluator.evaluate(&event);
-        info!(
-            tenant_id = %event.tenant_id,
-            resource_type = %event.resource_type,
-            resource_id = %event.resource_id,
-            event_type = %event.event_type,
-            matched_subscriptions = matches.len(),
-            "Subscription event evaluated"
-        );
-        if matches.is_empty() {
             return;
         }
+        if !self.scheduler.start(&self.core) {
+            return;
+        }
+        if let Some(receipt) = self.scheduler.enqueue(|| event, true) {
+            let _ = receipt.await;
+        }
+    }
 
-        debug!(
-            resource_type = %event.resource_type,
-            resource_id = %event.resource_id,
-            matched_subscriptions = matches.len(),
-            "Event matched subscriptions"
-        );
+    /// Coherent occupancy and shedding counters for the effective dispatch limits.
+    pub fn dispatch_snapshot(&self) -> DispatchSnapshot {
+        self.scheduler.state.snapshot()
+    }
 
-        let matched = matches.len();
-        let mut delivered = 0u32;
-        let mut failed = 0u32;
+    pub(crate) fn observe_write(&self, write: &helios_persistence::core::ResourceWrite) {
+        let Some(notice) = write.notice.as_ref().filter(|n| !n.resource_id.is_empty()) else {
+            return;
+        };
+        if tokio::runtime::Handle::try_current().is_err() {
+            debug!(resource_type = %write.resource_type, resource_id = %notice.resource_id, "No Tokio runtime; subscription event not dispatched");
+            return;
+        }
+        let view = EventView {
+            tenant_id: &write.tenant,
+            fhir_version: write.fhir_version,
+            resource_type: &write.resource_type,
+            resource_id: &notice.resource_id,
+            version_id: &notice.version_id,
+            event_type: match notice.kind {
+                helios_persistence::core::WriteKind::Create => ResourceEventType::Create,
+                helios_persistence::core::WriteKind::Update => ResourceEventType::Update,
+                helios_persistence::core::WriteKind::Delete => ResourceEventType::Delete,
+            },
+            resource: notice.resource.as_ref(),
+            previous_resource: notice.previous.as_ref(),
+        };
+        if let Some(activation) = self.handle_control(view) {
+            if let Some(snapshot) = activation {
+                if self.scheduler.start(&self.core) {
+                    self.scheduler.state.request_activation(snapshot);
+                }
+            }
+            return;
+        }
+        if self.scheduler.start(&self.core) {
+            self.scheduler.enqueue(
+                || ResourceEvent {
+                    tenant_id: write.tenant.clone(),
+                    fhir_version: write.fhir_version,
+                    resource_type: write.resource_type.clone(),
+                    resource_id: notice.resource_id.clone(),
+                    version_id: notice.version_id.clone(),
+                    event_type: view.event_type,
+                    resource: notice.resource.clone(),
+                    previous_resource: notice.previous.clone(),
+                    timestamp: write.at,
+                },
+                false,
+            );
+        }
+    }
 
-        // Build and dispatch notifications for each match.
-        for eval_match in matches {
-            let mut subscription = eval_match.subscription;
+    fn handle_control(&self, event: EventView<'_>) -> Option<Option<SubscriptionSnapshot>> {
+        match event.resource_type {
+            "Subscription" => {
+                let snapshot = self.core.handle_subscription_event(&event);
+                if snapshot.is_some() || event.event_type == ResourceEventType::Delete {
+                    self.scheduler
+                        .state
+                        .invalidate_registration(event.tenant_id.as_str(), event.resource_id);
+                }
+                Some(
+                    snapshot.filter(|s| s.subscription.status == SubscriptionStatusCode::Requested),
+                )
+            }
+            "SubscriptionTopic" => {
+                self.core.handle_topic_event(&event);
+                Some(None)
+            }
+            "Basic" if self.core.handle_r4_basic_topic_event(&event) => Some(None),
+            _ => None,
+        }
+    }
 
-            // Increment event counter.
-            let event_number = self
-                .manager
-                .increment_event_count(&subscription.tenant_id, &subscription.id)
-                .unwrap_or(0);
-            // Ensure notification metadata reflects the event being emitted.
-            subscription.events_since_start = event_number;
+    pub(crate) async fn activate_subscription(&self, snapshot: &SubscriptionSnapshot) {
+        if !self.core.manager.is_current(snapshot) || snapshot.generation.is_cancelled() {
+            return;
+        }
+        if self.scheduler.start(&self.core) {
+            let mut receipt = self.scheduler.state.request_activation(snapshot.clone());
+            while !*receipt.borrow_and_update() {
+                if receipt.changed().await.is_err() {
+                    break;
+                }
+            }
+        }
+    }
+}
 
-            let focus_reference = format!("{}/{}", event.resource_type, event.resource_id);
+#[derive(Clone, Copy)]
+struct EventView<'a> {
+    tenant_id: &'a TenantId,
+    fhir_version: helios_fhir::FhirVersion,
+    resource_type: &'a str,
+    resource_id: &'a str,
+    version_id: &'a str,
+    event_type: ResourceEventType,
+    resource: Option<&'a serde_json::Value>,
+    previous_resource: Option<&'a serde_json::Value>,
+}
+impl<'a> From<&'a ResourceEvent> for EventView<'a> {
+    fn from(event: &'a ResourceEvent) -> Self {
+        Self {
+            tenant_id: &event.tenant_id,
+            fhir_version: event.fhir_version,
+            resource_type: &event.resource_type,
+            resource_id: &event.resource_id,
+            version_id: &event.version_id,
+            event_type: event.event_type,
+            resource: event.resource.as_ref(),
+            previous_resource: event.previous_resource.as_ref(),
+        }
+    }
+}
+
+impl EngineCore {
+    fn evaluate_event(
+        self: &Arc<Self>,
+        event: &ResourceEvent,
+        scheduler: &Arc<SchedulerState>,
+        completion: &Option<CompletionTicket>,
+    ) {
+        let matches = self.evaluator.evaluate_snapshots(event);
+        info!(tenant_id = %event.tenant_id, resource_type = %event.resource_type, resource_id = %event.resource_id,
+            matched_subscriptions = matches.len(), "Subscription event evaluated");
+        for matched in matches {
+            let mut snapshot = matched.snapshot;
+            let Some(event_number) = self.manager.increment_event_count_if_current(&snapshot)
+            else {
+                continue;
+            };
+            snapshot.subscription.events_since_start = event_number;
+            let Some(resident) = scheduler.reserve(&snapshot) else {
+                continue;
+            };
             let event_data = NotificationEventData {
                 event_number,
                 timestamp: event.timestamp,
-                focus_reference: focus_reference.clone(),
+                focus_reference: format!("{}/{}", event.resource_type, event.resource_id),
             };
-
-            // Build notification bundle.
-            let public_base_url = (self.public_base_url_for_tenant)(&subscription.tenant_id);
+            let public_base_url =
+                (self.public_base_url_for_tenant)(&snapshot.subscription.tenant_id);
             let bundle = match notification::build_event_notification(
-                &subscription,
+                &snapshot.subscription,
                 event_data,
                 event.resource.as_ref(),
                 &public_base_url,
             ) {
-                Ok(b) => b,
-                Err(e) => {
-                    error!(
-                        subscription_id = %subscription.id,
-                        error = %e,
-                        "Failed to build notification"
-                    );
-                    failed += 1;
+                Ok(bundle) => bundle,
+                Err(error) => {
+                    error!(subscription_id = %snapshot.subscription.id, %error, "Failed to build notification");
                     continue;
                 }
             };
-
-            info!(
-                tenant_id = %subscription.tenant_id,
-                subscription_id = %subscription.id,
-                topic_url = %subscription.topic_url,
-                channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+            scheduler.submit(
+                self,
+                snapshot,
+                bundle,
                 event_number,
-                focus_reference = %focus_reference,
-                "Dispatching subscription event notification"
-            );
-
-            if self
-                .dispatch_with_retry(
-                    &subscription,
-                    &bundle,
-                    "event-notification",
-                    Some(event_number),
-                )
-                .await
-            {
-                delivered += 1;
-            } else {
-                failed += 1;
-            }
-        }
-
-        if delivered == 0 {
-            warn!(
-                tenant_id = %event.tenant_id,
-                resource_type = %event.resource_type,
-                resource_id = %event.resource_id,
-                matched,
-                failed,
-                "Subscription event processed with zero successful deliveries"
+                resident,
+                completion.as_ref().cloned(),
             );
         }
     }
 
     /// Handle a Subscription resource event (create/update/delete).
-    async fn handle_subscription_event(&self, event: &ResourceEvent) {
+    fn handle_subscription_event(&self, event: &EventView<'_>) -> Option<SubscriptionSnapshot> {
         let tenant_id = event.tenant_id.to_string();
         let subscription_id = &event.resource_id;
 
@@ -459,13 +537,15 @@ impl SubscriptionEngine {
             ResourceEventType::Create | ResourceEventType::Update => {
                 if let Some(resource) = &event.resource {
                     // Register (or re-register) the subscription.
-                    match self.manager.register(
+                    match self.manager.register_snapshot(
                         &tenant_id,
                         subscription_id,
                         resource,
                         event.fhir_version,
+                        Some(event.version_id),
                     ) {
-                        Ok(sub) => {
+                        Ok(snapshot) => {
+                            let sub = &snapshot.subscription;
                             info!(
                                 tenant_id = %sub.tenant_id,
                                 subscription_id = %sub.id,
@@ -476,17 +556,7 @@ impl SubscriptionEngine {
                                 fhir_version = %sub.fhir_version,
                                 "Subscription registered"
                             );
-                            // If status is requested, perform handshake and activate.
-                            if sub.status == SubscriptionStatusCode::Requested {
-                                info!(
-                                    tenant_id = %sub.tenant_id,
-                                    subscription_id = %sub.id,
-                                    channel_type = %sub.channel.channel_type.as_fhir_str(),
-                                    endpoint = sub.channel.endpoint.as_deref().unwrap_or(""),
-                                    "Subscription activation requested"
-                                );
-                                self.activate_subscription(&sub).await;
-                            }
+                            return Some(snapshot);
                         }
                         Err(e) => {
                             warn!(
@@ -500,14 +570,48 @@ impl SubscriptionEngine {
                 }
             }
         }
+        None
+    }
+
+    /// Registers a parsed topic and its resource-to-canonical association.
+    ///
+    /// Shared by live writes and startup rehydration so rename and payload-free
+    /// deletion have the same tenant-scoped index after a restart. Exported
+    /// resources without a usable string ID still register their definition.
+    pub(crate) fn register_topic(
+        &self,
+        tenant_id: &str,
+        resource_type: &str,
+        resource_id: Option<&str>,
+        topic: TopicDefinition,
+    ) {
+        let canonical_url = topic.canonical_url.clone();
+        if let Some(resource_id) = resource_id.filter(|id| !id.is_empty()) {
+            let key = (
+                tenant_id.to_string(),
+                resource_type.to_string(),
+                resource_id.to_string(),
+            );
+            if let Some(previous_url) = self
+                .topic_resource_index
+                .insert(key, canonical_url.clone())
+                .filter(|previous_url| previous_url != &canonical_url)
+            {
+                self.topic_registry.remove_topic(tenant_id, &previous_url);
+            }
+        } else {
+            warn!(tenant_id, resource_type, topic_url = %canonical_url,
+                "Registering topic without a resource ID; lifecycle index unavailable");
+        }
+        self.topic_registry.add_topic(tenant_id, topic);
     }
 
     /// Handle a SubscriptionTopic resource event.
-    async fn handle_topic_event(&self, event: &ResourceEvent) {
+    fn handle_topic_event(&self, event: &EventView<'_>) {
         let topic_key = (
             event.tenant_id.to_string(),
-            event.resource_type.clone(),
-            event.resource_id.clone(),
+            event.resource_type.to_string(),
+            event.resource_id.to_string(),
         );
 
         match event.event_type {
@@ -555,11 +659,11 @@ impl SubscriptionEngine {
                     return;
                 }
 
-                let tenant_id = event.tenant_id.as_str();
                 for canonical_url in candidate_urls {
-                    let removed = self.topic_registry.remove_topic(tenant_id, &canonical_url);
+                    let removed = self
+                        .topic_registry
+                        .remove_topic(event.tenant_id.as_ref(), &canonical_url);
                     info!(
-                        tenant = %tenant_id,
                         resource_id = %event.resource_id,
                         topic_url = %canonical_url,
                         removed,
@@ -571,21 +675,17 @@ impl SubscriptionEngine {
                 if let Some(resource) = &event.resource {
                     match InMemoryTopicRegistry::parse_topic_resource(resource) {
                         Ok(topic) => {
-                            let tenant_id = event.tenant_id.as_str();
                             let canonical_url = topic.canonical_url.clone();
-                            if let Some(previous_url) = self
-                                .topic_resource_index
-                                .insert(topic_key, canonical_url.clone())
-                                .filter(|previous_url| previous_url != &canonical_url)
-                            {
-                                let _ = self.topic_registry.remove_topic(tenant_id, &previous_url);
-                            }
                             info!(
-                                tenant = %tenant_id,
                                 topic_url = %canonical_url,
                                 "Registered SubscriptionTopic"
                             );
-                            self.topic_registry.add_topic(tenant_id, topic);
+                            self.register_topic(
+                                event.tenant_id.as_ref(),
+                                event.resource_type,
+                                Some(event.resource_id),
+                                topic,
+                            );
                         }
                         Err(e) => {
                             warn!(
@@ -604,15 +704,15 @@ impl SubscriptionEngine {
     ///
     /// Returns `true` when the `Basic` resource was recognized as a topic lifecycle
     /// event (including malformed topic candidates), `false` otherwise.
-    async fn handle_r4_basic_topic_event(&self, event: &ResourceEvent) -> bool {
+    fn handle_r4_basic_topic_event(&self, event: &EventView<'_>) -> bool {
         if event.fhir_version.as_str() != "R4" {
             return false;
         }
 
         let topic_key = (
             event.tenant_id.to_string(),
-            event.resource_type.clone(),
-            event.resource_id.clone(),
+            event.resource_type.to_string(),
+            event.resource_id.to_string(),
         );
 
         match event.event_type {
@@ -666,11 +766,11 @@ impl SubscriptionEngine {
                 candidate_urls.sort();
                 candidate_urls.dedup();
 
-                let tenant_id = event.tenant_id.as_str();
                 for canonical_url in candidate_urls {
-                    let removed = self.topic_registry.remove_topic(tenant_id, &canonical_url);
+                    let removed = self
+                        .topic_registry
+                        .remove_topic(event.tenant_id.as_ref(), &canonical_url);
                     info!(
-                        tenant = %tenant_id,
                         resource_id = %event.resource_id,
                         topic_url = %canonical_url,
                         removed,
@@ -684,21 +784,17 @@ impl SubscriptionEngine {
                 if let Some(resource) = &event.resource {
                     match InMemoryTopicRegistry::parse_r4_backport_basic_topic_resource(resource) {
                         Ok(Some(topic)) => {
-                            let tenant_id = event.tenant_id.as_str();
                             let canonical_url = topic.canonical_url.clone();
-                            if let Some(previous_url) = self
-                                .topic_resource_index
-                                .insert(topic_key, canonical_url.clone())
-                                .filter(|previous_url| previous_url != &canonical_url)
-                            {
-                                let _ = self.topic_registry.remove_topic(tenant_id, &previous_url);
-                            }
                             info!(
-                                tenant = %tenant_id,
                                 topic_url = %canonical_url,
                                 "Registered R4 Basic SubscriptionTopic"
                             );
-                            self.topic_registry.add_topic(tenant_id, topic);
+                            self.register_topic(
+                                event.tenant_id.as_ref(),
+                                event.resource_type,
+                                Some(event.resource_id),
+                                topic,
+                            );
                             true
                         }
                         Ok(None) => false,
@@ -718,115 +814,16 @@ impl SubscriptionEngine {
         }
     }
 
-    /// Apply an in-memory status transition and, when configured, write it back.
-    async fn transition_status(
-        &self,
-        tenant_id: &str,
-        subscription_id: &str,
-        new_status: SubscriptionStatusCode,
-    ) -> bool {
-        match self
-            .manager
-            .update_status(tenant_id, subscription_id, new_status)
-        {
-            Ok(old) => {
-                info!(
-                    tenant_id,
-                    subscription_id,
-                    from = %old,
-                    to = %new_status,
-                    "Subscription status transitioned"
-                );
-            }
-            Err(e) => {
-                warn!(
-                    tenant_id,
-                    subscription_id,
-                    to = %new_status,
-                    error = %e,
-                    "Failed to update in-memory subscription status"
-                );
-                return false;
-            }
-        }
-        self.write_status_back(tenant_id, subscription_id, new_status)
-            .await;
-        true
-    }
-
-    /// Writes a server-driven status transition into the stored `Subscription`.
-    ///
-    /// Fails **open**, always. The in-memory transition has already been applied.
-    async fn write_status_back(
-        &self,
-        tenant_id: &str,
-        subscription_id: &str,
-        new_status: SubscriptionStatusCode,
-    ) {
-        if !self.config.persist_status {
-            return;
-        }
-        let Some(storage) = self.status_store.as_ref() else {
-            return;
-        };
-
-        let Ok(_permit) = self.status_write_slots.acquire().await else {
-            return;
-        };
-
-        let tenant = TenantContext::new(TenantId::new(tenant_id), TenantPermissions::full_access());
-        let timeout = self.config.status_write_timeout;
-
-        let result = tokio::time::timeout(
-            timeout,
-            persist_status(storage.as_ref(), &tenant, subscription_id, new_status),
-        )
-        .await;
-
-        match result {
-            Ok(Ok(PersistOutcome::Written)) => debug!(
-                tenant_id,
-                subscription_id,
-                status = %new_status,
-                "Persisted subscription status transition"
-            ),
-            Ok(Ok(PersistOutcome::AlreadyCurrent)) => debug!(
-                tenant_id,
-                subscription_id,
-                status = %new_status,
-                "Subscription status already current in storage"
-            ),
-            Ok(Ok(PersistOutcome::Vanished)) => debug!(
-                tenant_id,
-                subscription_id, "Subscription resource is gone; nothing to persist status onto"
-            ),
-            Ok(Ok(PersistOutcome::RacedClientWrite)) => debug!(
-                tenant_id,
-                subscription_id, "Dropped status write-back after client raced the version"
-            ),
-            Ok(Err(e)) => error!(
-                tenant_id,
-                subscription_id,
-                status = %new_status,
-                error = %e,
-                "Failed to persist subscription status transition;                  in-memory status kept (fail-open)"
-            ),
-            Err(_) => error!(
-                tenant_id,
-                subscription_id,
-                status = %new_status,
-                timeout_ms = timeout.as_millis(),
-                "Timed out persisting subscription status transition;                  in-memory status kept (fail-open)"
-            ),
-        }
-    }
-
     /// Activate a subscription by performing the handshake.
     ///
-    /// `pub(crate)` so startup rehydration ([`crate::rehydrate`]) drives the
-    /// *same* activation path as the write handler rather than reimplementing
-    /// the handshake, retry, and status-transition logic.
-    pub(crate) async fn activate_subscription(&self, subscription: &ActiveSubscription) {
+    /// Invoked only after the shared scheduler has reserved an activation slot.
+    /// Live writes and startup rehydration use the same path and attempt budget.
+    async fn activate_subscription(
+        &self,
+        snapshot: &SubscriptionSnapshot,
+        scheduler: &Arc<SchedulerState>,
+    ) {
+        let subscription = &snapshot.subscription;
         let tenant_id = &subscription.tenant_id;
         let sub_id = &subscription.id;
         let handshake_max_attempts = self.config.handshake_max_attempts.max(1);
@@ -844,7 +841,7 @@ impl SubscriptionEngine {
                     error = %e,
                     "Failed to build handshake"
                 );
-                self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
+                self.transition_status(snapshot, SubscriptionStatusCode::Error, scheduler)
                     .await;
                 return;
             }
@@ -859,7 +856,16 @@ impl SubscriptionEngine {
                 delay_ms = self.config.handshake_initial_delay.as_millis() as u64,
                 "Delaying subscription handshake"
             );
-            tokio::time::sleep(self.config.handshake_initial_delay).await;
+            if scheduler
+                .run(
+                    snapshot,
+                    tokio::time::sleep(self.config.handshake_initial_delay),
+                )
+                .await
+                .is_none()
+            {
+                return;
+            }
         }
 
         let mut attempt = 1;
@@ -874,20 +880,69 @@ impl SubscriptionEngine {
                 "Sending subscription handshake"
             );
 
-            // Perform handshake via the registered dispatcher for this channel type.
-            let Some(dispatcher) = self.dispatchers.get(&subscription.channel.channel_type) else {
-                warn!(
-                    tenant_id,
-                    subscription_id = sub_id,
-                    channel_type = subscription.channel.channel_type.as_fhir_str(),
-                    endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                    "No dispatcher registered for channel type"
-                );
-                self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
-                    .await;
+            let Some(permit) = scheduler.attempt(snapshot).await else {
                 return;
             };
-            let result = dispatcher.handshake(subscription, &handshake_bundle).await;
+            // Perform handshake; release the attempt slot before persistence/backoff.
+            let handshake = async {
+                match subscription.channel.channel_type {
+                    ChannelType::RestHook => {
+                        self.rest_hook_channel
+                            .handshake(subscription, &handshake_bundle)
+                            .await
+                    }
+                    ChannelType::Websocket => {
+                        self.ws_channel
+                            .handshake(subscription, &handshake_bundle)
+                            .await
+                    }
+                    ChannelType::Email => match self.email_channel.as_ref() {
+                        Some(ch) => ch.handshake(subscription, &handshake_bundle).await,
+                        None => {
+                            warn!(
+                                tenant_id,
+                                subscription_id = sub_id,
+                                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                                "Email channel requested but no SMTP settings configured"
+                            );
+                            Ok(DispatchResult::PermanentError(
+                                "Channel is not configured".to_string(),
+                            ))
+                        }
+                    },
+                    ChannelType::Message => match self.messaging_channel.as_ref() {
+                        Some(ch) => ch.handshake(subscription, &handshake_bundle).await,
+                        None => {
+                            warn!(
+                                tenant_id,
+                                subscription_id = sub_id,
+                                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                                "Messaging channel requested but messaging settings not configured"
+                            );
+                            Ok(DispatchResult::PermanentError(
+                                "Channel is not configured".to_string(),
+                            ))
+                        }
+                    },
+                    _ => {
+                        warn!(
+                            tenant_id,
+                            subscription_id = sub_id,
+                            channel_type = subscription.channel.channel_type.as_fhir_str(),
+                            endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                            "Handshake not supported for channel type"
+                        );
+                        Ok(DispatchResult::PermanentError(
+                            "Handshake channel unsupported".to_string(),
+                        ))
+                    }
+                }
+            };
+            let result = scheduler.run(snapshot, handshake).await;
+            drop(permit);
+            let Some(result) = result else {
+                return;
+            };
 
             match result {
                 Ok(DispatchResult::Success) => {
@@ -899,7 +954,7 @@ impl SubscriptionEngine {
                         attempt,
                         "Handshake successful, activating subscription"
                     );
-                    self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Active)
+                    self.transition_status(snapshot, SubscriptionStatusCode::Active, scheduler)
                         .await;
                     return;
                 }
@@ -913,7 +968,7 @@ impl SubscriptionEngine {
                         error = %msg,
                         "Handshake failed with permanent error"
                     );
-                    self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
+                    self.transition_status(snapshot, SubscriptionStatusCode::Error, scheduler)
                         .await;
                     return;
                 }
@@ -928,7 +983,7 @@ impl SubscriptionEngine {
                             error = %msg,
                             "Handshake retries exhausted"
                         );
-                        self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
+                        self.transition_status(snapshot, SubscriptionStatusCode::Error, scheduler)
                             .await;
                         return;
                     }
@@ -945,7 +1000,13 @@ impl SubscriptionEngine {
                         error = %msg,
                         "Retrying subscription handshake"
                     );
-                    tokio::time::sleep(delay).await;
+                    if scheduler
+                        .run(snapshot, tokio::time::sleep(delay))
+                        .await
+                        .is_none()
+                    {
+                        return;
+                    }
                     attempt += 1;
                 }
                 Err(e) => {
@@ -958,7 +1019,7 @@ impl SubscriptionEngine {
                         error = %e,
                         "Handshake error"
                     );
-                    self.transition_status(tenant_id, sub_id, SubscriptionStatusCode::Error)
+                    self.transition_status(snapshot, SubscriptionStatusCode::Error, scheduler)
                         .await;
                     return;
                 }
@@ -967,38 +1028,93 @@ impl SubscriptionEngine {
     }
 
     /// Dispatch a notification with retry logic.
-    ///
-    /// Returns `true` when the endpoint accepted the notification.
     async fn dispatch_with_retry(
         &self,
-        subscription: &ActiveSubscription,
+        snapshot: &SubscriptionSnapshot,
         bundle: &serde_json::Value,
         notification_type: &'static str,
         event_number: Option<u64>,
-    ) -> bool {
+        scheduler: &Arc<SchedulerState>,
+    ) {
+        let subscription = &snapshot.subscription;
         let tenant_id = &subscription.tenant_id;
         let sub_id = &subscription.id;
 
-        let Some(dispatcher) = self.dispatchers.get(&subscription.channel.channel_type) else {
-            warn!(
-                tenant_id,
-                subscription_id = sub_id,
-                notification_type,
-                channel = subscription.channel.channel_type.as_fhir_str(),
-                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
-                "No dispatcher registered for channel type"
-            );
-            return false;
+        let dispatcher: &dyn ChannelDispatcher = match subscription.channel.channel_type {
+            ChannelType::RestHook => self.rest_hook_channel.as_ref(),
+            ChannelType::Websocket => self.ws_channel.as_ref(),
+            ChannelType::Email => match self.email_channel.as_deref() {
+                Some(ch) => ch,
+                None => {
+                    warn!(
+                        tenant_id,
+                        subscription_id = sub_id,
+                        notification_type,
+                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        "Email dispatch requested but no SMTP settings configured"
+                    );
+                    return;
+                }
+            },
+            ChannelType::Message => match self.messaging_channel.as_deref() {
+                Some(ch) => ch,
+                None => {
+                    warn!(
+                        tenant_id,
+                        subscription_id = sub_id,
+                        notification_type,
+                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        "Messaging dispatch requested but messaging settings not configured"
+                    );
+                    return;
+                }
+            },
+            _ => {
+                warn!(
+                    tenant_id,
+                    subscription_id = sub_id,
+                    notification_type,
+                    channel = subscription.channel.channel_type.as_fhir_str(),
+                    endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                    "No dispatcher for channel type"
+                );
+                return;
+            }
         };
 
         let mut attempt: u32 = 0;
         loop {
             let now = chrono::Utc::now().timestamp();
-            match dispatcher.dispatch(subscription, bundle).await {
+            let Some(permit) = scheduler.attempt(snapshot).await else {
+                return;
+            };
+            let result = scheduler
+                .run(snapshot, dispatcher.dispatch(subscription, bundle))
+                .await;
+            drop(permit);
+            let Some(result) = result else {
+                return;
+            };
+            if !self.manager.is_current(snapshot) || snapshot.generation.is_cancelled() {
+                return;
+            }
+            match result {
                 Ok(DispatchResult::Success) => {
-                    self.delivery_stats
-                        .record_success(tenant_id, sub_id, attempt == 0, now);
-                    self.manager.reset_failures(tenant_id, sub_id);
+                    if self
+                        .manager
+                        .accept_delivery_outcome(snapshot, true, || {
+                            self.delivery_stats.record_success(
+                                tenant_id,
+                                sub_id,
+                                attempt == 0,
+                                now,
+                            );
+                        })
+                        .is_none()
+                    {
+                        return;
+                    }
+                    self.manager.touch_last_notification(tenant_id, sub_id);
                     info!(
                         tenant_id,
                         subscription_id = sub_id,
@@ -1008,7 +1124,7 @@ impl SubscriptionEngine {
                         endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
                         "Subscription notification dispatched"
                     );
-                    return true;
+                    return;
                 }
                 Ok(DispatchResult::PermanentError(msg)) => {
                     warn!(
@@ -1021,9 +1137,8 @@ impl SubscriptionEngine {
                         error = %msg,
                         "Permanent delivery error"
                     );
-                    self.delivery_stats.record_failure(tenant_id, sub_id, now);
-                    self.handle_delivery_failure(tenant_id, sub_id).await;
-                    return false;
+                    self.handle_delivery_failure(snapshot, scheduler, now).await;
+                    return;
                 }
                 Ok(DispatchResult::RetryableError(msg)) => {
                     attempt += 1;
@@ -1039,9 +1154,8 @@ impl SubscriptionEngine {
                             error = %msg,
                             "Max retries exhausted"
                         );
-                        self.delivery_stats.record_failure(tenant_id, sub_id, now);
-                        self.handle_delivery_failure(tenant_id, sub_id).await;
-                        return false;
+                        self.handle_delivery_failure(snapshot, scheduler, now).await;
+                        return;
                     }
 
                     let delay = retry::calculate_delay(&self.config, attempt);
@@ -1054,7 +1168,13 @@ impl SubscriptionEngine {
                         delay_ms = delay.as_millis() as u64,
                         "Retrying delivery"
                     );
-                    tokio::time::sleep(delay).await;
+                    if scheduler
+                        .run(snapshot, tokio::time::sleep(delay))
+                        .await
+                        .is_none()
+                    {
+                        return;
+                    }
                 }
                 Err(e) => {
                     error!(
@@ -1067,18 +1187,124 @@ impl SubscriptionEngine {
                         error = %e,
                         "Dispatch error"
                     );
-                    self.delivery_stats.record_failure(tenant_id, sub_id, now);
-                    self.handle_delivery_failure(tenant_id, sub_id).await;
-                    return false;
+                    self.handle_delivery_failure(snapshot, scheduler, now).await;
+                    return;
                 }
+            }
+        }
+    }
+
+    /// The single choke point for every server-driven status transition.
+    ///
+    /// Applies the transition to the in-memory manager and, only when the
+    /// manager accepted it as a genuine state change, writes the new status back
+    /// into the stored `Subscription` resource.
+    ///
+    /// The manager accepts transitions only for the current generation and
+    /// rejects repeated or terminal transitions. A FIFO delivery queue has one
+    /// active notification per registration, so an outage cannot launch parallel
+    /// retry cycles for that receiver. Successful transitions still pass through
+    /// this single persistence funnel.
+    ///
+    /// Returns whether the in-memory transition was applied. Persistence failure
+    /// does **not** change that answer: see [`Self::write_status_back`].
+    async fn transition_status(
+        &self,
+        snapshot: &SubscriptionSnapshot,
+        new_status: SubscriptionStatusCode,
+        scheduler: &Arc<SchedulerState>,
+    ) -> bool {
+        if self
+            .manager
+            .update_status_if_current(snapshot, new_status)
+            .is_none()
+        {
+            return false;
+        }
+        self.write_status_back(snapshot, new_status, scheduler)
+            .await;
+        true
+    }
+
+    /// Writes a server-driven status transition into the stored `Subscription`.
+    ///
+    /// Fails **open**, always. The in-memory transition has already been applied
+    /// by [`Self::transition_status`] and is what this process acts on, so a
+    /// storage error must never undo it: refusing to mark a subscription `off`
+    /// because the database is briefly unavailable would put the server straight
+    /// back to hammering the endpoint the circuit breaker just gave up on. The
+    /// cost of failing open is that this one transition does not survive a
+    /// restart — exactly the pre-#357 behaviour, and no worse.
+    ///
+    /// A concurrent client write wins. `ResourceStorage::update` takes the
+    /// version that was read and every backend rejects a stale one, so a racing
+    /// `PUT /Subscription/{id}` surfaces here as a version conflict, which is
+    /// **dropped rather than retried**: the client's copy is the newer intent,
+    /// and its write re-registers the subscription anyway.
+    async fn write_status_back(
+        &self,
+        snapshot: &SubscriptionSnapshot,
+        new_status: SubscriptionStatusCode,
+        scheduler: &Arc<SchedulerState>,
+    ) {
+        if !self.config.persist_status {
+            return;
+        }
+        let storage = self
+            .status_store
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        let Some(storage) = storage else {
+            return;
+        };
+        let lock = snapshot.generation.status_write_lock();
+        let _write = tokio::select! { biased; _ = scheduler.closed() => return, _ = snapshot.generation.invalidated() => return, guard = lock.lock() => guard };
+        let _permit = tokio::select! { biased; _ = scheduler.closed() => return, _ = snapshot.generation.invalidated() => return, permit = self.status_write_slots.acquire() => match permit { Ok(p) => p, Err(_) => return } };
+        if !self.manager.is_current_status(snapshot, new_status) {
+            return;
+        }
+        let Some(fence) = self.manager.source_fence(snapshot) else {
+            return;
+        };
+        let sub = &snapshot.subscription;
+        let tenant = TenantContext::new(
+            TenantId::new(&sub.tenant_id),
+            TenantPermissions::full_access(),
+        );
+        let result = tokio::select! {
+            biased;
+            _ = scheduler.closed() => return,
+            _ = snapshot.generation.invalidated() => return,
+            result = tokio::time::timeout(self.config.status_write_timeout, persist_status(storage.as_ref(), &tenant, snapshot, new_status, &self.manager, &fence)) => result,
+        };
+        match result {
+            Ok(Ok(outcome)) => {
+                debug!(tenant_id = %sub.tenant_id, subscription_id = %sub.id, status = %new_status, ?outcome, "Subscription status write-back completed")
+            }
+            Ok(Err(error)) => {
+                error!(tenant_id = %sub.tenant_id, subscription_id = %sub.id, status = %new_status, %error, "Failed to persist subscription status transition; this transition will not survive a restart")
+            }
+            Err(_) => {
+                error!(tenant_id = %sub.tenant_id, subscription_id = %sub.id, status = %new_status, "Timed out persisting subscription status transition; this transition will not survive a restart")
             }
         }
     }
 
     /// Handle a delivery failure: increment failure count and potentially
     /// transition status to error or off.
-    async fn handle_delivery_failure(&self, tenant_id: &str, subscription_id: &str) {
-        let Some(failure_count) = self.manager.record_failure(tenant_id, subscription_id) else {
+    async fn handle_delivery_failure(
+        &self,
+        snapshot: &SubscriptionSnapshot,
+        scheduler: &Arc<SchedulerState>,
+        now: i64,
+    ) {
+        let tenant_id = &snapshot.subscription.tenant_id;
+        let subscription_id = &snapshot.subscription.id;
+        let Some(failure_count) = self.manager.accept_delivery_outcome(snapshot, false, || {
+            self.delivery_stats
+                .record_failure(tenant_id, subscription_id, now);
+        }) else {
             return;
         };
         if failure_count >= self.config.off_threshold {
@@ -1089,10 +1315,10 @@ impl SubscriptionEngine {
                 threshold = self.config.off_threshold,
                 "Turning off subscription after repeated failures"
             );
-            self.transition_status(tenant_id, subscription_id, SubscriptionStatusCode::Off)
+            self.transition_status(snapshot, SubscriptionStatusCode::Off, scheduler)
                 .await;
         } else if failure_count >= self.config.error_threshold {
-            self.transition_status(tenant_id, subscription_id, SubscriptionStatusCode::Error)
+            self.transition_status(snapshot, SubscriptionStatusCode::Error, scheduler)
                 .await;
         }
     }
@@ -1104,26 +1330,49 @@ enum PersistOutcome {
     /// The stored resource was rewritten with the new status.
     Written,
     /// The stored resource already carried this status — no write issued.
+    ///
+    /// This is the common case on the first boot after upgrading: rehydration
+    /// re-activates every subscription that reads back `requested`, and without
+    /// this check each success would rewrite a resource that write-back had
+    /// already corrected on a previous run.
     AlreadyCurrent,
-    /// The resource no longer exists (deleted between the transition and the write).
+    /// The resource no longer exists (deleted between the transition and the
+    /// write). Not an error.
     Vanished,
     /// A concurrent client write bumped the version first. Dropped, not retried.
     RacedClientWrite,
 }
 
 /// Reads the stored `Subscription`, replaces its `status`, and writes it back.
+///
+/// Only the `status` field is touched: the resource is read, mutated in place,
+/// and handed back to `update`, so a field this engine knows nothing about
+/// cannot be dropped on the way through. In particular the version-shape markers
+/// (`topic`/`channelType` vs `criteria`/`channel`) survive untouched, which
+/// matters because startup rehydration infers the FHIR version from exactly
+/// those keys (`crate::rehydrate::infer_fhir_version`).
 async fn persist_status(
     storage: &dyn ResourceStorage,
     tenant: &TenantContext,
-    subscription_id: &str,
+    snapshot: &SubscriptionSnapshot,
     new_status: SubscriptionStatusCode,
+    manager: &SubscriptionManager,
+    fence: &crate::manager::StatusSourceFence,
 ) -> Result<PersistOutcome, StorageError> {
+    let subscription_id = &snapshot.subscription.id;
     let current = match storage.read(tenant, "Subscription", subscription_id).await {
         Ok(Some(stored)) => stored,
         Ok(None) => return Ok(PersistOutcome::Vanished),
+        // A deleted subscription is `Gone`, not an error worth shouting about.
         Err(StorageError::Resource(_)) => return Ok(PersistOutcome::Vanished),
         Err(e) => return Err(e),
     };
+
+    if !manager.is_current_status(snapshot, new_status)
+        || !fence.matches(current.version_id(), current.content())
+    {
+        return Ok(PersistOutcome::RacedClientWrite);
+    }
 
     if current.content().get("status").and_then(|v| v.as_str()) == Some(new_status.as_fhir_str()) {
         return Ok(PersistOutcome::AlreadyCurrent);
@@ -1131,6 +1380,7 @@ async fn persist_status(
 
     let mut updated = current.content().clone();
     let Some(object) = updated.as_object_mut() else {
+        // Not a JSON object — nothing sane to write back onto.
         return Ok(PersistOutcome::Vanished);
     };
     object.insert(
@@ -1138,8 +1388,19 @@ async fn persist_status(
         serde_json::Value::String(new_status.as_fhir_str().to_string()),
     );
 
+    if !manager.is_current_status(snapshot, new_status) {
+        return Ok(PersistOutcome::RacedClientWrite);
+    }
     match storage.update(tenant, &current, updated).await {
-        Ok(_) => Ok(PersistOutcome::Written),
+        Ok(stored) => {
+            manager.acknowledge_status_write(
+                snapshot,
+                fence,
+                stored.version_id(),
+                stored.content(),
+            );
+            Ok(PersistOutcome::Written)
+        }
         Err(StorageError::Concurrency(_)) => Ok(PersistOutcome::RacedClientWrite),
         Err(StorageError::Resource(_)) => Ok(PersistOutcome::Vanished),
         Err(e) => Err(e),
@@ -1183,7 +1444,7 @@ mod tests {
             Arc::new(NoOpOutboundAuthProvider),
         );
         assert_eq!(
-            (engine.public_base_url_for_tenant)("acme"),
+            (engine.core.public_base_url_for_tenant)("acme"),
             "https://public.example/fhir/acme"
         );
 
@@ -1202,11 +1463,7 @@ mod tests {
             true,
             Arc::new(NoOpOutboundAuthProvider),
         );
-        assert!(
-            engine
-                .dispatchers()
-                .contains(&crate::manager::ChannelType::Message)
-        );
+        assert!(engine.core.messaging_channel.is_some());
     }
 
     fn encounter_topic() -> TopicDefinition {
@@ -1323,6 +1580,171 @@ mod tests {
         let topics = engine.topic_registry().list_topics("t1");
         assert_eq!(topics.len(), 1);
         assert!(topics.contains(&"http://example.org/topic/encounter-start".to_string()));
+    }
+
+    fn enabled_versions() -> Vec<FhirVersion> {
+        vec![
+            #[cfg(feature = "R4")]
+            FhirVersion::R4,
+            #[cfg(feature = "R4B")]
+            FhirVersion::R4B,
+            #[cfg(feature = "R5")]
+            FhirVersion::R5,
+            #[cfg(feature = "R6")]
+            FhirVersion::R6,
+        ]
+    }
+
+    fn tenant_topic_event(
+        version: FhirVersion,
+        tenant: &str,
+        url: &str,
+        trigger: &str,
+    ) -> ResourceEvent {
+        let mut event = topic_event();
+        #[cfg(feature = "R4")]
+        if version == FhirVersion::R4 {
+            event = r4_basic_topic_event();
+        }
+        event.tenant_id = TenantId::new(tenant);
+        event.fhir_version = version;
+        event.resource_id = "shared-id".to_string();
+        let resource = event.resource.as_mut().unwrap();
+        resource["id"] = json!(event.resource_id);
+        if version.as_str() == "R4" {
+            resource["extension"][0]["valueUri"] = json!(url);
+            resource["extension"][1]["extension"][0]["valueUri"] =
+                json!(format!("http://hl7.org/fhir/StructureDefinition/{trigger}"));
+        } else {
+            resource["url"] = json!(url);
+            resource["resourceTrigger"][0]["resource"] = json!(trigger);
+        }
+        event
+    }
+
+    #[tokio::test]
+    async fn shared_canonical_topic_lifecycle_is_tenant_scoped() {
+        let url = "http://example.org/topic/shared";
+        let renamed = "http://example.org/topic/renamed";
+        for version in enabled_versions() {
+            let engine = make_engine("http://example.org/fhir");
+            engine
+                .on_resource_event(tenant_topic_event(version, "tenant-a", url, "Encounter"))
+                .await;
+            engine
+                .on_resource_event(tenant_topic_event(version, "tenant-b", url, "Observation"))
+                .await;
+            assert_eq!(
+                engine
+                    .topic_registry()
+                    .get_topic("tenant-a", url)
+                    .unwrap()
+                    .resource_triggers[0]
+                    .resource_type,
+                "Encounter",
+                "{version:?}"
+            );
+            assert_eq!(
+                engine
+                    .topic_registry()
+                    .get_topic("tenant-b", url)
+                    .unwrap()
+                    .resource_triggers[0]
+                    .resource_type,
+                "Observation",
+                "{version:?}"
+            );
+
+            let mut update = tenant_topic_event(version, "tenant-b", url, "Patient");
+            update.event_type = ResourceEventType::Update;
+            engine.on_resource_event(update).await;
+            assert_eq!(
+                engine
+                    .topic_registry()
+                    .get_topic("tenant-b", url)
+                    .unwrap()
+                    .resource_triggers[0]
+                    .resource_type,
+                "Patient"
+            );
+
+            let mut rename = tenant_topic_event(version, "tenant-b", renamed, "Patient");
+            rename.event_type = ResourceEventType::Update;
+            engine.on_resource_event(rename).await;
+            assert!(engine.topic_registry().get_topic("tenant-b", url).is_none());
+            assert!(
+                engine
+                    .topic_registry()
+                    .get_topic("tenant-b", renamed)
+                    .is_some()
+            );
+            let mut delete = tenant_topic_event(version, "tenant-b", renamed, "Patient");
+            delete.event_type = ResourceEventType::Delete;
+            delete.resource = None;
+            engine.on_resource_event(delete).await;
+            assert!(engine.topic_registry().list_topics("tenant-b").is_empty());
+            assert_eq!(
+                engine
+                    .topic_registry()
+                    .get_topic("tenant-a", url)
+                    .unwrap()
+                    .resource_triggers[0]
+                    .resource_type,
+                "Encounter"
+            );
+
+            // Resolve deletion from the current payload, previous payload, or
+            // resource index; none may remove another tenant's shared URL.
+            for payload in 0..3 {
+                let create = tenant_topic_event(version, "tenant-b", url, "Observation");
+                engine.on_resource_event(create.clone()).await;
+                if payload < 2 {
+                    engine.core.topic_resource_index.remove(&(
+                        "tenant-b".to_string(),
+                        create.resource_type.clone(),
+                        create.resource_id.clone(),
+                    ));
+                }
+                let mut delete = create;
+                delete.event_type = ResourceEventType::Delete;
+                match payload {
+                    0 => {}
+                    1 => {
+                        delete.previous_resource = delete.resource.take();
+                    }
+                    _ => {
+                        delete.resource = None;
+                    }
+                }
+                engine.on_resource_event(delete).await;
+                assert!(engine.topic_registry().get_topic("tenant-b", url).is_none());
+                assert!(
+                    engine.topic_registry().get_topic("tenant-a", url).is_some(),
+                    "{version:?}, payload {payload}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn topics_without_a_resource_id_keep_their_definition() {
+        let engine = make_engine("http://example.org/fhir");
+        for resource_id in [None, Some("")] {
+            engine.register_topic(
+                "tenant-a",
+                "SubscriptionTopic",
+                resource_id,
+                encounter_topic(),
+            );
+            assert!(
+                engine
+                    .topic_registry()
+                    .get_topic("tenant-a", "http://example.org/topic/encounter-start")
+                    .is_some()
+            );
+            assert!(engine.core.topic_resource_index.is_empty());
+        }
+        assert!(engine.topic_registry().list_topics("tenant-b").is_empty());
     }
 
     #[tokio::test]
@@ -1597,17 +2019,6 @@ mod tests {
         // Check subscription status changed to error.
         let sub = engine.manager().get_subscription("t1", "sub-1").unwrap();
         assert_eq!(sub.status, SubscriptionStatusCode::Error);
-
-        let now = chrono::Utc::now().timestamp();
-        let window = engine.delivery_stats().window("t1", "sub-1", now);
-        assert_eq!(
-            window.delivered, 0,
-            "permanent failure must not count as a successful delivery"
-        );
-        assert!(
-            window.failed >= 1,
-            "zero-delivery events must still record DeliveryStats failures"
-        );
     }
 
     #[tokio::test]

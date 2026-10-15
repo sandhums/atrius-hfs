@@ -3724,7 +3724,7 @@ fn call_function(
         }
         "distinct" => {
             // Delegate to the dedicated function in distinct_functions.rs
-            crate::distinct_functions::distinct_function(invocation_base)
+            crate::distinct_functions::distinct_function(invocation_base, context)
         }
         "skip" => {
             // Validate argument count
@@ -8645,7 +8645,7 @@ fn compare_inequality(
 
 /// Compares two values for equality - Returns Result now
 #[allow(clippy::only_used_in_recursion)]
-fn compare_equality(
+pub(crate) fn compare_equality(
     left: &EvaluationResult,
     op: &str,
     right: &EvaluationResult,

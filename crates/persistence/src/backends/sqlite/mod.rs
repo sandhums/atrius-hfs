@@ -80,6 +80,8 @@ mod subscription_outbox;
 mod sync_failures;
 mod transaction;
 mod user_settings;
+mod wal;
 
 pub use backend::{SqliteBackend, SqliteBackendConfig};
 pub use subscription_outbox::SqliteSubscriptionOutbox;
+pub use wal::WalMaintenance;
