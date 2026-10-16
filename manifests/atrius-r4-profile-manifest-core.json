@@ -9,6 +9,7 @@
     "atrius-ig-package/StructureDefinition-atrius-consent-encounter.json",
     "atrius-ig-package/StructureDefinition-atrius-credit-limit.json",
     "atrius-ig-package/StructureDefinition-atrius-dosage-frequency.json",
+    "atrius-ig-package/StructureDefinition-atrius-esign-signer-certificate.json",
     "atrius-ig-package/StructureDefinition-atrius-icd11-stem.json",
     "atrius-ig-package/StructureDefinition-atrius-idsp-reportable.json",
     "atrius-ig-package/StructureDefinition-atrius-in-account.json",
