@@ -4198,6 +4198,34 @@ pub(crate) async fn process_vs_validate_code<B: TerminologyBackend>(
     result
 }
 
+/// `url=http://x|1.0` becomes `url=http://x` plus `valueSetVersion=1.0`, the
+/// form every lookup below resolves. Profile bindings carry versioned
+/// canonicals (`...|4.0.1`), and validators pass them through unchanged. An
+/// explicit `valueSetVersion` wins and leaves the parameters untouched.
+fn split_versioned_vs_url(mut params: Vec<Value>) -> Vec<Value> {
+    if find_str_param(&params, "valueSetVersion").is_some() {
+        return params;
+    }
+    let Some(position) = params
+        .iter()
+        .position(|p| p.get("name").and_then(Value::as_str) == Some("url"))
+    else {
+        return params;
+    };
+    let Some(url) = find_str_param(&params, "url") else {
+        return params;
+    };
+    let Some((bare, version)) = url.split_once('|') else {
+        return params;
+    };
+    if version.is_empty() {
+        return params;
+    }
+    params[position] = serde_json::json!({ "name": "url", "valueUri": bare });
+    params.push(serde_json::json!({ "name": "valueSetVersion", "valueString": version }));
+    params
+}
+
 /// Builds the `result=false` / `Unable_to_resolve_value_Set_` response for an
 /// inline ValueSet whose `compose.include[].valueSet[]` names an import that
 /// is neither stored nor supplied as a `tx-resource`.
@@ -4269,7 +4297,7 @@ async fn process_vs_validate_code_inner<B: TerminologyBackend>(
     // A VCL implicit-ValueSet `url` is rewritten to that inline form here
     // (after the handler cache key, which uses the original VCL URL).
     let is_vcl = find_str_param(&params, "url").is_some_and(|u| crate::vcl::is_vcl_url(&u));
-    let params = crate::vcl::rewrite_vcl_params(params)?;
+    let params = split_versioned_vs_url(crate::vcl::rewrite_vcl_params(params)?);
     if find_str_param(&params, "url").is_none() {
         if let Some(vs_resource) = find_resource_param(&params, "valueSet") {
             if is_vcl {
