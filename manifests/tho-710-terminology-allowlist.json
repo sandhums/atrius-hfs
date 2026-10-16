@@ -1,5 +1,6 @@
 {
   "package": "hl7.terminology.r4#7.1.0",
+  "core_only_from": "hl7.fhir.r4.core#4.0.1",
   "code_systems": [
     {
       "url": "http://terminology.hl7.org/CodeSystem/ADAToothSurfaceCodes",
@@ -56,6 +57,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/adverse-event-causality-method",
       "version": "2.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/adverse-event-outcome",
+      "version": "4.0.1"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/adverse-event-seriousness",
@@ -474,6 +479,10 @@
       "version": "2.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/effect-estimate-type",
+      "version": "4.0.1"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/encounter-special-arrangements",
       "version": "1.0.1"
     },
@@ -504,6 +513,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/evidence-quality",
       "version": "1.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/evidence-variant-state",
+      "version": "4.0.1"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/ex-USCLS",
@@ -766,12 +779,32 @@
       "version": "5.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/media-modality",
+      "version": "4.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/media-type",
+      "version": "4.0.1"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/medical-management-type",
       "version": "1.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/medication-admin-category",
+      "version": "4.0.1"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/medication-admin-location",
       "version": "1.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/medication-admin-status",
+      "version": "4.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/medication-statement-category",
+      "version": "4.0.1"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/medication-usage-admin-location",
@@ -780,6 +813,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/medicationdispense-performer-function",
       "version": "1.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/medicationdispense-status",
+      "version": "4.0.1"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/medicationknowledge-characteristic",
@@ -812,6 +849,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/message-reasons-encounter",
       "version": "1.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/message-transport",
+      "version": "4.0.1"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/missingtoothreason",
@@ -904,6 +945,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/practitioner-role",
       "version": "1.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/precision-estimate-type",
+      "version": "4.0.1"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/primary-source-type",
@@ -1008,6 +1053,14 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/resource-type-link",
       "version": "2.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/restful-security-service",
+      "version": "4.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/risk-estimate-type",
+      "version": "4.0.1"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/risk-probability",
@@ -1170,6 +1223,14 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0006|2.1",
+      "version": "0006"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0006|2.4",
+      "version": "0006"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0007",
       "version": "3.0.0"
     },
@@ -1190,6 +1251,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0023",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0027",
       "version": "3.0.0"
     },
@@ -1204,6 +1269,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0038",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0043",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0048",
@@ -1248,6 +1317,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0076",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0078",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0080",
@@ -1362,12 +1435,20 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0136",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0137",
       "version": "3.0.0"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0140",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0141",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0142",
@@ -1400,6 +1481,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0150",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0153",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0155",
@@ -1610,8 +1695,16 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0227",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0228",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0229",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0230",
@@ -1708,6 +1801,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0258",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0259",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0260",
@@ -1814,6 +1911,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0292",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0294",
       "version": "3.0.0"
     },
@@ -1910,12 +2011,24 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0338",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0339",
       "version": "3.0.0"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0344",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0350",
+      "version": "2.9"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0351",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0353",
@@ -1944,6 +2057,18 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0360",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0360|2.3.1",
+      "version": "0360"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0360|2.7",
+      "version": "0360"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0363",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0364",
@@ -2026,6 +2151,14 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0391|2.4",
+      "version": "0391"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0391|2.6",
+      "version": "0391"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0392",
       "version": "3.0.0"
     },
@@ -2076,6 +2209,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0409",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0411",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0415",
@@ -2194,8 +2331,24 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0455",
+      "version": "2.9"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0456",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0457",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0459",
+      "version": "2.9"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0460",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0465",
@@ -2578,6 +2731,14 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0719",
+      "version": "2.9"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0725",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0728",
       "version": "3.0.0"
     },
@@ -2668,6 +2829,10 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0894",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v2-0895",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v2-0904",
@@ -3538,12 +3703,20 @@
       "version": "4.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/CodeSystem/v3-policyHolderRole",
+      "version": "2018-08-12"
+    },
+    {
       "url": "http://terminology.hl7.org/CodeSystem/v3-styleType",
       "version": "4.0.0"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/v3-substanceAdminSubstitution",
       "version": "4.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/CodeSystem/v3-triggerEventID",
+      "version": "2018-08-12"
     },
     {
       "url": "http://terminology.hl7.org/CodeSystem/validation-process",
@@ -3576,6 +3749,14 @@
     {
       "url": "http://terminology.hl7.org/CodeSystem/virtual-healthcare-delivery-method",
       "version": "1.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/fhir/CodeSystem/medicationdispense-category",
+      "version": "4.0.1"
+    },
+    {
+      "url": "http://terminology.hl7.org/fhir/CodeSystem/medicationdispense-status-reason",
+      "version": "4.0.1"
     },
     {
       "url": "http://www.ada.org/snodent",
@@ -4788,6 +4969,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0023",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v2-0027",
       "version": "3.0.0"
     },
@@ -4802,6 +4987,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0038",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0043",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0048",
@@ -4846,6 +5035,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0076",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0078",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0080",
@@ -4976,6 +5169,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0141",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v2-0142",
       "version": "3.0.0"
     },
@@ -5006,6 +5203,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0150",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0153",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0155",
@@ -5224,6 +5425,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0229",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v2-0230",
       "version": "3.0.0"
     },
@@ -5318,6 +5523,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0258",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0259",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0260",
@@ -5418,6 +5627,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0290",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0291",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0292",
@@ -5568,6 +5781,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0363",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v2-0364",
       "version": "3.0.0"
     },
@@ -5700,6 +5917,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0411",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v2-0415",
       "version": "3.0.0"
     },
@@ -5816,12 +6037,24 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0455",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v2-0456",
       "version": "3.0.0"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0457",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0459",
+      "version": "2.9"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0460",
+      "version": "2.9"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0465",
@@ -6288,6 +6521,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v2-0834",
+      "version": "2.9"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v2-0868",
       "version": "3.0.0"
     },
@@ -6482,6 +6719,30 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-0971",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-2.1-0006",
+      "version": "0006"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-2.3.1-0360",
+      "version": "0360"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-2.4-0006",
+      "version": "0006"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-2.4-0391",
+      "version": "0391"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-2.6-0391",
+      "version": "0391"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v2-2.7-0360",
+      "version": "0360"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v2-4000",
@@ -8680,6 +8941,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v3-ConfidentialityClassification",
+      "version": "2014-03-26"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v3-ConfidentialityModifiers",
       "version": "3.0.0"
     },
@@ -8842,6 +9107,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-Dakotan",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-DataOperation",
+      "version": "2018-08-12"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-DecisionObservationMethod",
@@ -9482,6 +9751,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-HL7CalendarCycle",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-HL7ContextConductionStyle",
+      "version": "2018-08-12"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-HL7FormatCodes",
@@ -10572,6 +10845,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v3-ObservationValue",
+      "version": "2018-08-12"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v3-OilDrugForm",
       "version": "3.0.0"
     },
@@ -11210,6 +11487,10 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-QualitySpecimenRoleType",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-QueryParameterValue",
+      "version": "2018-08-12"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-QueryPriority",
@@ -12672,6 +12953,10 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v3-SpecimenType",
+      "version": "2018-08-12"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v3-SponsorParticipationFunction",
       "version": "3.0.0"
     },
@@ -13164,6 +13449,46 @@
       "version": "3.0.0"
     },
     {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7ApprovalStatus",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7CMETAttribution",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7ITSType",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7ITSVersionCode",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7PublishingDomain",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7PublishingSection",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7PublishingSubSection",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7Realm",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7V3Conformance",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-hl7VoteResolution",
+      "version": "2018-08-12"
+    },
+    {
       "url": "http://terminology.hl7.org/ValueSet/v3-immunizationForecastDate",
       "version": "3.0.0"
     },
@@ -13174,6 +13499,26 @@
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-materialForm",
       "version": "3.0.0"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-orderableDrugForm",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-policyHolderRole",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-styleType",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-substanceAdminSubstitution",
+      "version": "2018-08-12"
+    },
+    {
+      "url": "http://terminology.hl7.org/ValueSet/v3-triggerEventID",
+      "version": "2018-08-12"
     },
     {
       "url": "http://terminology.hl7.org/ValueSet/v3-tst0272",

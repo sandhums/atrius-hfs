@@ -6,6 +6,12 @@ are removed using an allowlist extracted from the 7.1.0 NPM package. Individual
 CodeSystem/ValueSet resources keep their canonical version (e.g. v3-ActCode 10.0.0),
 not the package version string.
 
+FHIR R4 core 4.0.1 also defines terminology.hl7.org resources whose URL THO
+dropped (medication-admin-status, medicationdispense-status,
+v3-ConfidentialityClassification, older v2 tables). R4 profiles bind them, and
+an HTS without them answers `result=false` for every code, so they stay on the
+allowlist and are imported from hl7.fhir.r4.core#4.0.1 alongside THO.
+
 Usage:
   # Dry run (default)
   python3 scripts/sync-tho-710-terminology.py
@@ -25,6 +31,7 @@ import sqlite3
 import subprocess
 import sys
 import tarfile
+import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -32,38 +39,67 @@ THO_PACKAGE_ID = "hl7.terminology.r4"
 THO_PACKAGE_VERSION = "7.1.0"
 THO_DOWNLOAD_URL = f"https://packages.fhir.org/{THO_PACKAGE_ID}/{THO_PACKAGE_VERSION}"
 THO_PREFIX = "http://terminology.hl7.org/"
+CORE_PACKAGE_ID = "hl7.fhir.r4.core"
+CORE_PACKAGE_VERSION = "4.0.1"
+CORE_DOWNLOAD_URL = f"https://packages.fhir.org/{CORE_PACKAGE_ID}/{CORE_PACKAGE_VERSION}"
 
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def terminology_resources(tgz: Path):
+    """Yield (archive member name, resource) for every CodeSystem and ValueSet."""
+    with tarfile.open(tgz) as archive:
+        for name in archive.getnames():
+            base = name.rsplit("/", 1)[-1]
+            if not name.endswith(".json") or not base.startswith(("CodeSystem-", "ValueSet-")):
+                continue
+            resource = json.load(archive.extractfile(name))
+            if resource.get("resourceType") in ("CodeSystem", "ValueSet") and resource.get("url"):
+                yield name, resource
+
+
 def load_allowlist(tgz: Path) -> tuple[set[tuple[str, str]], set[tuple[str, str]]]:
     code_systems: set[tuple[str, str]] = set()
     value_sets: set[tuple[str, str]] = set()
-    with tarfile.open(tgz) as archive:
-        for name in archive.getnames():
-            if not name.endswith(".json"):
-                continue
-            base = name.rsplit("/", 1)[-1]
-            if base.startswith("CodeSystem-"):
-                resource = json.load(archive.extractfile(name))
-                if resource.get("resourceType") == "CodeSystem" and resource.get("url"):
-                    code_systems.add((resource["url"], resource.get("version") or ""))
-            elif base.startswith("ValueSet-"):
-                resource = json.load(archive.extractfile(name))
-                if resource.get("resourceType") == "ValueSet" and resource.get("url"):
-                    value_sets.add((resource["url"], resource.get("version") or ""))
+    for _, resource in terminology_resources(tgz):
+        target = code_systems if resource["resourceType"] == "CodeSystem" else value_sets
+        target.add((resource["url"], resource.get("version") or ""))
     return code_systems, value_sets
 
 
-def ensure_tho_tgz(dest: Path) -> Path:
+def core_only_members(
+    core_tgz: Path,
+    cs_allow: set[tuple[str, str]],
+    vs_allow: set[tuple[str, str]],
+) -> list[tuple[str, dict]]:
+    """R4 core terminology.hl7.org resources whose URL THO does not define."""
+    tho_urls = {url for url, _ in cs_allow | vs_allow}
+    return [
+        (name, resource)
+        for name, resource in terminology_resources(core_tgz)
+        if resource["url"].startswith(THO_PREFIX) and resource["url"] not in tho_urls
+    ]
+
+
+def write_core_subset(core_tgz: Path, members: list[tuple[str, dict]], dest: Path) -> Path:
+    """An NPM-shaped tgz of `members` plus the core manifest, for `hts import`."""
+    keep = {name for name, _ in members} | {"package/package.json"}
+    with tarfile.open(core_tgz) as source, tarfile.open(dest, "w:gz") as target:
+        for info in source.getmembers():
+            if info.name in keep:
+                target.addfile(info, source.extractfile(info))
+    return dest
+
+
+def ensure_tgz(dest: Path, label: str, url: str) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.is_file() and dest.stat().st_size > 0:
         return dest
-    print(f"Downloading {THO_PACKAGE_ID}#{THO_PACKAGE_VERSION} …")
+    print(f"Downloading {label} …")
     tmp = dest.with_suffix(".tgz.part")
-    with urllib.request.urlopen(THO_DOWNLOAD_URL, timeout=120) as response:
+    with urllib.request.urlopen(url, timeout=300) as response:
         tmp.write_bytes(response.read())
     tmp.rename(dest)
     return dest
@@ -76,6 +112,7 @@ def write_allowlist_manifest(
 ) -> None:
     payload = {
         "package": f"{THO_PACKAGE_ID}#{THO_PACKAGE_VERSION}",
+        "core_only_from": f"{CORE_PACKAGE_ID}#{CORE_PACKAGE_VERSION}",
         "code_systems": sorted(
             ({"url": u, "version": v} for u, v in code_systems),
             key=lambda item: (item["url"], item["version"]),
@@ -115,7 +152,7 @@ def prune_table(
     return len(to_delete)
 
 
-def import_tho(hts_db: Path, tgz: Path) -> None:
+def import_package(hts_db: Path, tgz: Path) -> None:
     root = repo_root()
     cmd = [
         "cargo",
@@ -146,6 +183,13 @@ def main() -> int:
         help="Local THO 7.1.0 package path",
     )
     parser.add_argument(
+        "--core-tgz",
+        default=str(
+            repo_root() / "crates" / "hts" / "terminology-data" / f"{CORE_PACKAGE_ID}-{CORE_PACKAGE_VERSION}.tgz"
+        ),
+        help="Local FHIR R4 core 4.0.1 package path",
+    )
+    parser.add_argument(
         "--allowlist-out",
         default=str(repo_root() / "manifests" / "tho-710-terminology-allowlist.json"),
         help="Write extracted allowlist JSON for audit",
@@ -159,12 +203,18 @@ def main() -> int:
     if not db_path.is_file():
         raise SystemExit(f"HTS database not found: {db_path}")
 
-    tgz = ensure_tho_tgz(Path(args.tgz))
+    tgz = ensure_tgz(Path(args.tgz), f"{THO_PACKAGE_ID}#{THO_PACKAGE_VERSION}", THO_DOWNLOAD_URL)
+    core_tgz = ensure_tgz(Path(args.core_tgz), f"{CORE_PACKAGE_ID}#{CORE_PACKAGE_VERSION}", CORE_DOWNLOAD_URL)
     cs_allow, vs_allow = load_allowlist(tgz)
+    core_only = core_only_members(core_tgz, cs_allow, vs_allow)
+    for _, resource in core_only:
+        target = cs_allow if resource["resourceType"] == "CodeSystem" else vs_allow
+        target.add((resource["url"], resource.get("version") or ""))
     write_allowlist_manifest(Path(args.allowlist_out), cs_allow, vs_allow)
     print(
         f"THO allowlist: {len(cs_allow)} CodeSystems, {len(vs_allow)} ValueSets "
-        f"(package {THO_PACKAGE_ID}#{THO_PACKAGE_VERSION})"
+        f"(package {THO_PACKAGE_ID}#{THO_PACKAGE_VERSION}, plus {len(core_only)} "
+        f"from {CORE_PACKAGE_ID}#{CORE_PACKAGE_VERSION} that THO does not define)"
     )
 
     conn = sqlite3.connect(db_path)
@@ -194,7 +244,11 @@ def main() -> int:
         return 0
 
     print("\nRe-importing THO 7.1.0 …")
-    import_tho(db_path, tgz)
+    import_package(db_path, tgz)
+    print(f"\nImporting {len(core_only)} R4 core resources THO does not define …")
+    with tempfile.TemporaryDirectory() as scratch:
+        subset = write_core_subset(core_tgz, core_only, Path(scratch) / "r4-core-tho-only.tgz")
+        import_package(db_path, subset)
     print("Done. Restart HTS and verify $expand on pinned ValueSets.")
     return 0
 
