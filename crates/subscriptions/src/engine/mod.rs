@@ -227,6 +227,11 @@ impl SubscriptionEngine {
         self.outbox.is_some()
     }
 
+    /// Returns the attached outbox store, if any.
+    pub fn outbox_store(&self) -> Option<&DynSubscriptionOutboxStore> {
+        self.outbox.as_ref()
+    }
+
     /// Wake the outbox worker. The row was already written in the resource transaction.
     pub fn enqueue_resource_event(self: &Arc<Self>) {
         if self.outbox.is_some() {
