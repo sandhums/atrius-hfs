@@ -222,6 +222,36 @@ impl TerminologyClient {
         self.read_json(response).await
     }
 
+    async fn post_json_optional(
+        &self,
+        path: &str,
+        body: &Value,
+    ) -> Result<Option<Value>, TerminologyError> {
+        let url = format!("{}{path}", self.base_url);
+        let response = self
+            .send_with_retry(|| {
+                self.http
+                    .post(&url)
+                    .json(body)
+                    .header("Content-Type", FHIR_JSON)
+                    .header("Accept", FHIR_JSON)
+            })
+            .await?;
+        self.read_json_optional(response).await
+    }
+
+    async fn get_query_optional(
+        &self,
+        path: &str,
+        query: &[(&str, &str)],
+    ) -> Result<Option<Value>, TerminologyError> {
+        let url = format!("{}{path}", self.base_url);
+        let response = self
+            .send_with_retry(|| self.http.get(&url).query(query).header("Accept", FHIR_JSON))
+            .await?;
+        self.read_json_optional(response).await
+    }
+
     /// `POST /ValueSet/$expand` by canonical URL. Cached process-wide for [`EXPAND_TTL`].
     ///
     /// Follows `expansion.total` / page size so `:in` search sees every code, not
@@ -282,12 +312,8 @@ impl TerminologyClient {
             let total = expansion_total(&value);
             let page_len = page.len();
             all.extend(page);
-            if !should_fetch_next_expand_page(
-                page_len,
-                all.len(),
-                total,
-                EXPAND_PAGE_SIZE as usize,
-            ) {
+            if !should_fetch_next_expand_page(page_len, all.len(), total, EXPAND_PAGE_SIZE as usize)
+            {
                 break;
             }
             offset = offset.saturating_add(page_len as i64);
@@ -307,6 +333,54 @@ impl TerminologyClient {
         let mut query: Vec<(&str, &str)> = vec![("url", value_set_url)];
         query.extend_from_slice(extra);
         self.get_query("/ValueSet/$expand", &query).await
+    }
+
+    /// One page of `POST /ValueSet/$expand` as the raw expanded ValueSet.
+    ///
+    /// `Ok(None)` when the server answers `404` (it knows no value set at
+    /// `value_set_url`). Used by SQL-on-FHIR terminology relations (#1824).
+    pub async fn expand_value_set_page(
+        &self,
+        value_set_url: &str,
+        offset: usize,
+        count: usize,
+    ) -> Result<Option<Value>, TerminologyError> {
+        let body = json!({
+            "resourceType": "Parameters",
+            "parameter": [
+                {"name": "url", "valueUri": value_set_url},
+                {"name": "offset", "valueInteger": offset},
+                {"name": "count", "valueInteger": count}
+            ]
+        });
+        self.post_json_optional("/ValueSet/$expand", &body).await
+    }
+
+    /// `GET /ConceptMap?url=` (and optional `|version`) — first ConceptMap in
+    /// the search Bundle, or `Ok(None)` on 404 / empty.
+    pub async fn find_concept_map(
+        &self,
+        canonical: &str,
+    ) -> Result<Option<Value>, TerminologyError> {
+        let (url, version) = match canonical.split_once('|') {
+            Some((url, version)) => (url, Some(version)),
+            None => (canonical, None),
+        };
+        let mut query = vec![("url", url)];
+        if let Some(version) = version {
+            query.push(("version", version));
+        }
+        let Some(bundle) = self.get_query_optional("/ConceptMap", &query).await? else {
+            return Ok(None);
+        };
+        Ok(bundle
+            .get("entry")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|entry| entry.get("resource"))
+            .find(|r| r.get("resourceType").and_then(Value::as_str) == Some("ConceptMap"))
+            .cloned())
     }
 
     /// `POST /ValueSet/$validate-code`, returning the Parameters `result` boolean.
@@ -339,6 +413,16 @@ impl TerminologyClient {
             .json()
             .await
             .map_err(|e| TerminologyError::Parse(e.to_string()))
+    }
+
+    async fn read_json_optional(
+        &self,
+        response: reqwest::Response,
+    ) -> Result<Option<Value>, TerminologyError> {
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        self.read_json(response).await.map(Some)
     }
 }
 

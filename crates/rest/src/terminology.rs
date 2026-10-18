@@ -1,8 +1,11 @@
 //! Terminology service client for HFS/HTS integration.
 //!
 //! Thin REST-layer wrapper around [`helios_terminology_client`] used by the
-//! FHIR search handler to resolve `:in` / `:below` / `:above` via `$expand`.
-//! Configure the server with `HFS_TERMINOLOGY_SERVER`.
+//! FHIR search handler to resolve `:in` / `:below` / `:above` via `$expand`,
+//! and by SQL-on-FHIR terminology relations (#1824) for paged `$expand` and
+//! ConceptMap lookup. Configure the server with `HFS_TERMINOLOGY_SERVER`.
+
+use serde_json::Value;
 
 pub use helios_terminology_client::{ExpandedCode, TerminologyError};
 
@@ -50,6 +53,36 @@ impl TerminologyServiceClient {
         op: &str,
     ) -> Result<Vec<ExpandedCode>, TerminologyError> {
         self.inner.expand_subsumption(system, code, op).await
+    }
+
+    /// Fetches one page of a ValueSet expansion as the raw expanded ValueSet:
+    /// `POST {base_url}/ValueSet/$expand` with `url`, `offset` and `count`.
+    ///
+    /// Returns `Ok(None)` when the server answers `404` (it knows no value set
+    /// at `value_set_url`). Used by SQL-on-FHIR terminology relations (#1824),
+    /// which need nesting, `abstract`, `version` and `inactive` intact.
+    pub async fn expand_value_set_page(
+        &self,
+        value_set_url: &str,
+        offset: usize,
+        count: usize,
+    ) -> Result<Option<Value>, TerminologyError> {
+        self.inner
+            .expand_value_set_page(value_set_url, offset, count)
+            .await
+    }
+
+    /// Looks up a ConceptMap by canonical (`url`, or `url|version`) with
+    /// `GET {base_url}/ConceptMap?url=…[&version=…]`.
+    ///
+    /// Returns `Ok(None)` when no map matches, and the first match otherwise
+    /// (a server holding several versions of an unversioned canonical decides
+    /// the order).
+    pub async fn find_concept_map(
+        &self,
+        canonical: &str,
+    ) -> Result<Option<Value>, TerminologyError> {
+        self.inner.find_concept_map(canonical).await
     }
 }
 

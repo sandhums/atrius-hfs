@@ -1214,6 +1214,19 @@ pub struct ExpandQuery {
     pub filter: String,
 }
 
+/// Shared reqwest client for the `$expand` proxy below (#1019): building a
+/// client is ~19ms idle but ~716ms with 32 in flight, and this handler runs
+/// once per keystroke against a 2500ms budget.
+pub(crate) fn terminology_client() -> &'static reqwest::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(2500))
+            .build()
+            .expect("ui expand HTTP client")
+    })
+}
+
 pub async fn expand(State(state): State<WebState>, Query(query): Query<ExpandQuery>) -> Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
@@ -1221,9 +1234,10 @@ pub async fn expand(State(state): State<WebState>, Query(query): Query<ExpandQue
     let Some(base) = state.terminology.as_ref() else {
         return StatusCode::NO_CONTENT.into_response();
     };
-    let client = helios_terminology_client::TerminologyClient::new(
+    let client = helios_terminology_client::TerminologyClient::with_http(
+        terminology_client().clone(),
         base,
-        helios_terminology_client::ClientOptions::ui_expand(),
+        None,
     );
     let mut extra: Vec<(&str, &str)> = vec![("count", "25")];
     if !query.filter.is_empty() {

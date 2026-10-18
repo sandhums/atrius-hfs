@@ -297,7 +297,7 @@ fn detect_zip_format(path: &Path) -> Option<ImportFormat> {
         let Ok(entry) = zip.by_index(i) else {
             continue; // skip unreadable entries (zip64, encoding issues, etc.)
         };
-        let entry_name = entry.name().to_lowercase();
+        let entry_name = entry.name().map(|n| n.to_lowercase()).unwrap_or_default();
         if entry_name.contains("concept_full") || entry_name.contains("description_full") {
             return Some(ImportFormat::SnomedRf2);
         }
@@ -506,7 +506,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file(
                 "SnomedCT/Snapshot/Terminology/Concept_Full_INT_20240101.txt",
                 opts,
@@ -524,7 +524,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("LoincTable.csv", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -540,7 +540,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("Loinc_2.80/Loinc.csv", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -555,7 +555,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("Loinc_2.77/LoincTable.csv", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -569,7 +569,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("readme.txt", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -583,7 +583,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("rrf/RXNCONSO.RRF", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -597,7 +597,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("icd10cm_tabular_2025.xml", opts).unwrap();
             zip.write_all(b"<ICD10CM.tabular/>").unwrap();
             zip.finish().unwrap();
@@ -679,7 +679,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("ucum-essence.xml", opts).unwrap();
             zip.write_all(b"<root/>").unwrap();
             zip.finish().unwrap();
@@ -693,7 +693,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("Thesaurus.txt", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -707,7 +707,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             // File is nested inside a subdirectory — tests the starts_with fix
             zip.start_file("mesh2026/desc2026.xml", opts).unwrap();
             zip.write_all(b"<MeshHeadingList/>").unwrap();
@@ -722,7 +722,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("dicom_codes.csv", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -736,7 +736,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("nucc_taxonomy_250.csv", opts).unwrap();
             zip.write_all(b"dummy").unwrap();
             zip.finish().unwrap();
@@ -750,7 +750,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("CMS32_DESC_LONG_DX.txt", opts).unwrap();
             zip.write_all(b"001|Cholera\n").unwrap();
             zip.finish().unwrap();
@@ -764,7 +764,7 @@ mod tests {
         let tmp = tempfile::NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file("CMS32_DESC_SHORT_DX.txt", opts).unwrap();
             zip.write_all(b"001|Cholera\n").unwrap();
             zip.finish().unwrap();

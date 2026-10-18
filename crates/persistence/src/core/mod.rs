@@ -110,6 +110,7 @@ pub mod preconditions;
 pub mod schema_ledger;
 pub mod search;
 pub mod sof_runner;
+pub mod sof_terminology;
 pub mod storage;
 pub mod subscription_outbox;
 pub mod tenant_discovery;
@@ -193,7 +194,7 @@ pub use storage::{
     ActivityCell, ConditionalCreateResult, ConditionalDeleteResult, ConditionalInteraction,
     ConditionalPatchPreparation, ConditionalPatchResult, ConditionalStorage,
     ConditionalUpdateResult, DailyResourceCount, PatchFormat, PurgableStorage, ResourceCountDelta,
-    ResourceStorage, TenantRecord, WriteMarker, bucket_floor,
+    ResourceStorage, TenantRecord, WriteMarker, bucket_floor, restore_cas_miss,
 };
 pub use subscription_outbox::{
     CLOUDEVENTS_SPEC_VERSION, DynSubscriptionOutboxStore, InMemorySubscriptionOutbox,

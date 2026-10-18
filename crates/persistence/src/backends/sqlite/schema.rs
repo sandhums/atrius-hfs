@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 41;
+pub const SCHEMA_VERSION: i32 = 43;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -51,7 +51,11 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// `search_index_composite_slot` and `dead_at`. Helios v38 maps through
 /// `search_index_composite_slot` (index 37) and still runs
 /// `search_index_date_start` and `dead_at`. Helios v39 maps through
-/// `search_index_date_start` (index 38, `#1506`) and still runs `dead_at`.
+/// `search_index_date_start` (index 38, `#1506`) and still runs
+/// `history_updated_index`, `sof_terminology_tables`, and `dead_at`. Helios v40
+/// maps through `history_updated_index` (index 39, `#2107`) and still runs
+/// terminology and `dead_at`. Helios v41 maps through `sof_terminology_tables`
+/// (index 40, `#1824`) and still runs `dead_at`.
 const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_enhanced_columns", migrate_v1_to_v2),
     ("resource_fts", migrate_v2_to_v3),
@@ -92,6 +96,8 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("bulk_manifest_file_progress_completed", migrate_v36_to_v37),
     ("search_index_composite_slot", migrate_v37_to_v38),
     ("search_index_date_start", migrate_v38_to_v39),
+    ("history_updated_index", migrate_v39_to_v40),
+    ("sof_terminology_tables", migrate_v40_to_v41),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
@@ -2385,6 +2391,56 @@ fn backfill_value_date_start(conn: &Connection) -> StorageResult<()> {
             .map_err(|e| migration_err(format!("v39 commit backfill batch: {e}")))?;
     }
     Ok(())
+}
+
+/// The shape v40 gives `idx_history_updated`: the `(tenant_id, last_updated)`
+/// range every history-window read uses, plus each column the dashboard's
+/// bucketed history counts read (#2107).
+const HISTORY_UPDATED_INDEX: &str = "CREATE INDEX IF NOT EXISTS idx_history_updated ON resource_history(tenant_id, last_updated, resource_type, is_deleted, version_id)";
+
+/// v39 -> v40 (#2107): `idx_history_updated` carries `resource_type`,
+/// `is_deleted` and `version_id` after its `(tenant_id, last_updated)` key, so
+/// the dashboard's bucketed history counts (`count_deltas_by_bucket`,
+/// `count_deltas_by_type_and_bucket`) are answered from the index alone.
+/// Before, every history row in the charted window cost a read of its table
+/// row (the resource blob's page) just to test the type and the delta rule;
+/// after a bulk import that is nearly the whole history table, and on a 19M
+/// resource database the 30-day window took over ten seconds and churned the
+/// connection's page cache.
+///
+/// The index is widened rather than joined by a second one, so the write path
+/// still maintains one entry per history row, and every existing reader of the
+/// `(tenant_id, last_updated)` prefix (the write marker, the activity
+/// histogram, system history) keeps it. The v1 schema still creates the old
+/// shape on a fresh database, so an index of another shape is dropped and
+/// rebuilt here.
+fn migrate_v39_to_v40(conn: &Connection) -> StorageResult<()> {
+    let is_current: bool = conn
+        .query_row(
+            "SELECT sql LIKE '%is_deleted, version_id)%' FROM sqlite_master
+              WHERE type = 'index' AND name = 'idx_history_updated'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+    if !is_current {
+        conn.execute("DROP INDEX IF EXISTS idx_history_updated", [])
+            .map_err(|e| migration_err(format!("v40 drop idx_history_updated: {e}")))?;
+    }
+    conn.execute(HISTORY_UPDATED_INDEX, [])
+        .map_err(|e| migration_err(format!("v40 create idx_history_updated: {e}")))?;
+    Ok(())
+}
+
+/// Migrate from schema version 40 to version 41.
+///
+/// Adds the bookkeeping for SQL-on-FHIR terminology relations (#1824): the
+/// registry of per-(tenant, canonical) relation tables and the Library
+/// references that keep them alive. The relation tables themselves are created
+/// and dropped at runtime by the terminology store.
+fn migrate_v40_to_v41(conn: &Connection) -> StorageResult<()> {
+    super::sof_terminology::create_bookkeeping_tables(conn)
+        .map_err(|e| migration_err(format!("v41 terminology tables: {e}")))
 }
 
 fn migration_err(message: String) -> crate::error::StorageError {
@@ -4723,6 +4779,40 @@ mod tests {
         .unwrap();
         migrate_v34_to_v35(&conn).unwrap();
         assert_eq!(end("a").as_deref(), Some("kept"));
+    }
+
+    /// #2107: v40 widens a v39 database's `idx_history_updated` so the
+    /// dashboard's history counts are covered, and a replay leaves it as is.
+    #[test]
+    fn migrate_v39_to_v40_widens_the_history_updated_index() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute_batch(
+            "DROP INDEX idx_history_updated;
+             CREATE INDEX idx_history_updated ON resource_history(tenant_id, last_updated);
+             DELETE FROM schema_migrations WHERE name = 'history_updated_index';",
+        )
+        .unwrap();
+        set_schema_version(&conn, 39).unwrap();
+        let shape = || -> String {
+            conn.query_row(
+                "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_history_updated'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap()
+        };
+        assert!(!shape().contains("version_id"));
+
+        initialize_schema(&conn).unwrap();
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        let widened = shape();
+        assert!(
+            widened.ends_with("(tenant_id, last_updated, resource_type, is_deleted, version_id)"),
+            "{widened}"
+        );
+        migrate_v39_to_v40(&conn).unwrap();
+        assert_eq!(shape(), widened, "a replay keeps the index");
     }
 
     /// A v38 database: the v39 column and both date-end indexes un-applied.

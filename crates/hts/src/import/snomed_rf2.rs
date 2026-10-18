@@ -715,7 +715,10 @@ fn find_rf2_paths(
         let entry = zip
             .by_index(i)
             .map_err(|e| HtsError::InvalidRequest(format!("ZIP entry error: {e}")))?;
-        let name = entry.name().to_string();
+        let name = entry
+            .name()
+            .map_err(|e| HtsError::InvalidRequest(format!("ZIP entry name error: {e}")))?
+            .into_owned();
 
         if !name.ends_with(".txt") {
             continue;
@@ -785,7 +788,10 @@ fn find_module_dependency_path(path: &Path) -> Result<Option<String>, HtsError> 
         let entry = zip
             .by_index(i)
             .map_err(|e| HtsError::InvalidRequest(format!("ZIP entry error: {e}")))?;
-        let name = entry.name().to_string();
+        let name = entry
+            .name()
+            .map_err(|e| HtsError::InvalidRequest(format!("ZIP entry name error: {e}")))?
+            .into_owned();
         let lower = name.to_lowercase();
         if lower.ends_with(".txt") && lower.contains("moduledependency") {
             candidates.push(name);
@@ -1366,7 +1372,7 @@ id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\
         let tmp = NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
 
             zip.start_file(
                 "Snapshot/Terminology/sct2_Concept_Snapshot_INT_20240101.txt",
@@ -1429,7 +1435,7 @@ id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\
         let tmp = make_test_rf2_zip();
         {
             let mut zip = zip::ZipWriter::new_append(tmp.reopen().unwrap()).unwrap();
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
 
             zip.start_file("Full/Terminology/sct2_Concept_Full_INT_20240101.txt", opts)
                 .unwrap();
@@ -1876,7 +1882,7 @@ a\t20260313\t1\t13941000189108\t900000000000534007\t900000000000207008\t20260313
         let tmp = NamedTempFile::with_suffix(".zip").unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             zip.start_file(
                 "Snapshot/Terminology/sct2_Concept_Snapshot_IN1000189_20260313T120000Z.txt",
                 opts,
@@ -2322,7 +2328,7 @@ id\teffectiveTime\tactive\tmoduleId\tsourceId\tdestinationId\trelationshipGroup\
         let tmp = NamedTempFile::new().unwrap();
         {
             let mut zip = zip::ZipWriter::new(tmp.reopen().unwrap());
-            let opts = zip::write::FileOptions::default();
+            let opts = zip::write::SimpleFileOptions::default();
             for (name, content) in [
                 (
                     "Snapshot/Terminology/sct2_Concept_Snapshot_NE_20240101.txt",
