@@ -353,6 +353,7 @@ mod tests {
                     left_join: false,
                     on_filter: None,
                     flat_index: Some(0),
+                    array_source: false,
                 }),
             }),
         };
@@ -381,6 +382,7 @@ mod tests {
             left_join: false,
             on_filter: None,
             flat_index: None,
+            array_source: false,
         };
         assert_eq!(
             OutputLimitStrategy::for_plan(&plan),
@@ -524,9 +526,9 @@ mod tests {
         });
         let q = compile(view).unwrap();
         assert_eq!(q.columns, vec!["family", "use"]);
-        // Type-guarded so a singleton object is not iterated member-wise.
+        // `Patient.name` repeats, so it is iterated in place.
         assert!(
-            q.sql.contains("JOIN json_each(CASE WHEN json_type(r.data, '$.name') = 'array' THEN json_extract(r.data, '$.name')") && q.sql.contains("ELSE '[]' END) fe ON 1=1"),
+            q.sql.contains("JOIN json_each(r.data, '$.name') fe ON 1=1"),
             "{}",
             q.sql
         );
@@ -551,8 +553,8 @@ mod tests {
         });
         let q = compile(view).unwrap();
         assert!(
-            q.sql.contains("LEFT JOIN json_each(CASE WHEN json_type(r.data, '$.name') = 'array' THEN json_extract(r.data, '$.name')")
-                && q.sql.contains("ELSE '[]' END) fe ON 1=1"),
+            q.sql
+                .contains("LEFT JOIN json_each(r.data, '$.name') fe ON 1=1"),
             "{}",
             q.sql
         );
@@ -582,9 +584,9 @@ mod tests {
             "{}",
             q.sql
         );
-        // Type-guarded so a singleton object is not iterated member-wise.
+        // `Patient.name` repeats, so it is iterated in place.
         assert!(
-            q.sql.contains("JOIN json_each(CASE WHEN json_type(r.data, '$.name') = 'array' THEN json_extract(r.data, '$.name')") && q.sql.contains("ELSE '[]' END) fe ON 1=1"),
+            q.sql.contains("JOIN json_each(r.data, '$.name') fe ON 1=1"),
             "{}",
             q.sql
         );
@@ -657,12 +659,12 @@ mod tests {
         assert_eq!(q.columns, vec!["family", "city"]);
         // First unnest keeps the `fe` alias (legacy), second uses `fe2`.
         assert!(
-            q.sql.contains("JOIN json_each(CASE WHEN json_type(r.data, '$.name') = 'array' THEN json_extract(r.data, '$.name')") && q.sql.contains("END) fe ON"),
+            q.sql.contains("JOIN json_each(r.data, '$.name') fe ON"),
             "{}",
             q.sql
         );
         assert!(
-            q.sql.contains("JOIN json_each(CASE WHEN json_type(r.data, '$.address') = 'array' THEN json_extract(r.data, '$.address')") && q.sql.contains("END) fe2 ON"),
+            q.sql.contains("JOIN json_each(r.data, '$.address') fe2 ON"),
             "{}",
             q.sql
         );
@@ -1508,6 +1510,51 @@ mod tests {
                 ColumnDecode::Json
             ]
         );
+    }
+
+    #[test]
+    fn test_integer64_decodes_as_integer() {
+        let d = decodes(condition_view(json!([
+            {"name": "a", "path": "id", "type": "integer64"},
+            {"name": "b", "path": "id", "type": "instant"},
+            {"name": "c", "path": "id", "type": "base64Binary"}
+        ])));
+        assert_eq!(
+            d,
+            vec![
+                ColumnDecode::Integer,
+                ColumnDecode::Text,
+                ColumnDecode::Text
+            ]
+        );
+    }
+
+    #[test]
+    fn test_ansi_type_tag_is_validated_for_every_target() {
+        let view = |value: &str, ty: &str| {
+            json!({"resource": "Patient", "select": [{"column": [
+                {"name": "c", "path": "id", "type": ty,
+                 "tag": [{"name": "ansi/type", "value": value}]}
+            ]}]})
+        };
+        // Accepted tag: compiles for SQL and Mongo.
+        assert!(compile(view("VARCHAR", "integer")).is_ok());
+        #[cfg(feature = "mongodb")]
+        assert!(
+            compile_view_definition_mongo(&view("VARCHAR", "integer"), FhirVersion::R4).is_ok()
+        );
+        // Unknown and incompatible tags are rejected on both targets.
+        for bad in [view("NOPE", "string"), view("INT", "decimal")] {
+            assert!(matches!(
+                compile(bad.clone()),
+                Err(SofError::InvalidViewDefinition(_))
+            ));
+            #[cfg(feature = "mongodb")]
+            assert!(matches!(
+                compile_view_definition_mongo(&bad, FhirVersion::R4),
+                Err(SofError::InvalidViewDefinition(_))
+            ));
+        }
     }
 
     #[test]
