@@ -404,6 +404,21 @@ async fn launch_claim_names_are_configurable() {
 }
 
 #[tokio::test]
+async fn audit_identity_reads_the_configured_fhir_user_claim() {
+    let config = AuthConfig {
+        fhir_user_claim: "fhir_user".into(),
+        ..audience_config()
+    };
+    let mut claims = valid_claims();
+    claims["fhir_user"] = json!("Practitioner/dr9");
+    claims["fhirUser"] = json!("Practitioner/ignored");
+
+    let principal = authenticate_with(config, &claims).await.expect("accepted");
+    assert_eq!(principal.fhir_user(), Some("Practitioner/dr9"));
+    assert_eq!(principal.audit_agent_identity(), Some("Practitioner/dr9"));
+}
+
+#[tokio::test]
 async fn entra_client_credentials_roles_grant_scopes() {
     let mut claims = valid_claims();
     claims["roles"] = json!(["system/*.cruds"]);

@@ -137,13 +137,6 @@ impl AuthProvider for JwksBearerAuthProvider {
             .unwrap_or("")
             .to_string();
 
-        let fhir_user = claims
-            .get("fhirUser")
-            .and_then(|v| v.as_str())
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string);
-
         let jti = claims
             .get("jti")
             .and_then(|v| v.as_str())
@@ -212,16 +205,14 @@ impl AuthProvider for JwksBearerAuthProvider {
 
         debug!(
             sub = %subject,
-            fhir_user = ?fhir_user,
+            fhir_user = ?launch_context.as_ref().and_then(|c| c.fhir_user.as_deref()),
             iss = %issuer,
             "Token validated successfully"
         );
 
-        // Same-crate literal is allowed under `#[non_exhaustive]`.
         Ok(Principal {
             subject,
             issuer,
-            fhir_user,
             tenant_id,
             scopes,
             jti,

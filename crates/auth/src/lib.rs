@@ -20,7 +20,8 @@
 //! ## Key Types
 //!
 //! - [`Principal`] — Authenticated identity extracted from a validated JWT.
-//!   Tests outside this crate construct one with [`Principal::stub`].
+//!   Tests build one with [`Principal::stub`] or a literal ending in
+//!   `..Default::default()`.
 //! - [`LaunchContext`] — SMART launch context (`patient`, `encounter`, `fhirUser`) on a [`Principal`]
 //! - [`ScopeSet`] — Parsed SMART v2 scopes with permission checking
 //! - [`AuthProvider`] — Trait for token validation implementations

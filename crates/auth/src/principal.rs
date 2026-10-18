@@ -12,20 +12,15 @@ const STUB_ISSUER: &str = "https://idp.example/realms/fhir";
 /// Injected into Axum request extensions by the auth middleware after
 /// successful token validation.
 ///
-/// Marked `non_exhaustive` so fork-only fields (`fhir_user`, …) do not break
-/// Helios tests that construct a `Principal` with a struct literal. Outside
-/// this crate, build test principals with [`Principal::stub`]. Production
-/// tokens still come from `JwksBearerAuthProvider` (same crate, so the
-/// literal there is allowed).
-#[derive(Debug, Clone)]
-#[non_exhaustive]
+/// `Default` exists so literals (tests, embedders) can use `..Default::default()`
+/// and keep compiling when fields are added. The default principal has an empty
+/// subject, no scopes and an expiry at the Unix epoch, so it authorizes nothing.
+#[derive(Debug, Clone, Default)]
 pub struct Principal {
     /// The `sub` (subject) claim from the JWT.
     pub subject: String,
     /// The `iss` (issuer) claim from the JWT.
     pub issuer: String,
-    /// SMART `fhirUser` claim when present in the access token.
-    pub fhir_user: Option<String>,
     /// The tenant ID extracted from the configured JWT claim.
     pub tenant_id: Option<String>,
     /// Parsed SMART v2 scopes granted to this principal.
@@ -47,7 +42,7 @@ impl Principal {
     /// Test helper: a principal with `subject` and `scopes`, and otherwise
     /// empty optional claims.
     ///
-    /// Defaults: issuer [`STUB_ISSUER`], no `fhir_user` / tenant / `jti`,
+    /// Defaults: issuer [`STUB_ISSUER`], no tenant / `jti` / launch context,
     /// expiry one hour from now, empty custom claims. Chain
     /// [`with_issuer`](Self::with_issuer), [`with_tenant_id`](Self::with_tenant_id),
     /// or [`with_fhir_user`](Self::with_fhir_user) when a test needs those.
@@ -56,13 +51,9 @@ impl Principal {
         Self {
             subject: subject.into(),
             issuer: STUB_ISSUER.to_string(),
-            fhir_user: None,
-            tenant_id: None,
             scopes,
-            jti: None,
             expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-            launch_context: None,
+            ..Default::default()
         }
     }
 
@@ -80,10 +71,13 @@ impl Principal {
         self
     }
 
-    /// Set the SMART `fhirUser` claim.
+    /// Set the SMART `fhirUser` claim on the launch context, keeping any
+    /// patient or encounter already there.
     #[must_use]
     pub fn with_fhir_user(mut self, fhir_user: impl Into<String>) -> Self {
-        self.fhir_user = Some(fhir_user.into());
+        self.launch_context
+            .get_or_insert_with(LaunchContext::default)
+            .fhir_user = Some(fhir_user.into());
         self
     }
 
@@ -104,9 +98,10 @@ impl Principal {
         &self.issuer
     }
 
-    /// Returns the SMART `fhirUser` claim when set on the access token.
+    /// Returns the SMART `fhirUser` claim (named by `HFS_AUTH_FHIR_USER_CLAIM`)
+    /// when set on the access token.
     pub fn fhir_user(&self) -> Option<&str> {
-        self.fhir_user.as_deref()
+        self.launch_context.as_ref()?.fhir_user.as_deref()
     }
 
     /// Returns the tenant ID if present in the token.
@@ -117,10 +112,10 @@ impl Principal {
     /// Identity for audit `agent.who`: valid FHIR `fhirUser` reference, else `sub`.
     #[must_use]
     pub fn audit_agent_identity(&self) -> Option<&str> {
-        if let Some(ref fu) = self.fhir_user
+        if let Some(fu) = self.fhir_user()
             && is_fhir_relative_reference(fu)
         {
-            return Some(fu.as_str());
+            return Some(fu);
         }
         if !self.subject.is_empty() {
             return Some(self.subject.as_str());
