@@ -19,7 +19,7 @@ use helios_fhir::FhirVersion;
 use serde_json::{Value, json};
 
 use crate::core::{DailyResourceCount, PurgableStorage, ResourceStorage, WriteMarker};
-use crate::error::{BackendError, ResourceError, StorageError, StorageResult};
+use crate::error::{BackendError, ResourceError, StorageError, StorageResult, ValidationError};
 use crate::search::converters::IndexValue;
 use crate::search::extractor::ExtractedValue;
 use crate::search::reindex::{ReindexPageStats, ReindexSource, ReindexTarget, ResourcePage};
@@ -441,14 +441,29 @@ fn merge_composite_component(entry: &mut Value, origin: ValueOrigin<'_>, value: 
     }
 }
 
-/// The `meta.versionId` a composite primary stamped on a resource it mirrors
-/// to this backend.
-fn primary_version(resource: &Value) -> Option<String> {
-    resource
+/// Version and last-updated the primary stamped on a resource sent here.
+fn primary_write_meta(resource: &Value) -> Option<(String, Option<DateTime<Utc>>)> {
+    let version = resource
         .pointer("/meta/versionId")
         .and_then(Value::as_str)
-        .filter(|v| !v.is_empty())
-        .map(str::to_string)
+        .filter(|version| !version.is_empty())
+        .map(str::to_string)?;
+    let last_updated = resource
+        .pointer("/meta/lastUpdated")
+        .and_then(Value::as_str)
+        .and_then(|instant| DateTime::parse_from_rfc3339(instant).ok())
+        .map(|instant| instant.with_timezone(&Utc));
+    Some((version, last_updated))
+}
+
+fn missing_primary_version(resource_type: &str, id: &str) -> StorageError {
+    StorageError::Validation(ValidationError::InvalidResource {
+        message: format!(
+            "Elasticsearch is a search secondary and cannot assign versions; \
+             {resource_type}/{id} has no versionId from the primary"
+        ),
+        details: Vec::new(),
+    })
 }
 
 /// The search document for one stored resource. `last_updated` is the
@@ -985,442 +1000,6 @@ async fn index_document(
 //   contained documents are redone. A repeated `delete` finds the container
 //   gone and still runs the sweep (see `delete`).
 impl ElasticsearchBackend {
-    /// A single-document create. With `keep_primary_version` (a composite
-    /// secondary) the document takes the resource's own `meta.versionId`,
-    /// the version the primary assigned, instead of version 1.
-    async fn index_new(
-        &self,
-        tenant: &TenantContext,
-        resource_type: &str,
-        resource: Value,
-        fhir_version: FhirVersion,
-        keep_primary_version: bool,
-    ) -> StorageResult<StoredResource> {
-        tenant.check_permission(Operation::Create, resource_type)?;
-
-        let tenant_id = tenant.tenant_id().as_str();
-
-        let id = resource
-            .get("id")
-            .and_then(|v| v.as_str())
-            .map(String::from)
-            .unwrap_or_else(crate::types::new_resource_id);
-
-        let version_id = keep_primary_version
-            .then(|| primary_version(&resource))
-            .flatten()
-            .unwrap_or_else(|| "1".to_string());
-        let version_id = version_id.as_str();
-
-        // Ensure the resource has correct type and id
-        let mut resource = resource;
-        if let Some(obj) = resource.as_object_mut() {
-            obj.insert(
-                "resourceType".to_string(),
-                Value::String(resource_type.to_string()),
-            );
-            obj.insert("id".to_string(), Value::String(id.clone()));
-        }
-
-        // Extract search parameters
-        let extracted_values = self
-            .tenant_extractor(tenant_id)
-            .extract(&resource, resource_type)
-            .unwrap_or_default();
-
-        // The resource's instant: indexed as `last_updated` and returned as
-        // the stored resource's `meta.lastUpdated`, so the two agree (#1593).
-        let now = Utc::now();
-        let doc = build_es_document(
-            tenant_id,
-            resource_type,
-            &id,
-            version_id,
-            now,
-            &resource,
-            fhir_version,
-            &extracted_values,
-        );
-
-        // Ensure index exists
-        schema::ensure_index(self, tenant_id, resource_type).await?;
-
-        // Index the document
-        let index = self.index_name(tenant_id, resource_type);
-        let doc_id = Self::document_id(resource_type, &id);
-
-        index_document(
-            self,
-            &index,
-            &doc_id,
-            &doc,
-            self.write_refresh_param(),
-            "index document",
-        )
-        .await?;
-
-        // Index any contained resources for `_contained` search. New resource,
-        // so no stale docs to delete first.
-        if resource
-            .get("contained")
-            .and_then(|c| c.as_array())
-            .is_some_and(|a| !a.is_empty())
-        {
-            self.index_contained_docs(
-                tenant_id,
-                resource_type,
-                &id,
-                &resource,
-                fhir_version,
-                version_id,
-                now,
-                false,
-            )
-            .await?;
-        }
-
-        Ok(StoredResource::from_storage(
-            resource_type,
-            &id,
-            version_id,
-            tenant.tenant_id().clone(),
-            resource,
-            now,
-            now,
-            None,
-            fhir_version,
-        ))
-    }
-
-    /// `_bulk` requests of at most [`BULK_OPS_PER_REQUEST`] operations and the
-    /// configured byte budget, with the configured write-refresh policy applied
-    /// once per request rather than once per document.
-    ///
-    /// This is what makes a bulk load survivable under `refresh=wait_for`:
-    /// that policy blocks each write until the next scheduled refresh (the
-    /// index's `refresh_interval`, 1s by default), so N per-document writes
-    /// cost N refresh waits — the ~1.4k-resource conformance seed took over
-    /// twenty minutes and the server never came up — while one bulk request
-    /// costs one.
-    ///
-    /// With `keep_primary_version` (a composite secondary) each document is
-    /// indexed at the resource's own `meta.versionId`, the version the
-    /// primary assigned; otherwise every resource starts at version 1.
-    async fn index_many(
-        &self,
-        tenant: &TenantContext,
-        resource_type: &str,
-        resources: Vec<Value>,
-        fhir_version: FhirVersion,
-        keep_primary_version: bool,
-    ) -> Vec<StorageResult<StoredResource>> {
-        if resources.is_empty() {
-            return Vec::new();
-        }
-        if tenant
-            .check_permission(Operation::Create, resource_type)
-            .is_err()
-        {
-            return resources
-                .iter()
-                .map(|_| {
-                    tenant
-                        .check_permission(Operation::Create, resource_type)
-                        .map(|()| unreachable!("permission check failed a moment ago"))
-                        .map_err(StorageError::from)
-                })
-                .collect();
-        }
-
-        let tenant_id = tenant.tenant_id().as_str();
-        let extractor = self.tenant_extractor(tenant_id);
-        // One instant for the batch: indexed as every document's
-        // `last_updated` and returned as each stored resource's
-        // `meta.lastUpdated` (#1593).
-        let now = Utc::now();
-
-        // Every document each resource contributes — its own, plus one per
-        // `contained` entry — addressed by (index, doc id). Built up front so
-        // the indices can be ensured once each and the operations streamed
-        // out in a few requests.
-        struct Prepared {
-            id: String,
-            version_id: String,
-            resource: Value,
-            docs: Vec<(String, String, Value)>,
-        }
-        let mut types_touched = vec![resource_type.to_string()];
-        let prepared: Vec<Prepared> = resources
-            .into_iter()
-            .map(|mut resource| {
-                let id = resource
-                    .get("id")
-                    .and_then(|v| v.as_str())
-                    .map(String::from)
-                    .unwrap_or_else(crate::types::new_resource_id);
-                if let Some(obj) = resource.as_object_mut() {
-                    obj.insert(
-                        "resourceType".to_string(),
-                        Value::String(resource_type.to_string()),
-                    );
-                    obj.insert("id".to_string(), Value::String(id.clone()));
-                }
-                let version_id = keep_primary_version
-                    .then(|| primary_version(&resource))
-                    .flatten()
-                    .unwrap_or_else(|| "1".to_string());
-                let extracted_values = extractor
-                    .extract(&resource, resource_type)
-                    .unwrap_or_default();
-                let mut docs = vec![(
-                    self.index_name(tenant_id, resource_type),
-                    Self::document_id(resource_type, &id),
-                    build_es_document(
-                        tenant_id,
-                        resource_type,
-                        &id,
-                        &version_id,
-                        now,
-                        &resource,
-                        fhir_version,
-                        &extracted_values,
-                    ),
-                )];
-                for contained in extractor.extract_contained(&resource) {
-                    types_touched.push(contained.contained_type.clone());
-                    docs.push((
-                        self.index_name(tenant_id, &contained.contained_type),
-                        Self::document_id(
-                            &contained.contained_type,
-                            &contained_resource_id(&id, &contained.local_id),
-                        ),
-                        build_es_contained_document(
-                            tenant_id,
-                            resource_type,
-                            &id,
-                            &contained.contained_type,
-                            &contained.local_id,
-                            &contained.content,
-                            &version_id,
-                            now,
-                            fhir_version,
-                            &contained.values,
-                        ),
-                    ));
-                }
-                Prepared {
-                    id,
-                    version_id,
-                    resource,
-                    docs,
-                }
-            })
-            .collect();
-
-        // Ensure every index touched exists, once each.
-        let mut ensured = std::collections::HashSet::new();
-        for ty in types_touched {
-            if ensured.insert(ty.clone())
-                && let Err(e) = schema::ensure_index(self, tenant_id, &ty).await
-            {
-                let message = error_detail(&e);
-                return prepared
-                    .iter()
-                    .map(|_| Err(internal_error(message.clone())))
-                    .collect();
-            }
-        }
-
-        // Flatten to operations, remembering which resource each belongs to,
-        // and send them in bounded requests. A resource's outcome is the first
-        // failure among its own operations, if any.
-        let ops: Vec<(usize, &str, &str, &Value)> = prepared
-            .iter()
-            .enumerate()
-            .flat_map(|(i, p)| {
-                p.docs
-                    .iter()
-                    .map(move |(index, doc_id, doc)| (i, index.as_str(), doc_id.as_str(), doc))
-            })
-            .collect();
-        let failures = self
-            .send_bulk_index(&ops, prepared.len(), self.write_refresh_param())
-            .await;
-
-        prepared
-            .into_iter()
-            .zip(failures)
-            .map(|(p, failure)| match failure {
-                Some(failure) => Err(internal_error(failure.message)),
-                None => Ok(StoredResource::from_storage(
-                    resource_type,
-                    &p.id,
-                    &p.version_id,
-                    tenant.tenant_id().clone(),
-                    p.resource,
-                    now,
-                    now,
-                    None,
-                    fhir_version,
-                )),
-            })
-            .collect()
-    }
-
-    /// PUT semantics. With `keep_primary_version` (a composite secondary) the
-    /// document takes the resource's own `meta.versionId`, the version the
-    /// primary assigned, rather than this index's previous version plus one.
-    async fn upsert(
-        &self,
-        tenant: &TenantContext,
-        resource_type: &str,
-        id: &str,
-        resource: Value,
-        fhir_version: FhirVersion,
-        keep_primary_version: bool,
-    ) -> StorageResult<(StoredResource, bool)> {
-        let tenant_id = tenant.tenant_id().as_str();
-
-        // Check if document exists
-        let index = self.index_name(tenant_id, resource_type);
-        let doc_id = Self::document_id(resource_type, id);
-
-        // Deciding "this resource is new, start at version 1" requires knowing that
-        // it does not already exist. Only Elasticsearch saying so establishes that
-        // (`"found": false`, or the index does not exist) — the same two answers
-        // `read` accepts, through the same retried request (#1364). If the
-        // existence check failed, or was answered by something else with a bare
-        // 404, we must not guess "new" — doing so would reset the version of a
-        // resource that does exist, silently clobbering its history.
-        let op = ReadOp::Get { doc_id: &doc_id };
-        let existing = send_read_with_retry(self, op, &index, Value::Null).await?;
-
-        let (version_id, is_new) = match existing {
-            Some(body) => {
-                let source = body.get("_source");
-                // Belt-and-braces tenant guard, mirroring `read` (see below).
-                //
-                // After the #384 fix an injective `index_name` already guarantees
-                // this index belongs to exactly one tenant, so this check should
-                // never fire. It is kept because this is the one place the backend
-                // reads *foreign state* to make a *write* decision, and a future
-                // regression in the naming derivation would otherwise silently
-                // resume deriving one tenant's version from another's document.
-                //
-                // A mismatch is treated as **absent**, not as an error. An index
-                // upgraded from the pre-fix layout can still hold documents left
-                // behind by a colliding tenant; erroring would brick the rightful
-                // owner on exactly those ids, permanently, with no operator
-                // remedy. Treating them as absent is self-healing — the foreign
-                // document is overwritten and leaves an index it never belonged
-                // in — and is correct on the merits: from this tenant's
-                // perspective the resource genuinely does not exist. Resetting the
-                // version is harmless because Elasticsearch keeps no history and,
-                // in every supported composite mode, the primary is authoritative
-                // for version assignment (writes always land there first).
-                let doc_tenant = source
-                    .and_then(|s| s.get("tenant_id"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                if doc_tenant != tenant_id {
-                    tracing::warn!(
-                        tenant = %tenant_id,
-                        found_tenant = %doc_tenant,
-                        resource_type,
-                        id,
-                        "Elasticsearch document at this address belongs to another tenant; \
-                         treating as absent and overwriting (see issue #384)"
-                    );
-                    ("1".to_string(), true)
-                } else {
-                    let current_version: u64 = source
-                        .and_then(|s| s.get("version_id"))
-                        .and_then(|v| v.as_str())
-                        .and_then(|v| v.parse().ok())
-                        .unwrap_or(0);
-                    ((current_version + 1).to_string(), false)
-                }
-            }
-            None => ("1".to_string(), true),
-        };
-        let version_id = keep_primary_version
-            .then(|| primary_version(&resource))
-            .flatten()
-            .unwrap_or(version_id);
-
-        // Ensure resource has correct type and id
-        let mut resource = resource;
-        if let Some(obj) = resource.as_object_mut() {
-            obj.insert(
-                "resourceType".to_string(),
-                Value::String(resource_type.to_string()),
-            );
-            obj.insert("id".to_string(), Value::String(id.to_string()));
-        }
-
-        // Extract search parameters
-        let extracted_values = self
-            .tenant_extractor(tenant_id)
-            .extract(&resource, resource_type)
-            .unwrap_or_default();
-
-        // The resource's instant: indexed as `last_updated` and returned as
-        // the stored resource's `meta.lastUpdated`, so the two agree (#1593).
-        let now = Utc::now();
-        let doc = build_es_document(
-            tenant_id,
-            resource_type,
-            id,
-            &version_id,
-            now,
-            &resource,
-            fhir_version,
-            &extracted_values,
-        );
-
-        // Ensure index exists
-        schema::ensure_index(self, tenant_id, resource_type).await?;
-
-        index_document(
-            self,
-            &index,
-            &doc_id,
-            &doc,
-            self.write_refresh_param(),
-            "index document",
-        )
-        .await?;
-
-        // Re-sync contained docs (delete stale, then re-index) so updates that
-        // add/remove/change `contained[]` entries are reflected.
-        self.index_contained_docs(
-            tenant_id,
-            resource_type,
-            id,
-            &resource,
-            fhir_version,
-            &version_id,
-            now,
-            true,
-        )
-        .await?;
-
-        Ok((
-            StoredResource::from_storage(
-                resource_type,
-                id,
-                &version_id,
-                tenant.tenant_id().clone(),
-                resource,
-                now,
-                now,
-                None,
-                fhir_version,
-            ),
-            is_new,
-        ))
-    }
-
     /// Deletes all contained-resource docs derived from the given container
     /// (across the tenant's indices), used before re-indexing or on container
     /// delete so removed contained resources don't linger.
@@ -1510,6 +1089,464 @@ impl ElasticsearchBackend {
         }
         Ok(())
     }
+
+    /// A single-document create. Elasticsearch is always a search secondary,
+    /// so `meta.versionId` and `meta.lastUpdated` come from the primary when
+    /// present. A body with neither still starts at version 1 and now — the
+    /// path integration tests use to seed an index — and logs a warning.
+    async fn index_new(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        resource: Value,
+        fhir_version: FhirVersion,
+    ) -> StorageResult<StoredResource> {
+        tenant.check_permission(Operation::Create, resource_type)?;
+
+        let tenant_id = tenant.tenant_id().as_str();
+
+        let id = resource
+            .get("id")
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .unwrap_or_else(crate::types::new_resource_id);
+
+        let (version_id, now) = match primary_write_meta(&resource) {
+            Some((version, last_updated)) => (version, last_updated.unwrap_or_else(Utc::now)),
+            None => {
+                tracing::warn!(
+                    resource_type,
+                    id,
+                    "Elasticsearch create has no primary meta.versionId; indexing as version 1"
+                );
+                ("1".to_string(), Utc::now())
+            }
+        };
+        let version_id = version_id.as_str();
+
+        // Ensure the resource has correct type and id
+        let mut resource = resource;
+        if let Some(obj) = resource.as_object_mut() {
+            obj.insert(
+                "resourceType".to_string(),
+                Value::String(resource_type.to_string()),
+            );
+            obj.insert("id".to_string(), Value::String(id.clone()));
+        }
+
+        // Extract search parameters
+        let extracted_values = self
+            .tenant_extractor(tenant_id)
+            .extract(&resource, resource_type)
+            .unwrap_or_default();
+
+        // The resource's instant: indexed as `last_updated` and returned as
+        // the stored resource's `meta.lastUpdated`, so the two agree (#1593).
+        let doc = build_es_document(
+            tenant_id,
+            resource_type,
+            &id,
+            version_id,
+            now,
+            &resource,
+            fhir_version,
+            &extracted_values,
+        );
+
+        // Ensure index exists
+        schema::ensure_index(self, tenant_id, resource_type).await?;
+
+        // Index the document
+        let index = self.index_name(tenant_id, resource_type);
+        let doc_id = Self::document_id(resource_type, &id);
+
+        index_document(
+            self,
+            &index,
+            &doc_id,
+            &doc,
+            self.write_refresh_param(),
+            "index document",
+        )
+        .await?;
+
+        // Index any contained resources for `_contained` search. New resource,
+        // so no stale docs to delete first.
+        if resource
+            .get("contained")
+            .and_then(|c| c.as_array())
+            .is_some_and(|a| !a.is_empty())
+        {
+            self.index_contained_docs(
+                tenant_id,
+                resource_type,
+                &id,
+                &resource,
+                fhir_version,
+                version_id,
+                now,
+                false,
+            )
+            .await?;
+        }
+
+        Ok(StoredResource::from_storage(
+            resource_type,
+            &id,
+            version_id,
+            tenant.tenant_id().clone(),
+            resource,
+            now,
+            now,
+            None,
+            fhir_version,
+        ))
+    }
+
+    /// `_bulk` requests of at most [`BULK_OPS_PER_REQUEST`] operations and the
+    /// configured byte budget, with the configured write-refresh policy applied
+    /// once per request rather than once per document.
+    ///
+    /// This is what makes a bulk load survivable under `refresh=wait_for`:
+    /// that policy blocks each write until the next scheduled refresh (the
+    /// index's `refresh_interval`, 1s by default), so N per-document writes
+    /// cost N refresh waits — the ~1.4k-resource conformance seed took over
+    /// twenty minutes and the server never came up — while one bulk request
+    /// costs one.
+    ///
+    /// Each document takes the resource's own `meta.versionId` and
+    /// `meta.lastUpdated` when the primary stamped them; otherwise version 1
+    /// and the batch instant, with a warning.
+    async fn index_many(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        resources: Vec<Value>,
+        fhir_version: FhirVersion,
+    ) -> Vec<StorageResult<StoredResource>> {
+        if resources.is_empty() {
+            return Vec::new();
+        }
+        if tenant
+            .check_permission(Operation::Create, resource_type)
+            .is_err()
+        {
+            return resources
+                .iter()
+                .map(|_| {
+                    tenant
+                        .check_permission(Operation::Create, resource_type)
+                        .map(|()| unreachable!("permission check failed a moment ago"))
+                        .map_err(StorageError::from)
+                })
+                .collect();
+        }
+
+        let tenant_id = tenant.tenant_id().as_str();
+        let extractor = self.tenant_extractor(tenant_id);
+        // One instant for the batch: indexed as every document's
+        // `last_updated` and returned as each stored resource's
+        // `meta.lastUpdated` (#1593).
+        let now = Utc::now();
+
+        // Every document each resource contributes — its own, plus one per
+        // `contained` entry — addressed by (index, doc id). Built up front so
+        // the indices can be ensured once each and the operations streamed
+        // out in a few requests.
+        struct Prepared {
+            id: String,
+            version_id: String,
+            last_updated: DateTime<Utc>,
+            resource: Value,
+            docs: Vec<(String, String, Value)>,
+        }
+        let mut types_touched = vec![resource_type.to_string()];
+        let prepared: Vec<Prepared> = resources
+            .into_iter()
+            .map(|mut resource| {
+                let id = resource
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+                    .unwrap_or_else(crate::types::new_resource_id);
+                if let Some(obj) = resource.as_object_mut() {
+                    obj.insert(
+                        "resourceType".to_string(),
+                        Value::String(resource_type.to_string()),
+                    );
+                    obj.insert("id".to_string(), Value::String(id.clone()));
+                }
+                let (version_id, last_updated) = match primary_write_meta(&resource) {
+                    Some((version, last_updated)) => {
+                        (version, last_updated.unwrap_or(now))
+                    }
+                    None => {
+                        tracing::warn!(
+                            resource_type,
+                            id,
+                            "Elasticsearch create_many has no primary meta.versionId; indexing as version 1"
+                        );
+                        ("1".to_string(), now)
+                    }
+                };
+                let extracted_values = extractor
+                    .extract(&resource, resource_type)
+                    .unwrap_or_default();
+                let mut docs = vec![(
+                    self.index_name(tenant_id, resource_type),
+                    Self::document_id(resource_type, &id),
+                    build_es_document(
+                        tenant_id,
+                        resource_type,
+                        &id,
+                        &version_id,
+                        last_updated,
+                        &resource,
+                        fhir_version,
+                        &extracted_values,
+                    ),
+                )];
+                for contained in extractor.extract_contained(&resource) {
+                    types_touched.push(contained.contained_type.clone());
+                    docs.push((
+                        self.index_name(tenant_id, &contained.contained_type),
+                        Self::document_id(
+                            &contained.contained_type,
+                            &contained_resource_id(&id, &contained.local_id),
+                        ),
+                        build_es_contained_document(
+                            tenant_id,
+                            resource_type,
+                            &id,
+                            &contained.contained_type,
+                            &contained.local_id,
+                            &contained.content,
+                            &version_id,
+                            last_updated,
+                            fhir_version,
+                            &contained.values,
+                        ),
+                    ));
+                }
+                Prepared {
+                    id,
+                    version_id,
+                    last_updated,
+                    resource,
+                    docs,
+                }
+            })
+            .collect();
+
+        // Ensure every index touched exists, once each.
+        let mut ensured = std::collections::HashSet::new();
+        for ty in types_touched {
+            if ensured.insert(ty.clone())
+                && let Err(e) = schema::ensure_index(self, tenant_id, &ty).await
+            {
+                let message = error_detail(&e);
+                return prepared
+                    .iter()
+                    .map(|_| Err(internal_error(message.clone())))
+                    .collect();
+            }
+        }
+
+        // Flatten to operations, remembering which resource each belongs to,
+        // and send them in bounded requests. A resource's outcome is the first
+        // failure among its own operations, if any.
+        let ops: Vec<(usize, &str, &str, &Value)> = prepared
+            .iter()
+            .enumerate()
+            .flat_map(|(i, p)| {
+                p.docs
+                    .iter()
+                    .map(move |(index, doc_id, doc)| (i, index.as_str(), doc_id.as_str(), doc))
+            })
+            .collect();
+        let failures = self
+            .send_bulk_index(&ops, prepared.len(), self.write_refresh_param())
+            .await;
+
+        prepared
+            .into_iter()
+            .zip(failures)
+            .map(|(p, failure)| match failure {
+                Some(failure) => Err(internal_error(failure.message)),
+                None => Ok(StoredResource::from_storage(
+                    resource_type,
+                    &p.id,
+                    &p.version_id,
+                    tenant.tenant_id().clone(),
+                    p.resource,
+                    p.last_updated,
+                    p.last_updated,
+                    None,
+                    fhir_version,
+                )),
+            })
+            .collect()
+    }
+
+    /// PUT semantics. When the primary stamped `meta.versionId`, that version
+    /// and `meta.lastUpdated` are indexed and the existence GET is skipped.
+    /// Without them this backend still counts its own versions — the seed
+    /// path used by tests — and logs a warning.
+    async fn upsert(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        id: &str,
+        resource: Value,
+        fhir_version: FhirVersion,
+    ) -> StorageResult<(StoredResource, bool)> {
+        let tenant_id = tenant.tenant_id().as_str();
+
+        let index = self.index_name(tenant_id, resource_type);
+        let doc_id = Self::document_id(resource_type, id);
+
+        let (version_id, now, is_new) =
+            if let Some((version, last_updated)) = primary_write_meta(&resource) {
+                (version, last_updated.unwrap_or_else(Utc::now), true)
+            } else {
+                tracing::warn!(
+                    resource_type,
+                    id,
+                    "Elasticsearch create_or_update has no primary meta.versionId; \
+                 fetching the existing document to increment its version"
+                );
+                // Deciding "this resource is new, start at version 1" requires knowing that
+                // it does not already exist. Only Elasticsearch saying so establishes that
+                // (`"found": false`, or the index does not exist) — the same two answers
+                // `read` accepts, through the same retried request (#1364). If the
+                // existence check failed, or was answered by something else with a bare
+                // 404, we must not guess "new" — doing so would reset the version of a
+                // resource that does exist, silently clobbering its history.
+                let op = ReadOp::Get { doc_id: &doc_id };
+                let existing = send_read_with_retry(self, op, &index, Value::Null).await?;
+
+                let (version_id, is_new) = match existing {
+                    Some(body) => {
+                        let source = body.get("_source");
+                        // Belt-and-braces tenant guard, mirroring `read` (see below).
+                        //
+                        // After the #384 fix an injective `index_name` already guarantees
+                        // this index belongs to exactly one tenant, so this check should
+                        // never fire. It is kept because this is the one place the backend
+                        // reads *foreign state* to make a *write* decision, and a future
+                        // regression in the naming derivation would otherwise silently
+                        // resume deriving one tenant's version from another's document.
+                        //
+                        // A mismatch is treated as **absent**, not as an error. An index
+                        // upgraded from the pre-fix layout can still hold documents left
+                        // behind by a colliding tenant; erroring would brick the rightful
+                        // owner on exactly those ids, permanently, with no operator
+                        // remedy. Treating them as absent is self-healing — the foreign
+                        // document is overwritten and leaves an index it never belonged
+                        // in — and is correct on the merits: from this tenant's
+                        // perspective the resource genuinely does not exist. Resetting the
+                        // version is harmless because Elasticsearch keeps no history and,
+                        // in every supported composite mode, the primary is authoritative
+                        // for version assignment (writes always land there first).
+                        let doc_tenant = source
+                            .and_then(|s| s.get("tenant_id"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        if doc_tenant != tenant_id {
+                            tracing::warn!(
+                                tenant = %tenant_id,
+                                found_tenant = %doc_tenant,
+                                resource_type,
+                                id,
+                                "Elasticsearch document at this address belongs to another tenant; \
+                                 treating as absent and overwriting (see issue #384)"
+                            );
+                            ("1".to_string(), true)
+                        } else {
+                            let current_version: u64 = source
+                                .and_then(|s| s.get("version_id"))
+                                .and_then(|v| v.as_str())
+                                .and_then(|v| v.parse().ok())
+                                .unwrap_or(0);
+                            ((current_version + 1).to_string(), false)
+                        }
+                    }
+                    None => ("1".to_string(), true),
+                };
+                (version_id, Utc::now(), is_new)
+            };
+
+        // Ensure resource has correct type and id
+        let mut resource = resource;
+        if let Some(obj) = resource.as_object_mut() {
+            obj.insert(
+                "resourceType".to_string(),
+                Value::String(resource_type.to_string()),
+            );
+            obj.insert("id".to_string(), Value::String(id.to_string()));
+        }
+
+        // Extract search parameters
+        let extracted_values = self
+            .tenant_extractor(tenant_id)
+            .extract(&resource, resource_type)
+            .unwrap_or_default();
+
+        // The resource's instant: indexed as `last_updated` and returned as
+        // the stored resource's `meta.lastUpdated`, so the two agree (#1593).
+        let doc = build_es_document(
+            tenant_id,
+            resource_type,
+            id,
+            &version_id,
+            now,
+            &resource,
+            fhir_version,
+            &extracted_values,
+        );
+
+        // Ensure index exists
+        schema::ensure_index(self, tenant_id, resource_type).await?;
+
+        index_document(
+            self,
+            &index,
+            &doc_id,
+            &doc,
+            self.write_refresh_param(),
+            "index document",
+        )
+        .await?;
+
+        // Re-sync contained docs (delete stale, then re-index) so updates that
+        // add/remove/change `contained[]` entries are reflected.
+        self.index_contained_docs(
+            tenant_id,
+            resource_type,
+            id,
+            &resource,
+            fhir_version,
+            &version_id,
+            now,
+            true,
+        )
+        .await?;
+
+        Ok((
+            StoredResource::from_storage(
+                resource_type,
+                id,
+                &version_id,
+                tenant.tenant_id().clone(),
+                resource,
+                now,
+                now,
+                None,
+                fhir_version,
+            ),
+            is_new,
+        ))
+    }
 }
 
 #[async_trait]
@@ -1534,19 +1571,12 @@ impl ResourceStorage for ElasticsearchBackend {
         resource: Value,
         fhir_version: FhirVersion,
     ) -> StorageResult<StoredResource> {
-        self.index_new(tenant, resource_type, resource, fhir_version, false)
+        self.index_new(tenant, resource_type, resource, fhir_version)
             .await
     }
 
-    async fn mirror_create(
-        &self,
-        tenant: &TenantContext,
-        resource_type: &str,
-        resource: Value,
-        fhir_version: FhirVersion,
-    ) -> StorageResult<StoredResource> {
-        self.index_new(tenant, resource_type, resource, fhir_version, true)
-            .await
+    fn as_search_index(&self) -> Option<&dyn ReindexTarget> {
+        Some(self)
     }
 
     /// `_bulk` requests of at most [`BULK_OPS_PER_REQUEST`] operations; see
@@ -1558,18 +1588,7 @@ impl ResourceStorage for ElasticsearchBackend {
         resources: Vec<Value>,
         fhir_version: FhirVersion,
     ) -> Vec<StorageResult<StoredResource>> {
-        self.index_many(tenant, resource_type, resources, fhir_version, false)
-            .await
-    }
-
-    async fn mirror_many(
-        &self,
-        tenant: &TenantContext,
-        resource_type: &str,
-        resources: Vec<Value>,
-        fhir_version: FhirVersion,
-    ) -> Vec<StorageResult<StoredResource>> {
-        self.index_many(tenant, resource_type, resources, fhir_version, true)
+        self.index_many(tenant, resource_type, resources, fhir_version)
             .await
     }
 
@@ -1581,19 +1600,7 @@ impl ResourceStorage for ElasticsearchBackend {
         resource: Value,
         fhir_version: FhirVersion,
     ) -> StorageResult<(StoredResource, bool)> {
-        self.upsert(tenant, resource_type, id, resource, fhir_version, false)
-            .await
-    }
-
-    async fn mirror_update(
-        &self,
-        tenant: &TenantContext,
-        resource_type: &str,
-        id: &str,
-        resource: Value,
-        fhir_version: FhirVersion,
-    ) -> StorageResult<(StoredResource, bool)> {
-        self.upsert(tenant, resource_type, id, resource, fhir_version, true)
+        self.upsert(tenant, resource_type, id, resource, fhir_version)
             .await
     }
 
@@ -2618,6 +2625,17 @@ impl ReindexTarget for ElasticsearchBackend {
             let resource = &resources[i];
             let resource_type = resource.resource_type();
             let id = resource.id();
+            if resource.version_id().is_empty() {
+                return Prepared {
+                    values: 0,
+                    docs: Vec::new(),
+                    failure: Some(format!(
+                        "Elasticsearch is a search secondary and cannot assign versions; \
+                         {resource_type}/{id} has no versionId from the primary"
+                    )),
+                    types: Vec::new(),
+                };
+            }
             let content = resource.content();
             let fhir_version = resource.fhir_version();
             let extracted_values = match extractor.extract(content, resource_type) {
@@ -2761,6 +2779,12 @@ impl ReindexTarget for ElasticsearchBackend {
         tenant: &TenantContext,
         resource: &StoredResource,
     ) -> StorageResult<usize> {
+        if resource.version_id().is_empty() {
+            return Err(missing_primary_version(
+                resource.resource_type(),
+                resource.id(),
+            ));
+        }
         let tenant_id = tenant.tenant_id().as_str();
         let resource_type = resource.resource_type();
         let resource_id = resource.id();
