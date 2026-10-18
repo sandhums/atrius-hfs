@@ -28,7 +28,7 @@ regression on the same Diabetes ValueSet.
   `$expand` / `$validate-code` (`3ecac00f4`). Same `value_set.rs` missing-system
   arms, different patch.
 - [`expand-paths-architecture.md`](expand-paths-architecture.md) — full `$expand`
-  routing map. The `is-a` fast path below is a new branch on that map.
+  routing map. Unbounded `is-a` now takes upstream's `ecl::evaluate_hierarchy` branch (#2114).
 - `atrius-his/scripts/icd/README.md` — load order, `--replace`, `?finalize=true`.
 - `atrius-his/scripts/icd/verify-icd-load.py` — 22 post-load invariants. Run
   after any HTS rebuild or upstream merge that touches these files.
@@ -44,7 +44,7 @@ same symptom. If they did, drop ours and note it here.
 
 | # | Symptom if this patch is lost | Keep / conflict hotspot |
 |---|-------------------------------|-------------------------|
-| 1 | Unbounded `$expand` of any `is-a` / `descendent-of` ValueSet whose codes contain `.` or `-` (ICD-10 `E11.3`, LOINC `718-7`) returns **HTTP 400** `Invalid ECL expression: Unexpected character: '.'`. Bounded `count=` still works, so IG Publisher / validators that omit `count` fail and typeahead that passes one does not. | `backends/sqlite/value_set.rs` `apply_compose_filters` — same file as the FTS typeahead fork. Upstream still routes these through the ECL parser. **Keep ours.** Postgres already has its own CTE/`is-a` path and was not changed. |
+| 1 | Unbounded `$expand` of any `is-a` / `descendent-of` ValueSet whose codes contain `.` or `-` (ICD-10 `E11.3`, LOINC `718-7`) returns **HTTP 400** `Invalid ECL expression: Unexpected character: '.'`. Bounded `count=` still works, so IG Publisher / validators that omit `count` fail and typeahead that passes one does not. | **Dropped 2026-10-18 — adopted upstream.** Helios fixed this in `4b0e5313d` (#2114) with `ecl::evaluate_hierarchy`, a recursive CTE over `concept_hierarchy`. Our `query_descendants_full` fast path (over `concept_closure`) ran first and shadowed it, so it was removed — unbounded `is-a` no longer depends on the closure being built (item 3). |
 | 2 | Unbounded hierarchical `$expand` covering a SNOMED mutual parent/child pair (`310387003` ⇄ `707221002`) **aborts the process** (stack overflow). CMS165 `is-a` ValueSets (e.g. pregnancy, 39 ICD-10 blocks) default to tree mode when `$expand` omits `count`/`excludeNested`, which is how the sidecar evaluates measures. | Same file, `build_subtree` / `build_hierarchical_expansion` (iterative heap walk + path-local cycle skip). Postgres `build_subtree` has the same walk. **Keep ours.** A global visited-set from upstream would be the wrong fix — these are poly-hierarchies. |
 | 3 | Chunked `POST /import` of a CodeSystem into a *running* server leaves `concept_closure` empty. `$subsumes` returns `not-subsumed` for a genuine parent/child; `is-a` `$expand` still works (it walks `concept_hierarchy`). Split-brain. | `operations/import_bundle.rs` (`?finalize=true`), `import/mod.rs` (`BundleImportBackend::rebuild_missing_closures`), sqlite/postgres `mod.rs` + `schema.rs` (return `usize`). Trait default is `Ok(0)`, so adding the method is merge-safe; the `Query(ImportParams)` extractor on `import_handler` will conflict if upstream also changed the signature. **Keep ours.** |
 | 4 | `DELETE /CodeSystem/{id}` of a resource imported via `/import` returns **HTTP 500** `resource not found`. Imported content is permanently undeletable; `/import` only upserts, so retired codes linger forever. | `operations/crud.rs` `delete_resource`. **Keep ours.** FHIR DELETE is idempotent — absent is 204. |
@@ -66,7 +66,7 @@ merge-and-reload:
 ## Files touched (merge checklist)
 
 ```
-crates/hts/src/backends/sqlite/value_set.rs     # 1, 2
+crates/hts/src/backends/sqlite/value_set.rs     # 2 (1 adopted from upstream #2114)
 crates/hts/src/backends/sqlite/mod.rs           # 3
 crates/hts/src/backends/sqlite/schema.rs        # 3 (migrate_concept_closure → usize)
 crates/hts/src/backends/postgres/mod.rs         # 3
@@ -95,6 +95,10 @@ Signature changes that will fail to compile if only half-merged:
 ---
 
 ## 1. Unbounded `is-a` / `descendent-of` no longer goes through ECL
+
+> **Superseded (2026-10-18).** Upstream #2114 (`4b0e5313d`) covers this with
+> `ecl::evaluate_hierarchy`; the Atrius fast path below was removed. Kept for
+> history.
 
 **Where:** `apply_compose_filters` in `backends/sqlite/value_set.rs`, just
 before the `ecl::parse_and_evaluate` slow path.

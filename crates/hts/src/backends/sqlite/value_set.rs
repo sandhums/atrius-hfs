@@ -4401,28 +4401,6 @@ fn apply_compose_filters(
             continue;
         }
 
-        // Fast path for is-a / descendent-of with no prior candidate set.
-        // ECL only accepts numeric SCTIDs, so routing these through
-        // `parse_and_evaluate` rejects any code system whose codes carry a
-        // `.` or `-` (ICD-10 `H40.1`, LOINC `718-7`). A closure lookup is
-        // equivalent for a plain-code hierarchy op and works on every system —
-        // it is already what the bounded paths above and
-        // `apply_compose_filters_to_candidates` use.
-        if property_norm == "concept" && matches!(op, "is-a" | "descendent-of") && !value.is_empty()
-        {
-            let descendants =
-                query_descendants_full(conn, system_url, system_id, value, op == "is-a")?;
-            match result.as_mut() {
-                Some(prev) => {
-                    let keep: HashSet<String> =
-                        descendants.iter().map(|c| c.code.clone()).collect();
-                    prev.retain(|c| keep.contains(&c.code));
-                }
-                None => result = Some(descendants),
-            }
-            continue;
-        }
-
         // Slow path: no prior bounded set — compute the full expansion.
         // Helios #2114 evaluates concept hierarchy ops without ECL tokenization
         // so dotted codes are valid; remaining `constraint =` expressions stay ECL.
@@ -5036,58 +5014,6 @@ fn query_ancestors_full(
                 contains: vec![],
             })
         })
-        .map_err(|e| HtsError::StorageError(e.to_string()))?
-        .collect::<rusqlite::Result<Vec<_>>>()
-        .map_err(|e| HtsError::StorageError(e.to_string()))?;
-
-    Ok(rows)
-}
-
-/// Return all descendants of `value_code` in `system_id`, including `value_code`
-/// itself when `include_self`.
-///
-/// The mirror of [`query_ancestors_full`], walking `concept_closure` in the
-/// descendant direction. Backs the unbounded `is-a` / `descendent-of` compose
-/// filters, which cannot go through ECL because the ECL grammar only accepts
-/// numeric SCTIDs.
-fn query_descendants_full(
-    conn: &Connection,
-    system_url: &str,
-    system_id: &str,
-    value_code: &str,
-    include_self: bool,
-) -> Result<Vec<ExpansionContains>, HtsError> {
-    let mut stmt = conn
-        .prepare_cached(
-            "SELECT cc.descendant_code, c.display
-             FROM   concept_closure cc
-             JOIN   concepts c ON c.system_id = ?2 AND c.code = cc.descendant_code
-             WHERE  cc.system_id = ?2 AND cc.ancestor_code = ?1
-               AND  (cc.descendant_code != ?1 OR ?3)",
-        )
-        .map_err(|e| HtsError::StorageError(e.to_string()))?;
-
-    let rows = stmt
-        .query_map(
-            rusqlite::params![value_code, system_id, i64::from(include_self)],
-            |r| {
-                Ok(ExpansionContains {
-                    system: system_url.to_owned(),
-                    version: None,
-                    code: r.get(0)?,
-                    display: r.get(1)?,
-                    is_abstract: None,
-
-                    inactive: None,
-
-                    designations: vec![],
-
-                    properties: vec![],
-                    extensions: vec![],
-                    contains: vec![],
-                })
-            },
-        )
         .map_err(|e| HtsError::StorageError(e.to_string()))?
         .collect::<rusqlite::Result<Vec<_>>>()
         .map_err(|e| HtsError::StorageError(e.to_string()))?;
