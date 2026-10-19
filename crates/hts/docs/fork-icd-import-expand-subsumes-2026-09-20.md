@@ -45,8 +45,8 @@ same symptom. If they did, drop ours and note it here.
 | # | Symptom if this patch is lost | Keep / conflict hotspot |
 |---|-------------------------------|-------------------------|
 | 1 | Unbounded `$expand` of any `is-a` / `descendent-of` ValueSet whose codes contain `.` or `-` (ICD-10 `E11.3`, LOINC `718-7`) returns **HTTP 400** `Invalid ECL expression: Unexpected character: '.'`. Bounded `count=` still works, so IG Publisher / validators that omit `count` fail and typeahead that passes one does not. | **Dropped 2026-10-18 — adopted upstream.** Helios fixed this in `4b0e5313d` (#2114) with `ecl::evaluate_hierarchy`, a recursive CTE over `concept_hierarchy`. Our `query_descendants_full` fast path (over `concept_closure`) ran first and shadowed it, so it was removed — unbounded `is-a` no longer depends on the closure being built (item 3). |
-| 2 | Unbounded hierarchical `$expand` covering a SNOMED mutual parent/child pair (`310387003` ⇄ `707221002`) **aborts the process** (stack overflow). CMS165 `is-a` ValueSets (e.g. pregnancy, 39 ICD-10 blocks) default to tree mode when `$expand` omits `count`/`excludeNested`, which is how the sidecar evaluates measures. | Same file, `build_subtree` / `build_hierarchical_expansion` (iterative heap walk + path-local cycle skip). Postgres `build_subtree` has the same walk. **Keep ours.** A global visited-set from upstream would be the wrong fix — these are poly-hierarchies. |
-| 3 | Chunked `POST /import` of a CodeSystem into a *running* server leaves `concept_closure` empty. `$subsumes` returns `not-subsumed` for a genuine parent/child; `is-a` `$expand` still works (it walks `concept_hierarchy`). Split-brain. | `operations/import_bundle.rs` (`?finalize=true`), `import/mod.rs` (`BundleImportBackend::rebuild_missing_closures`), sqlite/postgres `mod.rs` + `schema.rs` (return `usize`). Trait default is `Ok(0)`, so adding the method is merge-safe; the `Query(ImportParams)` extractor on `import_handler` will conflict if upstream also changed the signature. **Keep ours.** |
+| 2 | Unbounded hierarchical `$expand` covering a SNOMED mutual parent/child pair (`310387003` ⇄ `707221002`) **aborts the process** (stack overflow). CMS165 `is-a` ValueSets (e.g. pregnancy, 39 ICD-10 blocks) default to tree mode when `$expand` omits `count`/`excludeNested`, which is how the sidecar evaluates measures. | **Dropped 2026-10-19 — adopted upstream.** Helios #2125 (`8c1ce8fc8`) plus cycle-root promotion (`74fc74a80`) live in `backends/hierarchy.rs` (`nest_expansion`). Path-local cycle skip, poly-hierarchy copies kept, rootless cycles rooted at the source component rather than the lowest unplaced code. |
+| 3 | Chunked `POST /import` of a CodeSystem into a *running* server leaves `concept_closure` empty. `$subsumes` returns `not-subsumed` for a genuine parent/child; `is-a` `$expand` still works (it walks `concept_hierarchy`). Split-brain. | **Dropped 2026-10-19 — adopted upstream.** Helios #2125 (`dfdde6eb5`) plus timeout/background `202` (`d0263e724`), rebuild on every import (`146d54558`), `?defer_closure=true` (`4511edf9c`), and isolated PG tests (`43de1754d`). Chunked loaders must pass `defer_closure=true` on non-final chunks and poll `finalize=true` until `closures_rebuild` is no longer `"pending"`. |
 | 4 | `DELETE /CodeSystem/{id}` of a resource imported via `/import` returns **HTTP 500** `resource not found`. Imported content is permanently undeletable; `/import` only upserts, so retired codes linger forever. | `operations/crud.rs` `delete_resource`. **Keep ours.** FHIR DELETE is idempotent — absent is 204. |
 | 5 | HFS `Condition?code:in=…/atrius-vs-diabetes` returns **total=0** even though `$validate-code` for `44054006` is true and GET `$expand?count=10000` lists all 546 codes. CMS951 (and any retrieve on a ValueSet larger than the HTS default page) scores IP empty. Essential Hypertension is 16 codes and still works, which is how this looked like a measure/CQL flake. | `crates/terminology-client` `expand_value_set` (page `$expand`) and `crates/persistence` SQLite token OR chunking. **Keep ours.** HTS paging when `count` is omitted is FHIR-legal; the client must walk `expansion.total`. |
 
@@ -66,13 +66,10 @@ merge-and-reload:
 ## Files touched (merge checklist)
 
 ```
-crates/hts/src/backends/sqlite/value_set.rs     # 2 (1 adopted from upstream #2114)
-crates/hts/src/backends/sqlite/mod.rs           # 3
-crates/hts/src/backends/sqlite/schema.rs        # 3 (migrate_concept_closure → usize)
-crates/hts/src/backends/postgres/mod.rs         # 3
-crates/hts/src/backends/postgres/schema.rs      # 3 (migrate_concept_closure_pg → usize)
-crates/hts/src/import/mod.rs                    # 3 (trait method + default)
-crates/hts/src/operations/import_bundle.rs      # 3 (Query param + test)
+crates/hts/src/backends/sqlite/value_set.rs     # 1 and 2 adopted from upstream (#2114 / #2125)
+crates/hts/src/backends/hierarchy.rs            # 2 (Helios nest_expansion)
+crates/hts/src/operations/import_bundle.rs      # 3 adopted from upstream (#2125 + follow-ups)
+crates/hts/src/import/mod.rs                    # 3 adopted; keep `code_system_concept_codes` (--extends)
 crates/hts/src/operations/crud.rs               # 4
 crates/terminology-client/src/lib.rs            # 5 (page $expand for :in)
 crates/persistence/src/backends/sqlite/search/query_builder.rs  # 5 (token OR chunks)
@@ -124,6 +121,11 @@ catch it.
 
 ## 2. Path-local cycle guard in hierarchical `$expand`
 
+> **Superseded (2026-10-19).** Upstream #2125 (`8c1ce8fc8`) plus `74fc74a80`
+> cover this in `backends/hierarchy.rs` (`nest_expansion`). Cycle-root
+> promotion uses source strongly-connected components, not the lowest unplaced
+> code. Shared tests live next to that function. Kept for history.
+
 **Where:** `build_hierarchical_expansion` / `build_subtree` in the same file.
 
 **What was wrong:** `concept_hierarchy` is not acyclic. SNOMED RF2 imports
@@ -158,6 +160,13 @@ sets, never lengths. `verify-icd-load.py` §8 does this.
 ---
 
 ## 3. `POST /import?finalize=true` rebuilds missing closures
+
+> **Superseded (2026-10-19).** Upstream #2125 (`dfdde6eb5`) plus
+> `d0263e724` / `146d54558` / `4511edf9c` / `43de1754d` cover this. Every
+> `/import` rebuilds the closure of what it wrote; chunked loads opt out with
+> `?defer_closure=true`; `finalize=true` may answer `202` with
+> `closures_rebuild: "pending"` and must be polled. HIS loaders still need
+> `defer_closure=true` on non-final chunks and 202 polling. Kept for history.
 
 **Where:** `import_bundle.rs`, `import/mod.rs`, both backends' `schema.rs` /
 `mod.rs`.

@@ -6519,13 +6519,6 @@ fn build_hierarchical_expansion(
         return Ok(flat);
     }
 
-    // Build lookup: (system_url, code) → ExpansionContains.
-    let items_map: HashMap<(String, String), ExpansionContains> = flat
-        .iter()
-        .cloned()
-        .map(|c| ((c.system.clone(), c.code.clone()), c))
-        .collect();
-
     // Set of all (system_url, code) pairs in the expansion for fast membership checks.
     let expansion_set: HashSet<(String, String)> = flat
         .iter()
@@ -6555,8 +6548,6 @@ fn build_hierarchical_expansion(
     // both endpoints are in the expansion.
     // parent_to_children: (system_url, parent_code) → Vec<(system_url, child_code)>
     let mut parent_to_children: HashMap<(String, String), Vec<(String, String)>> = HashMap::new();
-    // has_parent: tracks which codes have a parent within the expansion.
-    let mut has_parent: HashSet<(String, String)> = HashSet::new();
 
     for (sys_url, sys_id) in &system_id_map {
         let mut stmt = conn
@@ -6582,114 +6573,15 @@ fn build_hierarchical_expansion(
                 parent_to_children
                     .entry(parent_key)
                     .or_default()
-                    .push(child_key.clone());
-                has_parent.insert(child_key);
+                    .push(child_key);
             }
         }
     }
 
-    // Roots: concepts that appear in the expansion but have no parent within it.
-    let mut roots: Vec<ExpansionContains> = flat
-        .iter()
-        .filter(|c| !has_parent.contains(&(c.system.clone(), c.code.clone())))
-        .map(|c| {
-            build_subtree(
-                &(c.system.clone(), c.code.clone()),
-                &items_map,
-                &parent_to_children,
-            )
-        })
-        .collect();
-
-    // When every member of the expansion has a parent inside it, the edge set
-    // contains a cycle with no external entry point and there is no root to
-    // nest under. Fall back to the flat list rather than returning nothing.
-    if roots.is_empty() {
-        let mut flat = flat;
-        flat.sort_by(|a, b| a.code.cmp(&b.code));
-        return Ok(flat);
-    }
-
-    roots.sort_by(|a, b| a.code.cmp(&b.code));
-    Ok(roots)
-}
-
-/// Build an [`ExpansionContains`] node with all its nested children.
-///
-/// Looks up `key` in `items_map`, then walks `parent_to_children` iteratively
-/// (heap stack, not the OS thread stack). Children are sorted by code before
-/// being attached, producing a deterministic tree order regardless of the
-/// order edges were stored in `concept_hierarchy`.
-///
-/// The walk is path-local cycle-safe. `concept_hierarchy` is not guaranteed
-/// acyclic: SNOMED RF2 imports produce mutual parent/child pairs (e.g.
-/// `310387003` ⇄ `707221002`). A recursive walk of those edges overflowed the
-/// tokio worker stack and aborted the process. The guard is path-local rather
-/// than global because these are poly-hierarchies: the same concept
-/// legitimately nests under several different parents.
-///
-/// ## Parameters
-/// - `key` — `(system_url, code)` of the concept to build.
-/// - `items_map` — flat `(system_url, code)` → [`ExpansionContains`] lookup.
-/// - `parent_to_children` — adjacency map built from `concept_hierarchy` edges
-///   that are fully contained within the expansion set.
-fn build_subtree(
-    key: &(String, String),
-    items_map: &HashMap<(String, String), ExpansionContains>,
-    parent_to_children: &HashMap<(String, String), Vec<(String, String)>>,
-) -> ExpansionContains {
-    struct Frame {
-        key: (String, String),
-        next_child: usize,
-        children: Vec<(String, String)>,
-        built: Vec<ExpansionContains>,
-    }
-
-    let start_children = parent_to_children.get(key).cloned().unwrap_or_default();
-    let mut stack = vec![Frame {
-        key: key.clone(),
-        next_child: 0,
-        children: start_children,
-        built: Vec::new(),
-    }];
-    let mut path = HashSet::new();
-    path.insert(key.clone());
-
-    while let Some(frame) = stack.last_mut() {
-        if frame.next_child < frame.children.len() {
-            let child_key = frame.children[frame.next_child].clone();
-            frame.next_child += 1;
-            if path.contains(&child_key) {
-                continue;
-            }
-            path.insert(child_key.clone());
-            let grandchildren = parent_to_children
-                .get(&child_key)
-                .cloned()
-                .unwrap_or_default();
-            stack.push(Frame {
-                key: child_key,
-                next_child: 0,
-                children: grandchildren,
-                built: Vec::new(),
-            });
-            continue;
-        }
-
-        let done = stack.pop().expect("frame just observed");
-        path.remove(&done.key);
-        let mut item = items_map[&done.key].clone();
-        let mut child_items = done.built;
-        child_items.sort_by(|a, b| a.code.cmp(&b.code));
-        item.contains = child_items;
-        if let Some(parent) = stack.last_mut() {
-            parent.built.push(item);
-        } else {
-            return item;
-        }
-    }
-
-    items_map[key].clone()
+    Ok(crate::backends::hierarchy::nest_expansion(
+        flat,
+        &parent_to_children,
+    ))
 }
 
 /// Write computed expansion entries into the `value_set_expansions` cache.
@@ -10980,140 +10872,6 @@ mod tests {
         assert_eq!(resp.contains.len(), 4);
         for c in &resp.contains {
             assert!(c.contains.is_empty(), "flat mode should not nest children");
-        }
-    }
-
-    /// `concept_hierarchy` is not guaranteed acyclic: SNOMED RF2 imports leave
-    /// mutual parent/child pairs behind (e.g. `310387003` ⇄ `707221002`).
-    /// `build_subtree` used to recurse across such a pair until the worker
-    /// thread overflowed its stack, aborting the whole process — so any
-    /// unbounded `$expand` covering one took the server down.
-    #[test]
-    fn build_subtree_terminates_on_cyclic_hierarchy() {
-        const SYS: &str = "http://snomed.info/sct";
-        let key = |code: &str| (SYS.to_string(), code.to_string());
-        let node = |code: &str| ExpansionContains {
-            system: SYS.to_string(),
-            version: None,
-            code: code.to_string(),
-            display: None,
-            is_abstract: None,
-            inactive: None,
-            designations: vec![],
-            properties: vec![],
-            extensions: vec![],
-            contains: vec![],
-        };
-
-        // root → a, plus the mutual pair a ⇄ b.
-        let items_map: HashMap<(String, String), ExpansionContains> = ["root", "a", "b"]
-            .iter()
-            .map(|c| (key(c), node(c)))
-            .collect();
-        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = [
-            (key("root"), vec![key("a")]),
-            (key("a"), vec![key("b")]),
-            (key("b"), vec![key("a")]),
-        ]
-        .into_iter()
-        .collect();
-
-        let tree = build_subtree(&key("root"), &items_map, &parent_to_children);
-
-        // root → a → b; b's edge back to a closes the cycle and is dropped.
-        assert_eq!(tree.code, "root");
-        assert_eq!(tree.contains.len(), 1);
-        assert_eq!(tree.contains[0].code, "a");
-        assert_eq!(tree.contains[0].contains.len(), 1);
-        assert_eq!(tree.contains[0].contains[0].code, "b");
-        assert!(tree.contains[0].contains[0].contains.is_empty());
-    }
-
-    /// A 4k-deep parent chain would overflow a tokio worker if `build_subtree`
-    /// still recursed on the OS stack. Heap walk must terminate.
-    #[test]
-    fn build_subtree_survives_deep_chain() {
-        const SYS: &str = "http://example.org/cs";
-        const DEPTH: usize = 4_096;
-        let key = |n: usize| (SYS.to_string(), n.to_string());
-        let node = |n: usize| ExpansionContains {
-            system: SYS.to_string(),
-            version: None,
-            code: n.to_string(),
-            display: None,
-            is_abstract: None,
-            inactive: None,
-            designations: vec![],
-            properties: vec![],
-            extensions: vec![],
-            contains: vec![],
-        };
-
-        let items_map: HashMap<(String, String), ExpansionContains> =
-            (0..=DEPTH).map(|n| (key(n), node(n))).collect();
-        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> =
-            (0..DEPTH).map(|n| (key(n), vec![key(n + 1)])).collect();
-
-        let tree = build_subtree(&key(0), &items_map, &parent_to_children);
-        let mut walk = &tree;
-        for n in 0..=DEPTH {
-            assert_eq!(walk.code, n.to_string());
-            if n == DEPTH {
-                assert!(walk.contains.is_empty());
-            } else {
-                assert_eq!(walk.contains.len(), 1);
-                walk = &walk.contains[0];
-            }
-        }
-    }
-
-    /// The cycle guard is path-local on purpose: these are poly-hierarchies, so
-    /// one concept legitimately nests under each of its parents.
-    #[test]
-    fn build_subtree_keeps_shared_concept_under_every_parent() {
-        const SYS: &str = "http://snomed.info/sct";
-        let key = |code: &str| (SYS.to_string(), code.to_string());
-        let node = |code: &str| ExpansionContains {
-            system: SYS.to_string(),
-            version: None,
-            code: code.to_string(),
-            display: None,
-            is_abstract: None,
-            inactive: None,
-            designations: vec![],
-            properties: vec![],
-            extensions: vec![],
-            contains: vec![],
-        };
-
-        // root → p1, p2; both p1 and p2 → shared.
-        let items_map: HashMap<(String, String), ExpansionContains> =
-            ["root", "p1", "p2", "shared"]
-                .iter()
-                .map(|c| (key(c), node(c)))
-                .collect();
-        let parent_to_children: HashMap<(String, String), Vec<(String, String)>> = [
-            (key("root"), vec![key("p1"), key("p2")]),
-            (key("p1"), vec![key("shared")]),
-            (key("p2"), vec![key("shared")]),
-        ]
-        .into_iter()
-        .collect();
-
-        let tree = build_subtree(&key("root"), &items_map, &parent_to_children);
-
-        assert_eq!(tree.contains.len(), 2);
-        for parent in &tree.contains {
-            assert_eq!(
-                parent
-                    .contains
-                    .iter()
-                    .map(|c| c.code.as_str())
-                    .collect::<Vec<_>>(),
-                vec!["shared"],
-                "{} should still nest the shared concept",
-                parent.code
-            );
         }
     }
 

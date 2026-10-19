@@ -3541,12 +3541,6 @@ async fn build_hierarchical_expansion(
         return Ok(flat);
     }
 
-    let items_map: HashMap<(String, String), ExpansionContains> = flat
-        .iter()
-        .cloned()
-        .map(|c| ((c.system.clone(), c.code.clone()), c))
-        .collect();
-
     let expansion_set: HashSet<(String, String)> = flat
         .iter()
         .map(|c| (c.system.clone(), c.code.clone()))
@@ -3569,7 +3563,6 @@ async fn build_hierarchical_expansion(
     }
 
     let mut parent_to_children: HashMap<(String, String), Vec<(String, String)>> = HashMap::new();
-    let mut has_parent: HashSet<(String, String)> = HashSet::new();
 
     for (sys_url, sys_id) in &system_id_map {
         let edge_rows = client
@@ -3589,90 +3582,15 @@ async fn build_hierarchical_expansion(
                 parent_to_children
                     .entry(parent_key)
                     .or_default()
-                    .push(child_key.clone());
-                has_parent.insert(child_key);
+                    .push(child_key);
             }
         }
     }
 
-    let mut roots: Vec<ExpansionContains> = flat
-        .iter()
-        .filter(|c| !has_parent.contains(&(c.system.clone(), c.code.clone())))
-        .map(|c| {
-            build_subtree(
-                &(c.system.clone(), c.code.clone()),
-                &items_map,
-                &parent_to_children,
-            )
-        })
-        .collect();
-
-    roots.sort_by(|a, b| a.code.cmp(&b.code));
-    Ok(roots)
-}
-
-/// Build an [`ExpansionContains`] node with nested children (heap walk).
-///
-/// Same cycle / poly-hierarchy contract as the SQLite `build_subtree`: path-
-/// local skip of already-open ancestors, so SNOMED mutual parent/child pairs
-/// cannot overflow the tokio worker stack.
-fn build_subtree(
-    key: &(String, String),
-    items_map: &HashMap<(String, String), ExpansionContains>,
-    parent_to_children: &HashMap<(String, String), Vec<(String, String)>>,
-) -> ExpansionContains {
-    struct Frame {
-        key: (String, String),
-        next_child: usize,
-        children: Vec<(String, String)>,
-        built: Vec<ExpansionContains>,
-    }
-
-    let start_children = parent_to_children.get(key).cloned().unwrap_or_default();
-    let mut stack = vec![Frame {
-        key: key.clone(),
-        next_child: 0,
-        children: start_children,
-        built: Vec::new(),
-    }];
-    let mut path = HashSet::new();
-    path.insert(key.clone());
-
-    while let Some(frame) = stack.last_mut() {
-        if frame.next_child < frame.children.len() {
-            let child_key = frame.children[frame.next_child].clone();
-            frame.next_child += 1;
-            if path.contains(&child_key) {
-                continue;
-            }
-            path.insert(child_key.clone());
-            let grandchildren = parent_to_children
-                .get(&child_key)
-                .cloned()
-                .unwrap_or_default();
-            stack.push(Frame {
-                key: child_key,
-                next_child: 0,
-                children: grandchildren,
-                built: Vec::new(),
-            });
-            continue;
-        }
-
-        let done = stack.pop().expect("frame just observed");
-        path.remove(&done.key);
-        let mut item = items_map[&done.key].clone();
-        let mut child_items = done.built;
-        child_items.sort_by(|a, b| a.code.cmp(&b.code));
-        item.contains = child_items;
-        if let Some(parent) = stack.last_mut() {
-            parent.built.push(item);
-        } else {
-            return item;
-        }
-    }
-
-    items_map[key].clone()
+    Ok(crate::backends::hierarchy::nest_expansion(
+        flat,
+        &parent_to_children,
+    ))
 }
 
 /// Write computed expansion entries into the `value_set_expansions` cache.
