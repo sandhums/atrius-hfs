@@ -563,6 +563,21 @@ mod tests {
         assert!(!is_transient(&FhirPathError::TerminologyError("x".into())));
     }
 
+    #[tokio::test]
+    async fn expand_network_error_omits_the_url_query() {
+        let client = TerminologyClient::new(
+            "http://127.0.0.1:1?api_key=QUERYSECRET".to_string(),
+            FhirVersion::R4,
+        );
+        let err = client
+            .expand("http://hl7.org/fhir/ValueSet/administrative-gender", None)
+            .await
+            .expect_err("nothing listens on port 1");
+        let text = err.to_string();
+        assert!(!text.contains("QUERYSECRET"), "{text}");
+        assert!(text.contains("127.0.0.1:1"), "{text}");
+    }
+
     async fn call_operation(client: &TerminologyClient, operation: &str) -> FhirPathResult<Value> {
         match operation {
             "expand" => client.expand("http://example.org/vs", None).await,

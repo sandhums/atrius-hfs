@@ -8,8 +8,23 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
+use helios_observability::redact::redact_url;
 use reqwest::{Client, RequestBuilder, Response};
 use serde_json::{Value, json};
+
+/// Renders a reqwest error with its URL passed through [`redact_url`].
+///
+/// reqwest ends its message with `for url (...)`, query included, so a
+/// credential in the configured terminology-server URL must not ride along
+/// (#2149).
+fn transport_error_text(error: reqwest::Error) -> String {
+    let url = error.url().map(|url| redact_url(url.as_str()));
+    let error = error.without_url();
+    match url {
+        Some(url) => format!("{error} for url ({url})"),
+        None => error.to_string(),
+    }
+}
 
 const VALIDATE_TTL: Duration = Duration::from_secs(300);
 const EXPAND_TTL: Duration = Duration::from_secs(300);
@@ -162,7 +177,7 @@ impl TerminologyClient {
             let response = request()
                 .send()
                 .await
-                .map_err(|e| TerminologyError::Network(e.to_string()))?;
+                .map_err(|e| TerminologyError::Network(transport_error_text(e)))?;
             // Cloudflare uses HTTP 530 for tunnel failures, including error 1033
             // when no healthy cloudflared instance can receive the request.
             if !matches!(response.status().as_u16(), 502 | 503 | 504 | 530) {
@@ -412,7 +427,7 @@ impl TerminologyClient {
         response
             .json()
             .await
-            .map_err(|e| TerminologyError::Parse(e.to_string()))
+            .map_err(|e| TerminologyError::Parse(transport_error_text(e)))
     }
 
     async fn read_json_optional(
@@ -606,6 +621,22 @@ mod tests {
     fn client_trims_trailing_slash() {
         let client = TerminologyClient::new("http://localhost:9091/", ClientOptions::rest_search());
         assert_eq!(client.base_url(), "http://localhost:9091");
+    }
+
+    #[tokio::test]
+    async fn network_error_omits_the_url_query() {
+        let client = TerminologyClient::new(
+            "http://127.0.0.1:1?token=QUERY-SECRET",
+            ClientOptions::rest_search(),
+        );
+        let err = client
+            .expand_value_set("http://hl7.org/fhir/ValueSet/administrative-gender")
+            .await
+            .expect_err("nothing listens on port 1");
+        let message = err.to_string();
+        assert!(matches!(err, TerminologyError::Network(_)), "{message}");
+        assert!(!message.contains("SECRET"), "query leaked: {message}");
+        assert!(message.contains("127.0.0.1:1"), "{message}");
     }
 
     #[test]

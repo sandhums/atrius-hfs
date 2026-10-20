@@ -101,4 +101,22 @@ mod tests {
         let client = TerminologyServiceClient::new("http://localhost:9091".to_string());
         assert_eq!(client.base_url(), "http://localhost:9091");
     }
+
+    /// A request error names the URL it failed on; the configured base URL's
+    /// query must not come along with it (#2149).
+    #[tokio::test]
+    async fn test_network_error_omits_the_url_query() {
+        // Port 1 on loopback refuses the connection immediately.
+        let client =
+            TerminologyServiceClient::new("http://127.0.0.1:1?token=QUERY-SECRET".to_string());
+        let err = client
+            .expand_value_set("http://hl7.org/fhir/ValueSet/administrative-gender")
+            .await
+            .expect_err("nothing listens on port 1");
+        let message = err.to_string();
+        assert!(matches!(err, TerminologyError::Network(_)), "{message}");
+        assert!(!message.contains("SECRET"), "query leaked: {message}");
+        // reqwest names the URL; it is still there, redacted.
+        assert!(message.contains("127.0.0.1:1"), "{message}");
+    }
 }

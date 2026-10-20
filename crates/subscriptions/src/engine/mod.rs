@@ -556,7 +556,7 @@ impl EngineCore {
                                 subscription_id = %sub.id,
                                 topic_url = %sub.topic_url,
                                 channel_type = %sub.channel.channel_type.as_fhir_str(),
-                                endpoint = sub.channel.endpoint.as_deref().unwrap_or(""),
+                                endpoint = %sub.channel.endpoint_for_log(),
                                 status = %sub.status,
                                 fhir_version = %sub.fhir_version,
                                 "Subscription registered"
@@ -842,7 +842,7 @@ impl EngineCore {
                     tenant_id,
                     subscription_id = sub_id,
                     channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                    endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                    endpoint = %subscription.channel.endpoint_for_log(),
                     error = %e,
                     "Failed to build handshake"
                 );
@@ -857,7 +857,7 @@ impl EngineCore {
                 tenant_id,
                 subscription_id = sub_id,
                 channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                endpoint = %subscription.channel.endpoint_for_log(),
                 delay_ms = self.config.handshake_initial_delay.as_millis() as u64,
                 "Delaying subscription handshake"
             );
@@ -879,7 +879,7 @@ impl EngineCore {
                 tenant_id,
                 subscription_id = sub_id,
                 channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                endpoint = %subscription.channel.endpoint_for_log(),
                 attempt,
                 max_attempts = handshake_max_attempts,
                 "Sending subscription handshake"
@@ -907,7 +907,7 @@ impl EngineCore {
                             warn!(
                                 tenant_id,
                                 subscription_id = sub_id,
-                                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                                endpoint = %subscription.channel.endpoint_for_log(),
                                 "Email channel requested but no SMTP settings configured"
                             );
                             Ok(DispatchResult::PermanentError(
@@ -921,7 +921,7 @@ impl EngineCore {
                             warn!(
                                 tenant_id,
                                 subscription_id = sub_id,
-                                endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                                endpoint = %subscription.channel.endpoint_for_log(),
                                 "Messaging channel requested but messaging settings not configured"
                             );
                             Ok(DispatchResult::PermanentError(
@@ -934,7 +934,7 @@ impl EngineCore {
                             tenant_id,
                             subscription_id = sub_id,
                             channel_type = subscription.channel.channel_type.as_fhir_str(),
-                            endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                            endpoint = %subscription.channel.endpoint_for_log(),
                             "Handshake not supported for channel type"
                         );
                         Ok(DispatchResult::PermanentError(
@@ -955,7 +955,7 @@ impl EngineCore {
                         tenant_id,
                         subscription_id = sub_id,
                         channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         attempt,
                         "Handshake successful, activating subscription"
                     );
@@ -968,7 +968,7 @@ impl EngineCore {
                         tenant_id,
                         subscription_id = sub_id,
                         channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         attempt,
                         error = %msg,
                         "Handshake failed with permanent error"
@@ -983,7 +983,7 @@ impl EngineCore {
                             tenant_id,
                             subscription_id = sub_id,
                             channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                            endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                            endpoint = %subscription.channel.endpoint_for_log(),
                             attempts = attempt,
                             error = %msg,
                             "Handshake retries exhausted"
@@ -998,7 +998,7 @@ impl EngineCore {
                         tenant_id,
                         subscription_id = sub_id,
                         channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         attempt,
                         next_attempt = attempt + 1,
                         delay_ms = delay.as_millis() as u64,
@@ -1019,7 +1019,7 @@ impl EngineCore {
                         tenant_id,
                         subscription_id = sub_id,
                         channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         attempt,
                         error = %e,
                         "Handshake error"
@@ -1055,7 +1055,7 @@ impl EngineCore {
                         tenant_id,
                         subscription_id = sub_id,
                         notification_type,
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         "Email dispatch requested but no SMTP settings configured"
                     );
                     return;
@@ -1068,7 +1068,7 @@ impl EngineCore {
                         tenant_id,
                         subscription_id = sub_id,
                         notification_type,
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         "Messaging dispatch requested but messaging settings not configured"
                     );
                     return;
@@ -1080,7 +1080,7 @@ impl EngineCore {
                     subscription_id = sub_id,
                     notification_type,
                     channel = subscription.channel.channel_type.as_fhir_str(),
-                    endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                    endpoint = %subscription.channel.endpoint_for_log(),
                     "No dispatcher for channel type"
                 );
                 return;
@@ -1126,7 +1126,7 @@ impl EngineCore {
                         notification_type,
                         event_number,
                         channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         "Subscription notification dispatched"
                     );
                     return;
@@ -1138,7 +1138,7 @@ impl EngineCore {
                         notification_type,
                         event_number,
                         channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         error = %msg,
                         "Permanent delivery error"
                     );
@@ -1154,7 +1154,7 @@ impl EngineCore {
                             notification_type,
                             event_number,
                             channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                            endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                            endpoint = %subscription.channel.endpoint_for_log(),
                             attempts = attempt,
                             error = %msg,
                             "Max retries exhausted"
@@ -1188,7 +1188,7 @@ impl EngineCore {
                         notification_type,
                         event_number,
                         channel_type = %subscription.channel.channel_type.as_fhir_str(),
-                        endpoint = subscription.channel.endpoint.as_deref().unwrap_or(""),
+                        endpoint = %subscription.channel.endpoint_for_log(),
                         error = %e,
                         "Dispatch error"
                     );

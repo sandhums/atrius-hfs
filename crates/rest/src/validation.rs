@@ -30,6 +30,7 @@ use helios_fhir_validator::{
     materialize_package_layers,
 };
 use helios_persistence::core::ResourceStorage;
+use helios_persistence::core::bulk_submit_input::redact_urls_in;
 use helios_persistence::sof::reference_resolver::{
     StorageBackedResolver, StorageReferenceResolver, collect_missing_references,
 };
@@ -545,7 +546,7 @@ impl TerminologyProvider for RemoteTerminologyProvider {
         self.client
             .validate_code_bool(&key, &body)
             .await
-            .map_err(|e| TerminologyError(e.to_string()))
+            .map_err(|e| TerminologyError(redact_urls_in(&e.to_string())))
     }
 }
 
@@ -761,5 +762,62 @@ mod tests {
             Ok(_) => panic!("expected error when HFS_TERMINOLOGY_SERVER is unset"),
             Err(err) => assert!(err.contains("HFS_TERMINOLOGY_SERVER"), "{err}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod remote_terminology_redaction_tests {
+    use super::*;
+
+    /// A terminology-server failure reaches the client in the validation
+    /// OperationOutcome, so its message must not carry the configured URL's
+    /// credentials or query (#2149).
+    fn assert_redacted(message: &str, host: &str) {
+        assert!(!message.contains("SECRET"), "credential leaked: {message}");
+        assert!(message.contains(host), "host missing: {message}");
+    }
+
+    #[tokio::test]
+    async fn unreachable_server_error_omits_the_url_credentials() {
+        // Port 1 on loopback refuses the connection immediately.
+        let provider = RemoteTerminologyProvider::new(
+            "http://tx:PASS-SECRET@127.0.0.1:1?token=QUERY-SECRET".to_string(),
+            Duration::from_secs(5),
+        );
+        let err = provider
+            .validate_code(
+                "http://hl7.org/fhir/ValueSet/administrative-gender",
+                &CodedValue::Code("male".to_string()),
+            )
+            .await
+            .expect_err("nothing listens on port 1");
+        assert_redacted(&err.0, "127.0.0.1:1");
+    }
+
+    #[tokio::test]
+    async fn error_status_message_omits_the_url_credentials() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let app =
+            axum::Router::new().fallback(|| async { axum::http::StatusCode::SERVICE_UNAVAILABLE });
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let provider = RemoteTerminologyProvider::new(
+            format!("http://tx:PASS-SECRET@{addr}/fhir"),
+            Duration::from_secs(5),
+        );
+        let err = provider
+            .validate_code(
+                "http://hl7.org/fhir/ValueSet/administrative-gender",
+                &CodedValue::Code("male".to_string()),
+            )
+            .await
+            .expect_err("the server answers 503");
+        // The shared client reports status without repeating the configured
+        // URL, so there is no host to redact — only that credentials stayed
+        // out of the message (#2149).
+        assert!(!err.0.contains("SECRET"), "credential leaked: {}", err.0);
+        assert!(err.0.contains("503"), "{}", err.0);
     }
 }

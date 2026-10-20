@@ -3471,6 +3471,7 @@ dependencies = [
  "helios-fhir",
  "helios-fhirpath",
  "helios-fhirpath-support",
+ "helios-observability",
  "helios-sof",
  "humantime",
  "json-patch",
@@ -3676,6 +3677,7 @@ name = "helios-terminology-client"
 version = "0.2.5"
 dependencies = [
  "dashmap",
+ "helios-observability",
  "reqwest",
  "serde",
  "serde_json",
