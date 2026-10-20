@@ -24,7 +24,7 @@ use crate::core::transaction::{
 use crate::core::{
     ConditionalCreateResult, ConditionalDeleteResult, ConditionalStorage, ConditionalUpdateResult,
     PurgableStorage, ResourceStorage, SearchProvider, VersionedStorage, bundle_if_match_gate,
-    if_match_field_satisfied, normalize_etag,
+    bundle_if_none_match_gate, if_match_field_satisfied, normalize_etag,
 };
 use crate::error::TransactionError;
 use crate::error::{
@@ -5292,6 +5292,12 @@ impl PostgresBackend {
                 // silently creating.
                 if let Some(failure) = bundle_if_match_gate(
                     entry.if_match.as_deref(),
+                    existing.as_ref().map(|r| r.version_id()),
+                ) {
+                    return Ok(failure);
+                }
+                if let Some(failure) = bundle_if_none_match_gate(
+                    entry.if_none_match.as_deref(),
                     existing.as_ref().map(|r| r.version_id()),
                 ) {
                     return Ok(failure);

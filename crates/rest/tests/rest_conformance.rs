@@ -865,6 +865,77 @@ mod conditional_update {
 }
 
 // =============================================================================
+// PUT If-None-Match: * (create-if-absent)
+// =============================================================================
+
+mod put_if_none_match {
+    use super::*;
+
+    #[tokio::test]
+    async fn star_creates_when_the_resource_is_absent() {
+        let (server, _backend) = create_test_server().await;
+
+        let created = json!({
+            "resourceType": "Patient",
+            "id": "fresh",
+            "name": [{"family": "Created"}]
+        });
+
+        let response = server
+            .put("/Patient/fresh")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .add_header(IF_NONE_MATCH, HeaderValue::from_static("*"))
+            .json(&created)
+            .await;
+
+        response.assert_status(StatusCode::CREATED);
+
+        let read = server
+            .get("/Patient/fresh")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await;
+        let body: Value = read.json();
+        assert_eq!(body["name"][0]["family"], "Created");
+    }
+
+    #[tokio::test]
+    async fn star_is_412_when_the_resource_exists() {
+        let (server, backend) = create_test_server().await;
+        seed_patient(&backend, "patient-1", "Smith").await;
+
+        let overwritten = json!({
+            "resourceType": "Patient",
+            "id": "patient-1",
+            "name": [{"family": "Overwritten"}]
+        });
+
+        let response = server
+            .put("/Patient/patient-1")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .add_header(IF_NONE_MATCH, HeaderValue::from_static("*"))
+            .json(&overwritten)
+            .await;
+
+        response.assert_status(StatusCode::PRECONDITION_FAILED);
+
+        let read = server
+            .get("/Patient/patient-1")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await;
+        let body: Value = read.json();
+        assert_eq!(body["name"][0]["family"], "Smith");
+    }
+}
+
+// =============================================================================
 // Conditional Delete Tests (If-Match on DELETE) — issue #312
 // =============================================================================
 

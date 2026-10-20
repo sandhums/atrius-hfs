@@ -2400,6 +2400,54 @@ mod conditional_entries {
         assert_eq!(patient_count(&backend).await, before);
     }
 
+    /// `ifNoneMatch: *` on a transaction PUT creates when the id is free.
+    #[tokio::test]
+    async fn if_none_match_star_on_a_transaction_put_creates_when_absent() {
+        let (server, backend) = create_test_server().await;
+        let before = patient_count(&backend).await;
+
+        let mut put = put_entry("Patient/fresh", "Created");
+        put["request"]["ifNoneMatch"] = json!("*");
+        let body = post_batch(&server, transaction(vec![put])).await;
+
+        assert_eq!(
+            body["entry"][0]["response"]["status"], "201 Created",
+            "{body}"
+        );
+        assert_eq!(patient_count(&backend).await, before + 1);
+        assert_eq!(family_of(&backend, "fresh").await, "Created");
+    }
+
+    /// `ifNoneMatch: *` against an existing resource fails the bundle and
+    /// rolls back a sibling that would otherwise have committed.
+    #[tokio::test]
+    async fn if_none_match_star_on_an_existing_transaction_put_is_412() {
+        let (server, backend) = create_test_server().await;
+        seed_patient_with_identifier(&backend, "p1", "Nguyen").await;
+        let before = patient_count(&backend).await;
+
+        let mut put = put_entry("Patient/p1", "Overwritten");
+        put["request"]["ifNoneMatch"] = json!("*");
+        let response = post_bundle(&server, transaction(vec![sibling_post(), put])).await;
+
+        // An entry that fails *after* dispatch is still collapsed to 400
+        // `processing`, with the real 412 stringified into the message (see
+        // rest README: "Transaction entry failures after dispatch"). Conditional
+        // `ifMatch` 412s are raised in the pre-pass and keep HTTP 412; this
+        // instance PUT is evaluated inside the backend.
+        response.assert_status(StatusCode::BAD_REQUEST);
+        let body: Value = response.json();
+        assert_eq!(body["issue"][0]["code"], "processing", "{body}");
+        assert!(
+            body["issue"][0]["details"]["text"]
+                .as_str()
+                .is_some_and(|t| t.contains("412")),
+            "{body}"
+        );
+        assert_eq!(patient_count(&backend).await, before);
+        assert_eq!(family_of(&backend, "p1").await, "Nguyen");
+    }
+
     #[tokio::test]
     async fn a_transaction_post_with_url_criteria_is_400() {
         let (server, backend) = create_test_server().await;

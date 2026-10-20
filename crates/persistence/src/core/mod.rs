@@ -178,9 +178,9 @@ pub use patch::{
 };
 pub use preconditions::{
     EntityTag, EntityTagPrecondition, MalformedPrecondition, bundle_if_match_gate,
-    bundle_if_none_exist_gate, conditional_if_match_gate, delete_under_precondition,
-    if_match_field_satisfied, multiple_matches_entry, not_supported_entry,
-    precondition_failed_entry,
+    bundle_if_none_exist_gate, bundle_if_none_match_gate, conditional_if_match_gate,
+    delete_under_precondition, if_match_field_satisfied, multiple_matches_entry,
+    not_supported_entry, precondition_failed_entry,
 };
 pub use schema_ledger::{BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, SCHEMA_FLAVOUR};
 pub use search::{

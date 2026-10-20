@@ -30,6 +30,10 @@ use helios_persistence::core::BackendKind;
 #[path = "transactions/if_match_suite.rs"]
 mod if_match_suite;
 
+/// Backend-agnostic `ifNoneMatch` on transaction PUT, shared with SQLite.
+#[path = "transactions/if_none_match_suite.rs"]
+mod if_none_match_suite;
+
 /// Backend-agnostic `PUT/DELETE [type]?[criteria]` transaction scenarios
 /// (#859), shared with the SQLite and MongoDB suites.
 #[path = "transactions/conditional_url_suite.rs"]
@@ -32125,6 +32129,26 @@ mod postgres_integration {
     pg_if_match_test!(
         postgres_integration_transaction_delete_accepts_matching_if_match,
         transaction_delete_accepts_matching_if_match
+    );
+
+    macro_rules! pg_if_none_match_test {
+        ($test_name:ident, $scenario:ident) => {
+            #[tokio::test]
+            async fn $test_name() {
+                let backend = create_backend().await;
+                let tenant = create_tenant(concat!("if_none_match_", stringify!($scenario)));
+                super::if_none_match_suite::$scenario(&backend, &tenant).await;
+            }
+        };
+    }
+
+    pg_if_none_match_test!(
+        postgres_integration_star_if_none_match_creates_when_absent,
+        star_if_none_match_creates_when_absent
+    );
+    pg_if_none_match_test!(
+        postgres_integration_star_if_none_match_on_existing_rolls_the_transaction_back,
+        star_if_none_match_on_existing_rolls_the_transaction_back
     );
 
     // ========================================================================

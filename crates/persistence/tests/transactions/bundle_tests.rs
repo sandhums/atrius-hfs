@@ -1667,6 +1667,20 @@ sqlite_if_match_test!(strong_form_if_match_matches_weak_etag);
 sqlite_if_match_test!(transaction_delete_honors_stale_if_match);
 sqlite_if_match_test!(transaction_delete_accepts_matching_if_match);
 
+macro_rules! sqlite_if_none_match_test {
+    ($name:ident) => {
+        #[cfg(feature = "sqlite")]
+        #[tokio::test]
+        async fn $name() {
+            let backend = create_sqlite_backend();
+            super::if_none_match_suite::$name(&backend, &create_tenant()).await;
+        }
+    };
+}
+
+sqlite_if_none_match_test!(star_if_none_match_creates_when_absent);
+sqlite_if_none_match_test!(star_if_none_match_on_existing_rolls_the_transaction_back);
+
 #[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn transaction_overlapping_targets_and_changed_forward_references_roll_back() {

@@ -820,7 +820,7 @@ search entry and the same search at `GET [base]/[type]?…`.
 | target not found | 404 | `not-found` |
 | search entry failed (`_query`, `:not-in`, …) | per class | `invalid`, `not-supported`, … |
 | `HEAD` | 405 | `not-supported` |
-| `ifMatch` precondition failed | 412 | `conflict` |
+| `ifMatch` / `ifNoneMatch` precondition failed | 412 | `conflict` |
 | write validation failed | 422 | the validator's own issues |
 | `PATCH` is applied in-bundle (JSON Patch / merge); missing target | 404 | `not-found` |
 | `Binary` JSON Patch in an R4/R4B bundle | 501 | `not-supported` |
@@ -839,8 +839,12 @@ and an unusable value does not apply.
 - `ifMatch` — **supported.** ETag for optimistic locking on `PUT`, `PATCH` **and
   `DELETE`** entries, in both `batch` and `transaction` bundles. Parsed as the comma-separated
   list RFC 9110 §13.1.1 defines: satisfied when any supplied entity-tag matches.
-- `ifNoneMatch` — **parsed and ignored.** `parse_bundle_entry` populates
-  `BundleEntry.if_none_match`; no handler or backend reads it.
+- `ifNoneMatch` — **supported** on `PUT` entries, in both `batch` and
+  `transaction` bundles. `If-None-Match: *` is create-if-absent: the entry
+  succeeds when the resource does not exist (`201`) and answers `412` when it
+  does, rolling back a transaction. A list is the RFC 9110 inverse of
+  `ifMatch`. Parsed as the comma-separated list RFC 9110 §13.1.2 defines.
+  Standalone `PUT [type]/[id]` honours the same `If-None-Match` header.
 - `ifNoneExist` — **supported** on `POST` entries, in both `batch` and
   `transaction` bundles, on every backend that implements `ConditionalStorage`
   (SQLite, PostgreSQL, MongoDB; on S3 only `_id` and `identifier` criteria, by
@@ -939,7 +943,7 @@ The server supports standard FHIR HTTP headers:
 | `Accept` | Content negotiation |
 | `Content-Type` | Request body format |
 | `ETag` / `If-Match` | Optimistic locking on `PUT`, `PATCH` and `DELETE` |
-| `If-None-Match` | Conditional read |
+| `If-None-Match` | Conditional read; on `PUT`, create-if-absent (`*`) |
 | `If-None-Exist` | Conditional create |
 | `If-Modified-Since` | Conditional read by date |
 | `Prefer` | Response preference |

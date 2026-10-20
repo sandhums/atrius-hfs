@@ -22,7 +22,7 @@ use helios_persistence::core::{
     ConditionalPatchPreparation, ConditionalPatchResult, ConditionalStorage,
     ConditionalUpdateResult, IncludeProvider, PatchCandidateValidator, ResourceStorage,
     RevincludeProvider, SearchProvider, WriteKind, WriteNotice, apply_patch_for_version,
-    bundle_if_match_gate, bundle_patch_format,
+    bundle_if_match_gate, bundle_if_none_match_gate, bundle_patch_format,
 };
 use helios_persistence::error::{
     ResourceError, StorageError, TooLargeForCacheCause, TransactionError,
@@ -1091,8 +1091,29 @@ async fn check_entry_if_match<S>(
 where
     S: ResourceStorage + Send + Sync,
 {
-    // Entries that send no precondition pay nothing — not even the read.
-    if_match?;
+    check_entry_entity_tag_preconditions(state, tenant, resource_type, id, if_match, None).await
+}
+
+/// Evaluates `ifMatch` and `ifNoneMatch` on a batch instance PUT (or
+/// `ifMatch` alone on DELETE) against the current representation.
+///
+/// `If-None-Match: *` is create-if-absent: it fails when the resource already
+/// exists so a replay cannot overwrite it. Entries that send neither header
+/// pay nothing — not even the read.
+async fn check_entry_entity_tag_preconditions<S>(
+    state: &AppState<S>,
+    tenant: &TenantExtractor,
+    resource_type: &str,
+    id: &str,
+    if_match: Option<&str>,
+    if_none_match: Option<&str>,
+) -> Option<BundleEntryResult>
+where
+    S: ResourceStorage + Send + Sync,
+{
+    if if_match.is_none() && if_none_match.is_none() {
+        return None;
+    }
 
     let current = match state
         .storage()
@@ -1101,13 +1122,18 @@ where
     {
         Ok(current) => current,
         // A deleted resource has no current representation, which is a failed
-        // precondition rather than a storage error — the same mapping
-        // `handlers::update` and the backends' own batch arms make.
+        // If-Match rather than a storage error — the same mapping
+        // `handlers::update` and the backends' own batch arms make. If-None-Match
+        // treats that absence as success (`*` is then satisfied).
         Err(StorageError::Resource(ResourceError::Gone { .. })) => None,
         Err(e) => return Some(entry_storage_failure(e)),
     };
 
-    bundle_if_match_gate(if_match, current.as_ref().map(|r| r.version_id()))
+    let version = current.as_ref().map(|r| r.version_id());
+    if let Some(failure) = bundle_if_match_gate(if_match, version) {
+        return Some(failure);
+    }
+    bundle_if_none_match_gate(if_none_match, version)
 }
 
 /// The notice kind a committed transaction write announces, or `None` when
@@ -1244,6 +1270,7 @@ where
         return entry_failure(missing_url(index));
     };
     let if_match = request.get("ifMatch").and_then(|v| v.as_str());
+    let if_none_match = request.get("ifNoneMatch").and_then(|v| v.as_str());
     let if_none_exist = request.get("ifNoneExist").and_then(|v| v.as_str());
 
     // Parse the URL to extract resource type and ID
@@ -1654,10 +1681,17 @@ where
             }
 
             // Ahead of validation, because every backend evaluates `ifMatch`
-            // first: a stale precondition carrying an invalid body is a 412,
-            // not a 422.
-            if let Some(failure) =
-                check_entry_if_match(state, tenant, &resource_type, &id, if_match).await
+            // and `ifNoneMatch` first: a stale precondition carrying an invalid
+            // body is a 412, not a 422.
+            if let Some(failure) = check_entry_entity_tag_preconditions(
+                state,
+                tenant,
+                &resource_type,
+                &id,
+                if_match,
+                if_none_match,
+            )
+            .await
             {
                 return failure;
             }

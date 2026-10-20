@@ -424,6 +424,47 @@ pub fn bundle_if_match_gate(
     Some(precondition_failed_entry(&diagnostics))
 }
 
+/// Evaluates a bundle entry's `ifNoneMatch` against the current version,
+/// returning a ready-made `412` when the precondition fails.
+///
+/// `If-None-Match: *` on PUT is create-if-absent: it is satisfied only when
+/// there is no current representation, and fails when the resource already
+/// exists so a concurrent writer cannot overwrite it. A list is the RFC 9110
+/// inverse of `If-Match` — it fails when any listed tag matches.
+///
+/// A malformed field value fails closed as `412`, matching
+/// [`bundle_if_match_gate`]. Returns `None` to proceed.
+pub fn bundle_if_none_match_gate(
+    raw_if_none_match: Option<&str>,
+    current_version_id: Option<&str>,
+) -> Option<BundleEntryResult> {
+    let raw = raw_if_none_match?;
+
+    let precondition = match EntityTagPrecondition::parse([raw]) {
+        Ok(p) => p,
+        Err(e) => {
+            return Some(precondition_failed_entry(&format!(
+                "If-None-Match precondition failed: {e}"
+            )));
+        }
+    };
+
+    if precondition.if_none_match_satisfied(current_version_id) {
+        return None;
+    }
+
+    let diagnostics = match current_version_id {
+        Some(current) => {
+            format!("If-None-Match precondition failed: supplied {raw}, current version {current}")
+        }
+        None => format!(
+            "If-None-Match precondition failed: supplied {raw}, but the resource has no current version"
+        ),
+    };
+
+    Some(precondition_failed_entry(&diagnostics))
+}
+
 /// Whether a raw `If-Match` field value is satisfied by `current_version_id`.
 ///
 /// This is the comparison used by the backends' conditional-write primitives
@@ -865,6 +906,35 @@ mod tests {
         assert_eq!(
             bundle_if_match_gate(Some("garbage"), Some("3"))
                 .expect("malformed must fail closed")
+                .status,
+            412
+        );
+    }
+
+    #[test]
+    fn none_match_star_creates_only_when_absent() {
+        assert!(bundle_if_none_match_gate(None, Some("3")).is_none());
+        assert!(bundle_if_none_match_gate(Some("*"), None).is_none());
+        assert_eq!(
+            bundle_if_none_match_gate(Some("*"), Some("3"))
+                .expect("star on an existing resource must fail")
+                .status,
+            412
+        );
+    }
+
+    #[test]
+    fn none_match_list_fails_when_any_tag_matches() {
+        assert!(bundle_if_none_match_gate(Some("W/\"3\""), Some("9")).is_none());
+        assert_eq!(
+            bundle_if_none_match_gate(Some("W/\"3\", W/\"4\""), Some("4"))
+                .expect("a matching member must fail If-None-Match")
+                .status,
+            412
+        );
+        assert_eq!(
+            bundle_if_none_match_gate(Some("garbage"), Some("3"))
+                .expect("malformed If-None-Match must fail closed")
                 .status,
             412
         );

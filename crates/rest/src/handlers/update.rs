@@ -36,6 +36,7 @@ use crate::state::AppState;
 ///
 /// - `Content-Type` - Must be application/fhir+json or application/fhir+xml
 /// - `If-Match` - Optimistic locking (ETag of current version)
+/// - `If-None-Match` - Create-if-absent on `*` (412 if the resource exists)
 /// - `Prefer` - Response preference
 ///
 /// # Response
@@ -44,7 +45,7 @@ use crate::state::AppState;
 /// - `201 Created` - Resource created (upsert)
 /// - `400 Bad Request` - Invalid resource
 /// - `409 Conflict` - Version conflict (concurrent modification)
-/// - `412 Precondition Failed` - If-Match condition not met
+/// - `412 Precondition Failed` - If-Match or If-None-Match condition not met
 ///
 /// # Example
 ///
@@ -184,6 +185,16 @@ where
         .map_err(|e| RestError::PreconditionFailed {
             message: format!("Malformed If-Match header: {e}"),
         })?;
+    // `If-None-Match: *` on PUT is create-if-absent (RFC 9110 §13.1.2): it
+    // fails when a current representation exists, so a replay cannot overwrite
+    // a resource another writer already created. A malformed value fails closed
+    // as 412, never as an absent precondition.
+    let if_none_match =
+        conditional
+            .if_none_match_tags()
+            .map_err(|e| RestError::PreconditionFailed {
+                message: format!("Malformed If-None-Match header: {e}"),
+            })?;
 
     // Perform the update (or create).
     //
@@ -196,20 +207,21 @@ where
     // The two branches below are not an optimisation of one path; they are two
     // genuinely different requests:
     //
-    // * **No `If-Match`.** `EntityTagPrecondition::Absent` is satisfied by
-    //   *everything* (`preconditions.rs`), so the read this handler did could
-    //   not change the outcome by construction: `current_version` was computed
-    //   and then compared against a precondition that returns `true` without
-    //   looking at it. Nothing else in this function consulted `existing`. So
-    //   the read is dropped outright and `create_or_update` does the single
-    //   read it was always going to do. Last-writer-wins is preserved exactly:
-    //   the decision is still made from the row `create_or_update` reads, at
-    //   the same instant it read it before.
+    // * **No `If-Match` and no `If-None-Match`.** `EntityTagPrecondition::Absent`
+    //   is satisfied by *everything* (`preconditions.rs`), so the read this
+    //   handler did could not change the outcome by construction:
+    //   `current_version` was computed and then compared against a precondition
+    //   that returns `true` without looking at it. Nothing else in this
+    //   function consulted `existing`. So the read is dropped outright and
+    //   `create_or_update` does the single read it was always going to do.
+    //   Last-writer-wins is preserved exactly: the decision is still made from
+    //   the row `create_or_update` reads, at the same instant it read it before.
     //
-    // * **`If-Match` present.** The read has to happen here, because the
-    //   precondition is evaluated here. Handing the row it produced to `update`
-    //   — rather than throwing it away and letting `create_or_update` fetch its
-    //   own — removes the second read *and closes a lost update*:
+    // * **`If-Match` or `If-None-Match` present.** The read has to happen here,
+    //   because the precondition is evaluated here. Handing the row it produced
+    //   to `update` — rather than throwing it away and letting
+    //   `create_or_update` fetch its own — removes the second read *and closes
+    //   a lost update* when `If-Match` is present:
     //
     //     handler reads v1 → `If-Match: W/"1"` is satisfied → a concurrent
     //     writer commits v2 → `create_or_update` reads v2 → `update` compares
@@ -230,17 +242,19 @@ where
     //   `create_or_update`'s restore path: a client that conditioned its write
     //   on a specific live version should not silently resurrect a tombstone.
     //
-    //   A satisfied *present* precondition implies a current representation
+    //   A satisfied *present* `If-Match` implies a current representation
     //   — `Any` requires `current_version.is_some()` and `Tags` cannot match
-    //   `None` — so `existing` is `Some` on that path. The `None` arm is
-    //   unreachable and defers to the generic path rather than panicking.
+    //   `None` — so `existing` is `Some` on that path. A satisfied
+    //   `If-None-Match: *` is the opposite: `existing` is `None` and the write
+    //   is a create. The `None` arm is therefore the create-if-absent path,
+    //   not an unreachable fallback.
     //
     // `Gone` is mapped to `None` exactly as before: a deleted resource is
     // brought back to life by a subsequent update
     // (https://hl7.org/fhir/http.html#delete), so it is not an error — it means
     // there is no current version to match `If-Match` against, and (on the
     // no-precondition path) the storage layer restores the resource on write.
-    let (stored, created) = if if_match.is_present() {
+    let (stored, created) = if if_match.is_present() || if_none_match.is_present() {
         let existing = match state
             .storage()
             .read(tenant.context(), &resource_type, &id)
@@ -261,6 +275,15 @@ where
                     "If-Match precondition failed: the resource has no current version to match"
                         .to_string()
                 }
+            };
+            return Err(RestError::PreconditionFailed { message });
+        }
+        if !if_none_match.if_none_match_satisfied(current_version) {
+            let message = match current_version {
+                Some(current) => format!(
+                    "If-None-Match precondition failed: a current representation exists (W/\"{current}\")"
+                ),
+                None => "If-None-Match precondition failed".to_string(),
             };
             return Err(RestError::PreconditionFailed { message });
         }

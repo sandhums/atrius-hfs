@@ -15,6 +15,9 @@ pub mod busy_begin_tests;
 /// `#[path]`-includes this same file (see the module docs).
 pub mod if_match_suite;
 
+/// Backend-agnostic `ifNoneMatch` on transaction PUT, shared the same way.
+pub mod if_none_match_suite;
+
 /// Backend-agnostic `PUT/DELETE [type]?[criteria]` scenarios (#859), shared
 /// with the PostgreSQL and MongoDB suites the same way.
 pub mod conditional_url_suite;

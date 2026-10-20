@@ -85,7 +85,7 @@
 //! - `Accept` - Content negotiation (application/fhir+json, application/fhir+xml)
 //! - `Content-Type` - Request body format
 //! - `ETag` / `If-Match` - Optimistic locking for updates
-//! - `If-None-Match` - Conditional read
+//! - `If-None-Match` - Conditional read; on PUT, create-if-absent (`*`)
 //! - `If-None-Exist` - Conditional create
 //! - `If-Modified-Since` - Conditional read by date
 //! - `Prefer` - Response preference (return=minimal, return=representation, return=OperationOutcome)

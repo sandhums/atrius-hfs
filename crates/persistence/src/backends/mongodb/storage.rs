@@ -24,7 +24,7 @@ use crate::core::{
     HistoryEntry, HistoryMethod, HistoryPage, HistoryParams, InstanceHistoryProvider,
     PatchCandidateValidator, PurgableStorage, ResourceStorage, SettingsStore,
     SystemHistoryProvider, TypeHistoryProvider, VersionedStorage, bundle_if_match_gate,
-    bundle_if_none_exist_gate, if_match_field_satisfied, normalize_etag,
+    bundle_if_none_exist_gate, bundle_if_none_match_gate, if_match_field_satisfied, normalize_etag,
 };
 use crate::error::{
     BackendError, ConcurrencyError, QueryErrorExt, ResourceError, SearchError, StorageError,
@@ -5116,6 +5116,12 @@ impl MongoBackend {
                         ) {
                             return Ok(failure);
                         }
+                        if let Some(failure) = bundle_if_none_match_gate(
+                            entry.if_none_match.as_deref(),
+                            Some(existing.version_id()),
+                        ) {
+                            return Ok(failure);
+                        }
 
                         let updated = self
                             .update_resource_in_bundle_transaction(
@@ -5129,6 +5135,11 @@ impl MongoBackend {
                         // satisfied when there is no current representation, so
                         // it must fail rather than silently create.
                         if let Some(failure) = bundle_if_match_gate(entry.if_match.as_deref(), None)
+                        {
+                            return Ok(failure);
+                        }
+                        if let Some(failure) =
+                            bundle_if_none_match_gate(entry.if_none_match.as_deref(), None)
                         {
                             return Ok(failure);
                         }
