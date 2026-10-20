@@ -23,11 +23,12 @@ use helios_persistence::core::{
     ConditionalUpdateResult, IncludeProvider, PatchCandidateValidator, ResourceStorage,
     RevincludeProvider, SearchProvider, WriteKind, WriteNotice, apply_patch_for_version,
     bundle_if_match_gate, bundle_if_none_match_gate, bundle_patch_format,
+    if_none_match_create_lost_diagnostics, precondition_failed_entry,
 };
 use helios_persistence::error::{
     ResourceError, StorageError, TooLargeForCacheCause, TransactionError,
 };
-use helios_persistence::types::SearchParameter;
+use helios_persistence::types::{SearchParameter, StoredResource};
 use serde_json::Value;
 use tracing::{debug, error, warn};
 
@@ -1091,7 +1092,21 @@ async fn check_entry_if_match<S>(
 where
     S: ResourceStorage + Send + Sync,
 {
-    check_entry_entity_tag_preconditions(state, tenant, resource_type, id, if_match, None).await
+    check_entry_entity_tag_preconditions(state, tenant, resource_type, id, if_match, None)
+        .await
+        .err()
+}
+
+/// Outcome of evaluating `ifMatch` / `ifNoneMatch` on a batch instance write.
+enum TagPrecondition {
+    /// No entity-tag header was sent. The caller must not assume a read.
+    Unconditional,
+    /// Headers were evaluated against this read. `gone` is a tombstone: no
+    /// current representation, but `create` would still collide with the row.
+    Evaluated {
+        current: Option<StoredResource>,
+        gone: bool,
+    },
 }
 
 /// Evaluates `ifMatch` and `ifNoneMatch` on a batch instance PUT (or
@@ -1107,33 +1122,36 @@ async fn check_entry_entity_tag_preconditions<S>(
     id: &str,
     if_match: Option<&str>,
     if_none_match: Option<&str>,
-) -> Option<BundleEntryResult>
+) -> Result<TagPrecondition, BundleEntryResult>
 where
     S: ResourceStorage + Send + Sync,
 {
     if if_match.is_none() && if_none_match.is_none() {
-        return None;
+        return Ok(TagPrecondition::Unconditional);
     }
 
-    let current = match state
+    let (current, gone) = match state
         .storage()
         .read(tenant.context(), resource_type, id)
         .await
     {
-        Ok(current) => current,
+        Ok(current) => (current, false),
         // A deleted resource has no current representation, which is a failed
         // If-Match rather than a storage error — the same mapping
         // `handlers::update` and the backends' own batch arms make. If-None-Match
         // treats that absence as success (`*` is then satisfied).
-        Err(StorageError::Resource(ResourceError::Gone { .. })) => None,
-        Err(e) => return Some(entry_storage_failure(e)),
+        Err(StorageError::Resource(ResourceError::Gone { .. })) => (None, true),
+        Err(e) => return Err(entry_storage_failure(e)),
     };
 
     let version = current.as_ref().map(|r| r.version_id());
     if let Some(failure) = bundle_if_match_gate(if_match, version) {
-        return Some(failure);
+        return Err(failure);
     }
-    bundle_if_none_match_gate(if_none_match, version)
+    if let Some(failure) = bundle_if_none_match_gate(if_none_match, version) {
+        return Err(failure);
+    }
+    Ok(TagPrecondition::Evaluated { current, gone })
 }
 
 /// The notice kind a committed transaction write announces, or `None` when
@@ -1683,7 +1701,7 @@ where
             // Ahead of validation, because every backend evaluates `ifMatch`
             // and `ifNoneMatch` first: a stale precondition carrying an invalid
             // body is a 412, not a 422.
-            if let Some(failure) = check_entry_entity_tag_preconditions(
+            let tag = match check_entry_entity_tag_preconditions(
                 state,
                 tenant,
                 &resource_type,
@@ -1693,8 +1711,9 @@ where
             )
             .await
             {
-                return failure;
-            }
+                Err(failure) => return failure,
+                Ok(tag) => tag,
+            };
 
             // Write-path validation (per-entry outcome in batch semantics).
             if let Err(e) = state
@@ -1705,17 +1724,76 @@ where
                 return entry_failure(e);
             }
 
-            match state
-                .storage()
-                .create_or_update(
-                    tenant.context(),
-                    &resource_type,
-                    &id,
-                    resource,
-                    fhir_version,
-                )
-                .await
-            {
+            let written = match tag {
+                TagPrecondition::Unconditional => {
+                    state
+                        .storage()
+                        .create_or_update(
+                            tenant.context(),
+                            &resource_type,
+                            &id,
+                            resource,
+                            fhir_version,
+                        )
+                        .await
+                }
+                TagPrecondition::Evaluated {
+                    current: Some(current),
+                    ..
+                } => state
+                    .storage()
+                    .update(tenant.context(), &current, resource)
+                    .await
+                    .map(|stored| (stored, false)),
+                // Tombstone: `create` would collide with the deleted row, so
+                // restore still goes through `create_or_update`.
+                TagPrecondition::Evaluated {
+                    current: None,
+                    gone: true,
+                } => {
+                    state
+                        .storage()
+                        .create_or_update(
+                            tenant.context(),
+                            &resource_type,
+                            &id,
+                            resource,
+                            fhir_version,
+                        )
+                        .await
+                }
+                // Absent + `If-None-Match`. `create_or_update` retries
+                // `AlreadyExists` as an update; `create` fails the insert
+                // atomically and we map that to 412.
+                TagPrecondition::Evaluated {
+                    current: None,
+                    gone: false,
+                } => {
+                    let mut body = resource;
+                    if let Some(obj) = body.as_object_mut() {
+                        obj.insert("id".to_string(), Value::String(id.clone()));
+                    }
+                    match state
+                        .storage()
+                        .create(tenant.context(), &resource_type, body, fhir_version)
+                        .await
+                    {
+                        Ok(stored) => Ok((stored, true)),
+                        Err(StorageError::Resource(ResourceError::AlreadyExists { .. })) => {
+                            return precondition_failed_entry(
+                                &if_none_match_create_lost_diagnostics(
+                                    if_none_match.unwrap_or("*"),
+                                    &resource_type,
+                                    &id,
+                                ),
+                            );
+                        }
+                        Err(e) => Err(e),
+                    }
+                }
+            };
+
+            match written {
                 Ok((stored, created)) => {
                     super::write_event::report(
                         state,
@@ -1732,7 +1810,6 @@ where
                     if created {
                         BundleEntryResult::created(stored)
                     } else {
-                        // For updates, include location with versioned URL
                         let mut result = BundleEntryResult::updated(stored);
                         result.location = Some(format!("{}/{}", resource_type, id));
                         result

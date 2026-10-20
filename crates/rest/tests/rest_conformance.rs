@@ -933,6 +933,60 @@ mod put_if_none_match {
         let body: Value = read.json();
         assert_eq!(body["name"][0]["family"], "Smith");
     }
+
+    /// A deleted resource has no current representation, so `*` is satisfied
+    /// and the PUT restores (FHIR update-after-delete). `create` would collide
+    /// with the tombstone; restore uses `create_or_update`.
+    #[tokio::test]
+    async fn star_restores_a_deleted_resource() {
+        let (server, _backend) = create_test_server().await;
+
+        let created = json!({
+            "resourceType": "Patient",
+            "id": "gone",
+            "name": [{"family": "Original"}]
+        });
+        server
+            .put("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .json(&created)
+            .await
+            .assert_status(StatusCode::CREATED);
+
+        server
+            .delete("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await
+            .assert_status(StatusCode::NO_CONTENT);
+
+        let restored = json!({
+            "resourceType": "Patient",
+            "id": "gone",
+            "name": [{"family": "Restored"}]
+        });
+        server
+            .put("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .add_header(IF_NONE_MATCH, HeaderValue::from_static("*"))
+            .json(&restored)
+            .await
+            .assert_status(StatusCode::CREATED);
+
+        let read = server
+            .get("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await;
+        let body: Value = read.json();
+        assert_eq!(body["name"][0]["family"], "Restored");
+    }
 }
 
 // =============================================================================

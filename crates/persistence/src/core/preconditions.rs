@@ -453,16 +453,24 @@ pub fn bundle_if_none_match_gate(
         return None;
     }
 
-    let diagnostics = match current_version_id {
-        Some(current) => {
-            format!("If-None-Match precondition failed: supplied {raw}, current version {current}")
-        }
-        None => format!(
-            "If-None-Match precondition failed: supplied {raw}, but the resource has no current version"
-        ),
-    };
+    // A failed `*` or tag list always has a current version: `*` is satisfied
+    // on `None`, and a tag list is satisfied on `None`.
+    let current = current_version_id.expect("failed If-None-Match implies a current version");
+    Some(precondition_failed_entry(&format!(
+        "If-None-Match precondition failed: supplied {raw}, current version {current}"
+    )))
+}
 
-    Some(precondition_failed_entry(&diagnostics))
+/// Diagnostics when `If-None-Match` was satisfied against an absent current
+/// representation, but `create` then lost the insert to a concurrent writer.
+///
+/// `create_or_update` would retry that `AlreadyExists` as an update and
+/// overwrite the other writer. Mapping the collision to 412 is the same
+/// answer the precondition would have given had the read seen the row.
+pub fn if_none_match_create_lost_diagnostics(raw: &str, resource_type: &str, id: &str) -> String {
+    format!(
+        "If-None-Match precondition failed: supplied {raw}, a current representation now exists ({resource_type}/{id})"
+    )
 }
 
 /// Whether a raw `If-Match` field value is satisfied by `current_version_id`.
@@ -938,6 +946,13 @@ mod tests {
                 .status,
             412
         );
+    }
+
+    #[test]
+    fn lost_create_diagnostics_name_the_id() {
+        let text = if_none_match_create_lost_diagnostics("*", "Patient", "fresh");
+        assert!(text.contains("Patient/fresh"), "{text}");
+        assert!(text.contains("If-None-Match"), "{text}");
     }
 
     // ── Entity-tag construction and rendering ────────────────────────────────

@@ -842,8 +842,10 @@ and an unusable value does not apply.
 - `ifNoneMatch` — **supported** on `PUT` entries, in both `batch` and
   `transaction` bundles. `If-None-Match: *` is create-if-absent: the entry
   succeeds when the resource does not exist (`201`) and answers `412` when it
-  does, rolling back a transaction. A list is the RFC 9110 inverse of
-  `ifMatch`. Parsed as the comma-separated list RFC 9110 §13.1.2 defines.
+  does, rolling back a transaction. The write is `create`, not
+  `create_or_update`: a concurrent insert that wins the race is the same
+  `412`, not an overwrite. A list is the RFC 9110 inverse of `ifMatch`.
+  Parsed as the comma-separated list RFC 9110 §13.1.2 defines.
   Standalone `PUT [type]/[id]` honours the same `If-None-Match` header.
 - `ifNoneExist` — **supported** on `POST` entries, in both `batch` and
   `transaction` bundles, on every backend that implements `ConditionalStorage`

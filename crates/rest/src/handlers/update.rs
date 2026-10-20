@@ -245,23 +245,24 @@ where
     //   A satisfied *present* `If-Match` implies a current representation
     //   — `Any` requires `current_version.is_some()` and `Tags` cannot match
     //   `None` — so `existing` is `Some` on that path. A satisfied
-    //   `If-None-Match: *` is the opposite: `existing` is `None` and the write
-    //   is a create. The `None` arm is therefore the create-if-absent path,
-    //   not an unreachable fallback.
+    //   `If-None-Match: *` is the opposite: no current representation, so
+    //   the write is a create. That create must not go through
+    //   `create_or_update`: that method retries `AlreadyExists` as an update
+    //   and would overwrite a concurrent writer. `create` fails the insert
+    //   atomically; the handler maps that to 412.
     //
-    // `Gone` is mapped to `None` exactly as before: a deleted resource is
-    // brought back to life by a subsequent update
-    // (https://hl7.org/fhir/http.html#delete), so it is not an error — it means
-    // there is no current version to match `If-Match` against, and (on the
-    // no-precondition path) the storage layer restores the resource on write.
+    // A deleted resource has no current representation
+    // (https://hl7.org/fhir/http.html#delete), so `If-None-Match` is
+    // satisfied and `If-Match` is not. `create` treats a tombstone as
+    // existing, so restore still uses `create_or_update`.
     let (stored, created) = if if_match.is_present() || if_none_match.is_present() {
-        let existing = match state
+        let (existing, was_gone) = match state
             .storage()
             .read(tenant.context(), &resource_type, &id)
             .await
         {
-            Ok(existing) => existing,
-            Err(StorageError::Resource(ResourceError::Gone { .. })) => None,
+            Ok(existing) => (existing, false),
+            Err(StorageError::Resource(ResourceError::Gone { .. })) => (None, true),
             Err(e) => return Err(e.into()),
         };
 
@@ -279,13 +280,14 @@ where
             return Err(RestError::PreconditionFailed { message });
         }
         if !if_none_match.if_none_match_satisfied(current_version) {
-            let message = match current_version {
-                Some(current) => format!(
+            // A failed `*` or tag list always has a current version: `*` is
+            // satisfied on `None`, and a tag list is satisfied on `None`.
+            let current = current_version.expect("failed If-None-Match implies a current version");
+            return Err(RestError::PreconditionFailed {
+                message: format!(
                     "If-None-Match precondition failed: a current representation exists (W/\"{current}\")"
                 ),
-                None => "If-None-Match precondition failed".to_string(),
-            };
-            return Err(RestError::PreconditionFailed { message });
+            });
         }
 
         match existing {
@@ -296,6 +298,35 @@ where
                     .await?,
                 false,
             ),
+            // Absent + `If-None-Match`. `create_or_update` retries
+            // `AlreadyExists` as an update, so a lost race would overwrite
+            // the other writer. `create` is atomic (conflict →
+            // `AlreadyExists`); map that to 412, the same answer the
+            // precondition would have given had the read seen the row.
+            None if if_none_match.is_present() && !was_gone => {
+                let mut body = resource;
+                if let Some(obj) = body.as_object_mut() {
+                    obj.insert("id".to_string(), serde_json::Value::String(id.clone()));
+                }
+                match state
+                    .storage()
+                    .create(tenant.context(), &resource_type, body, fhir_version)
+                    .await
+                {
+                    Ok(stored) => (stored, true),
+                    Err(StorageError::Resource(ResourceError::AlreadyExists { .. })) => {
+                        return Err(RestError::PreconditionFailed {
+                            message: format!(
+                                "If-None-Match precondition failed: a current representation now exists ({resource_type}/{id})"
+                            ),
+                        });
+                    }
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            // Tombstone: `create` treats a deleted row as existing, so restore
+            // still goes through `create_or_update`. Two clients restoring the
+            // same id at once can still race; that is a restore, not a create.
             None => {
                 state
                     .storage()
