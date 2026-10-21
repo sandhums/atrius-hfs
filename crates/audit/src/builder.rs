@@ -4,7 +4,9 @@
 //! helpers from [`crate::helpers`] and BALP profile selection from
 //! [`crate::balp`].
 
-use crate::fhir_model::{AuditEvent, AuditEventAgent, AuditEventEntity, AuditEventSource, Meta};
+use crate::fhir_model::{
+    AuditEvent, AuditEventAgent, AuditEventEntity, AuditEventSource, Extension, Meta,
+};
 
 use crate::balp::{self, AuditAction, code_systems};
 use crate::helpers::*;
@@ -39,6 +41,9 @@ pub struct AuditEventBuilder {
     extra_entities: Vec<AuditEventEntity>,
     event_type_system: Option<String>,
     event_type_code: Option<String>,
+    id: Option<String>,
+    extra_subtypes: Vec<crate::fhir_model::Coding>,
+    extensions: Vec<Extension>,
 }
 
 impl AuditEventBuilder {
@@ -61,7 +66,29 @@ impl AuditEventBuilder {
             extra_entities: Vec::new(),
             event_type_system: None,
             event_type_code: None,
+            id: None,
+            extra_subtypes: Vec::new(),
+            extensions: Vec::new(),
         }
+    }
+
+    /// Set a deterministic resource id. When omitted, `build` assigns a UUID.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Append a subtype coding. The restful-interaction coding derived from
+    /// [`Self::action`] is kept; R4 `subtype` is 0..*.
+    pub fn subtype(mut self, system: &str, code: &str) -> Self {
+        self.extra_subtypes.push(coding(system, code));
+        self
+    }
+
+    /// Append a FHIR extension (hospital Organization, correlation, …).
+    pub fn extension(mut self, extension: Extension) -> Self {
+        self.extensions.push(extension);
+        self
     }
 
     /// Set the FHIR audit action.
@@ -192,8 +219,9 @@ impl AuditEventBuilder {
         // Extra entities added via entity()
         entities.extend(self.extra_entities);
 
-        // Build the subtype coding (maps action code to restful-interaction)
-        let subtype = self.action.map(|a| {
+        // Restful-interaction from `action`, then any extra subtype codings (R4 0..*).
+        let mut subtype_codings = Vec::new();
+        if let Some(a) = self.action {
             let interaction = match a {
                 AuditAction::Create => "create",
                 AuditAction::Read => "read",
@@ -204,8 +232,14 @@ impl AuditEventBuilder {
                 // for non-CRUD execution semantics.
                 AuditAction::Execute => "operation",
             };
-            vec![coding(code_systems::RESTFUL_INTERACTION, interaction)]
-        });
+            subtype_codings.push(coding(code_systems::RESTFUL_INTERACTION, interaction));
+        }
+        subtype_codings.extend(self.extra_subtypes);
+        let subtype = if subtype_codings.is_empty() {
+            None
+        } else {
+            Some(subtype_codings)
+        };
 
         // Event type: use override if set, otherwise default to "rest"
         let type_system = self
@@ -215,7 +249,10 @@ impl AuditEventBuilder {
         let type_code = self.event_type_code.as_deref().unwrap_or("rest");
 
         AuditEvent {
-            id: Some(fhir_string(uuid::Uuid::new_v4().to_string())),
+            id: Some(fhir_string(
+                self.id
+                    .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+            )),
             meta: Some(Meta {
                 profile: Some(vec![canonical(profile_url)]),
                 ..Default::default()
@@ -246,6 +283,11 @@ impl AuditEventBuilder {
                 None
             } else {
                 Some(entities)
+            },
+            extension: if self.extensions.is_empty() {
+                None
+            } else {
+                Some(self.extensions)
             },
             ..Default::default()
         }
@@ -563,5 +605,61 @@ mod tests {
             event.r#type.code.as_ref().and_then(|c| c.value.as_deref()),
             Some("rest")
         );
+    }
+
+    #[test]
+    fn test_id_override_is_kept() {
+        let event = AuditEventBuilder::new("Device/hfs")
+            .id("audit-claim-abc")
+            .build();
+        assert_eq!(
+            event.id.as_ref().and_then(|s| s.value.as_deref()),
+            Some("audit-claim-abc")
+        );
+    }
+
+    #[test]
+    fn test_subtype_appends_to_restful_interaction() {
+        let event = AuditEventBuilder::new("Device/hfs")
+            .action(AuditAction::Execute)
+            .subtype(
+                "https://atrius.in/fhir/CodeSystem/atrius-in-his-audit-action",
+                "claim-submit",
+            )
+            .build();
+        let subtypes = event.subtype.as_ref().unwrap();
+        assert_eq!(subtypes.len(), 2);
+        assert_eq!(
+            subtypes[0].code.as_ref().and_then(|c| c.value.as_deref()),
+            Some("operation")
+        );
+        assert_eq!(
+            subtypes[1].code.as_ref().and_then(|c| c.value.as_deref()),
+            Some("claim-submit")
+        );
+    }
+
+    #[test]
+    fn test_extension_reference_is_kept() {
+        let event = AuditEventBuilder::new("Device/hfs")
+            .extension(crate::helpers::reference_extension(
+                "https://atrius.in/fhir/StructureDefinition/atrius-in-his-audit-hospital",
+                "Organization/org-hospital",
+            ))
+            .build();
+        let ext = &event.extension.as_ref().unwrap()[0];
+        assert_eq!(
+            ext.url.value.as_deref(),
+            Some("https://atrius.in/fhir/StructureDefinition/atrius-in-his-audit-hospital")
+        );
+        match ext.value.as_ref() {
+            Some(crate::fhir_model::ExtensionValue::Reference(r)) => {
+                assert_eq!(
+                    r.reference.as_ref().and_then(|s| s.value.as_deref()),
+                    Some("Organization/org-hospital")
+                );
+            }
+            other => panic!("expected valueReference, got {other:?}"),
+        }
     }
 }

@@ -160,6 +160,17 @@ pub fn codeable_concept(c: Coding) -> CodeableConcept {
     }
 }
 
+/// Extension with `valueReference` (hospital Organization, related resource).
+pub fn reference_extension(url: &str, reference_value: &str) -> crate::fhir_model::Extension {
+    crate::fhir_model::Extension {
+        url: fhir_string(url),
+        value: Some(crate::fhir_model::ExtensionValue::Reference(reference(
+            reference_value,
+        ))),
+        ..Default::default()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
