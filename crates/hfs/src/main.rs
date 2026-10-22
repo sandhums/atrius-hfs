@@ -3569,6 +3569,7 @@ async fn start_sqlite_elasticsearch(
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
+        contained_sweep_concurrency: config.elasticsearch_contained_sweep_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
         reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
@@ -3924,6 +3925,7 @@ async fn start_postgres_elasticsearch(
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
+        contained_sweep_concurrency: config.elasticsearch_contained_sweep_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
         reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
@@ -4159,6 +4161,7 @@ async fn start_mongodb_elasticsearch(
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
+        contained_sweep_concurrency: config.elasticsearch_contained_sweep_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
         reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
@@ -4592,6 +4595,7 @@ async fn start_s3_elasticsearch(
         request_timeout_ms: config.elasticsearch_request_timeout_ms,
         bulk_max_bytes: config.elasticsearch_bulk_max_bytes,
         bulk_concurrency: config.elasticsearch_bulk_concurrency,
+        contained_sweep_concurrency: config.elasticsearch_contained_sweep_concurrency,
         reindex_refresh: es_reindex_refresh_from_config(&config)?,
         reindex_prepare_threads: config.elasticsearch_reindex_prepare_threads,
         ..Default::default()
