@@ -17,7 +17,7 @@ use crate::core::schema_ledger::{
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 54;
+pub const SCHEMA_VERSION: i32 = 55;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -55,6 +55,8 @@ pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 /// through `resources_live_tenant` (index 48, `#1911`) and still runs
 /// `search_index_date_recent_end`, slot-2, phase, and `dead_at`. Helios v50
 /// maps through `search_index_date_recent_end` (index 49) and still runs
+/// `sof_terminology_tables`, slot-2, phase, and `dead_at`. Helios v51 maps
+/// through `sof_terminology_tables` (index 50, `#2185`) and still runs
 /// slot-2, phase, and `dead_at`.
 const PG_STEPS: &[&str] = &[
     "search_index_enhanced_columns",
@@ -107,6 +109,7 @@ const PG_STEPS: &[&str] = &[
     "search_index_composite_slot",
     "resources_live_tenant",
     "search_index_date_recent_end",
+    "sof_terminology_tables",
     "search_index_slot2_columns",
     "bulk_manifests_phase_progress",
     OUTBOX_DEAD_LETTER_STEP,
@@ -558,6 +561,7 @@ async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> Stor
         "search_index_composite_slot" => migrate_v47_to_v48(client).await,
         "resources_live_tenant" => migrate_v48_to_v49(client).await,
         "search_index_date_recent_end" => migrate_v49_to_v50(client).await,
+        "sof_terminology_tables" => migrate_v50_to_v51(client).await,
         "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
         "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
         OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
@@ -5196,6 +5200,28 @@ async fn migrate_v49_to_v50(client: &mut deadpool_postgres::Client) -> StorageRe
             "Migration v49->v50 failed: restore statement_timeout: {e}"
         ))
     })?;
+    Ok(())
+}
+
+/// v50 -> v51: the SQL-on-FHIR terminology tables (#2185), PostgreSQL's
+/// counterpart of SQLite's v41. New, empty tables only, so the step is one
+/// transaction. The named ledger records it; this function does not stamp
+/// Helios integer 51. `SET LOCAL statement_timeout = 0`, like the other
+/// transactional steps: a deployment-wide timeout must not fail the DDL.
+async fn migrate_v50_to_v51(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
+    let tx = client
+        .transaction()
+        .await
+        .map_err(|e| pg_error(format!("begin v51 migration: {e}")))?;
+    tx.execute("SET LOCAL statement_timeout = 0", &[])
+        .await
+        .map_err(|e| pg_error(format!("disable statement timeout for v51 migration: {e}")))?;
+    tx.batch_execute(super::sof_terminology::CREATE_TABLES_SQL)
+        .await
+        .map_err(|e| pg_error(format!("Migration v50->v51 failed: {e}")))?;
+    tx.commit()
+        .await
+        .map_err(|e| pg_error(format!("commit v51 migration: {e}")))?;
     Ok(())
 }
 

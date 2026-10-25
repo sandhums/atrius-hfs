@@ -86,3 +86,5 @@ mod wal;
 pub use backend::{SqliteBackend, SqliteBackendConfig};
 pub use subscription_outbox::SqliteSubscriptionOutbox;
 pub use wal::WalMaintenance;
+
+pub use transaction::SqliteTransaction;
