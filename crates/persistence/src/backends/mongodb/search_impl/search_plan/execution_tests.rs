@@ -11,6 +11,9 @@ use std::path::PathBuf;
 #[path = "resource_page_tests.rs"]
 mod resource_page_tests;
 
+#[path = "legacy_candidates_tests.rs"]
+mod legacy_candidates_tests;
+
 #[path = "deadline_tests.rs"]
 mod deadline_tests;
 
@@ -103,6 +106,7 @@ mod shared_mongo {
         let run_id = std::env::var("GITHUB_RUN_ID").unwrap_or_default();
         let container = crate::container_cleanup::with_cleanup_label(
             Mongo::default()
+                .with_tag("7.0")
                 .with_label("github.run_id", &run_id)
                 // Every fixture owns a database of collection and index files,
                 // and WiredTiger panics (taking `mongod` down) on EMFILE. Some
@@ -159,6 +163,28 @@ struct Row {
     id: String,
     status: &'static str,
     deleted: bool,
+}
+
+/// Stamps the raw `missing_params` arrays a test wrote with the current
+/// fingerprint and runs the staleness probe, as a writer and `search()` do
+/// (#1999); planning entry points called directly do not probe.
+async fn trust_missing_metadata(backend: &MongoBackend, db: &mongodb::Database) {
+    let stamp = backend.stamp_missing_fingerprint(PLAN_TENANT, "Observation");
+    db.collection::<Document>("resources")
+        .update_many(
+            doc! { "tenant_id": PLAN_TENANT, "missing_params": { "$exists": true } },
+            doc! { "$set": { "missing_params_fp": stamp } },
+        )
+        .await
+        .unwrap();
+    let mut absent = parameter("method", "true");
+    absent.modifier = Some(SearchModifier::Missing);
+    backend
+        .refresh_missing_metadata_freshness(
+            PLAN_TENANT,
+            &SearchQuery::new("Observation").with_parameter(absent),
+        )
+        .await;
 }
 
 struct Fixture {
@@ -391,6 +417,7 @@ fn batched_plan(remaining: Vec<IndexPredicate>) -> BatchedIndexPlan {
         page_policy: NoTotalPagePolicy::Streaming,
         page_cache: None,
         probe_timeout: Duration::from_millis(DEFAULT_PROBE_TIMEOUT_MS),
+        missing: Vec::new(),
     }
 }
 
@@ -2188,6 +2215,14 @@ async fn missing_metadata_selection_preserves_other_candidate_routes() {
 
     let mut absent = parameter("method", "true");
     absent.modifier = Some(SearchModifier::Missing);
+    // The metadata route needs a staleness probe first (#1999).
+    fixture
+        .backend
+        .refresh_missing_metadata_freshness(
+            PLAN_TENANT,
+            &SearchQuery::new("Observation").with_parameter(absent.clone()),
+        )
+        .await;
     assert!(
         fixture
             .backend
