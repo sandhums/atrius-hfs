@@ -184,6 +184,49 @@ impl tracing::Subscriber for Warnings {
     }
 }
 
+/// `tracing-core` caches a callsite's interest when it first runs. While at
+/// most one dispatcher is registered it asks only the running thread's
+/// default, so a parallel test hitting the ingress-shed `warn!` can cache
+/// `never` for an event a scoped `Warnings` on this thread is waiting for
+/// (Helios #1942, same helper as `persistence/tests/mongodb_tests.rs`). Two
+/// permanent dispatchers that answer `sometimes` keep every registration on
+/// the full list and leave each event to the dispatcher current when it fires.
+fn pin_tracing_interest() {
+    static PINS: std::sync::OnceLock<[tracing::Dispatch; 2]> = std::sync::OnceLock::new();
+    PINS.get_or_init(|| {
+        [
+            tracing::Dispatch::new(SometimesInterest),
+            tracing::Dispatch::new(SometimesInterest),
+        ]
+    });
+}
+
+struct SometimesInterest;
+
+impl tracing::Subscriber for SometimesInterest {
+    fn register_callsite(
+        &self,
+        _: &'static tracing::Metadata<'static>,
+    ) -> tracing::subscriber::Interest {
+        tracing::subscriber::Interest::sometimes()
+    }
+    fn enabled(&self, _: &tracing::Metadata<'_>) -> bool {
+        false
+    }
+    // Leaves the global max level to the dispatchers that record events.
+    fn max_level_hint(&self) -> Option<tracing::metadata::LevelFilter> {
+        Some(tracing::metadata::LevelFilter::OFF)
+    }
+    fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+        tracing::span::Id::from_u64(1)
+    }
+    fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
+    fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
+    fn event(&self, _: &tracing::Event<'_>) {}
+    fn enter(&self, _: &tracing::span::Id) {}
+    fn exit(&self, _: &tracing::span::Id) {}
+}
+
 #[derive(Debug, Clone)]
 struct Notice {
     kind: String,
@@ -604,15 +647,10 @@ async fn observer_ingress_sheds_before_spawning_and_recovers_under_down_receiver
     .await;
     let receiver = GatedReceiver::new().await;
     fixture.add("bad", &receiver).await;
+    pin_tracing_interest();
     let warnings = Warnings::default();
-    // With a single registered dispatcher, tracing-core caches a callsite's
-    // interest from the default of whichever thread registers it first, so a
-    // parallel test hitting the shed `warn!` would cache it as disabled. A
-    // second live dispatcher makes interest cover every registered dispatcher.
-    let _registry = tracing::Dispatch::new(tracing::subscriber::NoSubscriber::default());
-    let capture = tracing::Dispatch::new(warnings.clone());
     for round in 0..3 {
-        tracing::dispatcher::with_default(&capture, || {
+        tracing::subscriber::with_default(warnings.clone(), || {
             for index in 0..10 {
                 fixture.write(fixture.encounter(&format!("round-{round}-{index}")));
             }
