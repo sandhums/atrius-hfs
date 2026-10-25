@@ -1340,9 +1340,6 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                 .get()
                 .map_err(|e| HtsError::StorageError(format!("Pool error: {e}")))?;
 
-            if let Some(resp) = crate::bcp13::validate_mimetypes_code(&url, &req) {
-                return Ok(resp);
-            }
             if let Some(resp) = crate::bcp47::validate_all_languages_code(&url, &req) {
                 return Ok(resp);
             }

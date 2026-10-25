@@ -350,13 +350,7 @@ mod inner {
         Ok(resource_response(&stored, format, status))
     }
 
-    /// DELETE /<ResourceType>/:id — soft-delete a resource and its normalized
-    /// identity in one transaction.
-    ///
-    /// Imported resources live in the HTS normalized tables and may have no
-    /// persistence row. The transaction materializes that content as version 1
-    /// before the soft-delete so history keeps the original. An id that exists
-    /// nowhere is still **204 No Content**: DELETE is idempotent in FHIR.
+    /// Delete the resource and its exact normalized identity in one transaction.
     async fn delete_resource<B: TerminologyBackend>(
         resource_type: &'static str,
         state: AppState<B>,
@@ -366,18 +360,12 @@ mod inner {
         let mut transaction = crud_transaction::begin(&state, kind, &id).await?;
         let result = async {
             transaction.prepare(kind, &id, None).await?;
-            // An id that exists in neither store is still 204. FHIR DELETE is idempotent.
-            match current_resource(&mut *transaction, kind, &id).await {
-                Ok(_) => {
-                    transaction
-                        .delete(resource_type, &id)
-                        .await
-                        .map_err(storage_error)?;
-                    transaction.remove_normalized(kind, &id).await
-                }
-                Err(HtsError::NotFound(_)) => Ok(()),
-                Err(error) => Err(error),
-            }
+            current_resource(&mut *transaction, kind, &id).await?;
+            transaction
+                .delete(resource_type, &id)
+                .await
+                .map_err(storage_error)?;
+            transaction.remove_normalized(kind, &id).await
         }
         .await;
         let result = finish(transaction, result).await;
@@ -715,9 +703,9 @@ mod tests {
         );
     }
 
-    /// DELETE is idempotent: an id that exists nowhere is still 204, not 500.
+    /// An id that exists nowhere is 404, not 500.
     #[tokio::test]
-    async fn delete_of_absent_code_system_is_idempotent() {
+    async fn delete_of_absent_code_system_is_not_found() {
         let (_directory, app) = import_and_delete_router();
         let resp = app
             .oneshot(
@@ -729,7 +717,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     }
 
     fn code_system_router() -> (TempDir, Router) {

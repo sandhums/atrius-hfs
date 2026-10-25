@@ -1064,9 +1064,6 @@ impl ValueSetOperations for PostgresTerminologyBackend {
             )
         })?;
 
-        if let Some(resp) = crate::bcp13::validate_mimetypes_code(&url, &req) {
-            return Ok(resp);
-        }
         if let Some(resp) = crate::bcp47::validate_all_languages_code(&url, &req) {
             return Ok(resp);
         }
