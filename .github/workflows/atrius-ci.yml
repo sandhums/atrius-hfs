@@ -69,8 +69,8 @@ jobs:
       - name: helios-persistence (sqlite)
         run: cargo test -p helios-persistence --features R4,sqlite
 
-      - name: helios-hts (lib, sqlite)
-        run: cargo test -p helios-hts --features R4,sqlite --lib
+      - name: helios-hts (sqlite)
+        run: cargo test -p helios-hts --features R4,sqlite
 
       - name: cds-server
         run: cargo test -p cds-server

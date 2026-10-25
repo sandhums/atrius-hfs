@@ -56,6 +56,9 @@ cargo build -p cds-server
 # PATCH-501 unit tests can merge independently of feat's three-entry
 # bundle fixture (14 Sep 2026).
 cargo test -p helios-rest --features R4,sqlite
+# Full HTS suite, not `--lib`: Helios's instance-identity and CRUD contract
+# tests are integration tests (25 Oct 2026).
+cargo test -p helios-hts --features R4,sqlite
 ```
 
 Optional (requires running stack):
@@ -357,6 +360,7 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 - [ ] `cargo build` (default workspace)
 - [ ] `cargo build -p cds-server`
 - [ ] `cargo test -p helios-rest --features R4,sqlite` (includes `--lib`; do not skip — Helios 501 PATCH unit tests)
+- [ ] `cargo test -p helios-hts --features R4,sqlite` (full suite, not `--lib`; Helios HTS contract tests are integration tests)
 - [ ] No accidental deletion of `handlers/sof/`, `bulk_submit`, or `persistence/src/sof/`
 - [ ] No resurrection of `fhir-validation*` or `HFS_PROFILE_MANIFEST`
 - [ ] `schema_migrations` dispatch still present in SQLite and Postgres schema.rs
