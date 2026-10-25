@@ -605,8 +605,14 @@ async fn observer_ingress_sheds_before_spawning_and_recovers_under_down_receiver
     let receiver = GatedReceiver::new().await;
     fixture.add("bad", &receiver).await;
     let warnings = Warnings::default();
+    // With a single registered dispatcher, tracing-core caches a callsite's
+    // interest from the default of whichever thread registers it first, so a
+    // parallel test hitting the shed `warn!` would cache it as disabled. A
+    // second live dispatcher makes interest cover every registered dispatcher.
+    let _registry = tracing::Dispatch::new(tracing::subscriber::NoSubscriber::default());
+    let capture = tracing::Dispatch::new(warnings.clone());
     for round in 0..3 {
-        tracing::subscriber::with_default(warnings.clone(), || {
+        tracing::dispatcher::with_default(&capture, || {
             for index in 0..10 {
                 fixture.write(fixture.encounter(&format!("round-{round}-{index}")));
             }
