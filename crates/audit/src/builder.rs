@@ -250,8 +250,7 @@ impl AuditEventBuilder {
 
         AuditEvent {
             id: Some(fhir_string(
-                self.id
-                    .unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+                self.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
             )),
             meta: Some(Meta {
                 profile: Some(vec![canonical(profile_url)]),

@@ -156,41 +156,22 @@ fn assert_bounded(snapshot: &DispatchSnapshot) {
     );
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct Warnings(Arc<Mutex<Vec<String>>>);
-impl tracing::Subscriber for Warnings {
-    fn enabled(&self, metadata: &tracing::Metadata<'_>) -> bool {
-        *metadata.level() == tracing::Level::WARN
-    }
-    fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
-        tracing::span::Id::from_u64(1)
-    }
-    fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
-    fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
-    fn enter(&self, _: &tracing::span::Id) {}
-    fn exit(&self, _: &tracing::span::Id) {}
-    fn event(&self, event: &tracing::Event<'_>) {
-        struct Message(String);
-        impl tracing::field::Visit for Message {
-            fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-                if field.name() == "message" {
-                    self.0 = format!("{value:?}");
-                }
-            }
-        }
-        let mut message = Message(String::new());
-        event.record(&mut message);
-        self.0.lock().unwrap().push(message.0);
+impl Default for Warnings {
+    fn default() -> Self {
+        pin_tracing_interest();
+        Self(Default::default())
     }
 }
 
 /// `tracing-core` caches a callsite's interest when it first runs. While at
 /// most one dispatcher is registered it asks only the running thread's
-/// default, so a parallel test hitting the ingress-shed `warn!` can cache
-/// `never` for an event a scoped `Warnings` on this thread is waiting for
-/// (Helios #1942, same helper as `persistence/tests/mongodb_tests.rs`). Two
-/// permanent dispatchers that answer `sometimes` keep every registration on
-/// the full list and leave each event to the dispatcher current when it fires.
+/// default, so another test shedding on its own thread can cache `never` for
+/// the shed warning while a scoped `Warnings` on this thread is waiting for
+/// it (#2235, same race as #1942). Two permanent dispatchers that answer
+/// `sometimes` keep every registration on the full list and leave each event
+/// to the dispatcher current when it fires.
 fn pin_tracing_interest() {
     static PINS: std::sync::OnceLock<[tracing::Dispatch; 2]> = std::sync::OnceLock::new();
     PINS.get_or_init(|| {
@@ -225,6 +206,32 @@ impl tracing::Subscriber for SometimesInterest {
     fn event(&self, _: &tracing::Event<'_>) {}
     fn enter(&self, _: &tracing::span::Id) {}
     fn exit(&self, _: &tracing::span::Id) {}
+}
+
+impl tracing::Subscriber for Warnings {
+    fn enabled(&self, metadata: &tracing::Metadata<'_>) -> bool {
+        *metadata.level() == tracing::Level::WARN
+    }
+    fn new_span(&self, _: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+        tracing::span::Id::from_u64(1)
+    }
+    fn record(&self, _: &tracing::span::Id, _: &tracing::span::Record<'_>) {}
+    fn record_follows_from(&self, _: &tracing::span::Id, _: &tracing::span::Id) {}
+    fn enter(&self, _: &tracing::span::Id) {}
+    fn exit(&self, _: &tracing::span::Id) {}
+    fn event(&self, event: &tracing::Event<'_>) {
+        struct Message(String);
+        impl tracing::field::Visit for Message {
+            fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+                if field.name() == "message" {
+                    self.0 = format!("{value:?}");
+                }
+            }
+        }
+        let mut message = Message(String::new());
+        event.record(&mut message);
+        self.0.lock().unwrap().push(message.0);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -647,7 +654,6 @@ async fn observer_ingress_sheds_before_spawning_and_recovers_under_down_receiver
     .await;
     let receiver = GatedReceiver::new().await;
     fixture.add("bad", &receiver).await;
-    pin_tracing_interest();
     let warnings = Warnings::default();
     for round in 0..3 {
         tracing::subscriber::with_default(warnings.clone(), || {
