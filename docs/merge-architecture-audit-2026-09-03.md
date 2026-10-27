@@ -32,7 +32,8 @@ the outbox types), so nothing here is a build failure.
 Two findings were live defects rather than design debt: **§3.1**, where IG
 validation was disabled in deployments whose configuration asserted `strict`
 (config/scripts/resolver work in §6; ABDM env example + staging 422 still open),
-and **§3.2**, where the outbox lost events on Postgres (closed: `WriteTx`).
+and **§3.2**, where the outbox lost events on Postgres (closed: one TX on
+direct CRUD; see §3.2).
 Start there. The rest is durability and extensibility debt, ordered by how much
 it compounds. The live remaining queue is **§5.1**.
 
@@ -246,10 +247,16 @@ fold the outbox insert into the resource CTE. Add a test that injects a failure
 between the resource write and the enqueue and asserts neither is visible.
 
 **Closed 5 Sep 2026** (`9e69fa873`). Direct REST CRUD (`create` / `update` /
-`delete` / `restore`) uses `WriteTx`
-(`crates/persistence/src/backends/postgres/write_tx.rs`): `BEGIN` on the pooled
-client, resource + index + outbox enqueue, then `COMMIT`. Drop without commit
-rolls back. Bundle writes already used `PostgresTransaction`.
+`delete` / `restore`) runs resource + index + outbox enqueue inside one
+transaction on the checked-out pooled client (`client.transaction()` in
+`crates/persistence/src/backends/postgres/storage.rs`), then explicit
+`commit` / `rollback`. Bundle writes already used `PostgresTransaction`.
+
+The first fix landed as a local `WriteTx` helper (`write_tx.rs`, simple-query
+`BEGIN` / `COMMIT` with pool-safe `Drop`). Later Helios upstream merges rewired
+`storage.rs` to the deadpool transaction API above; `WriteTx` was never wired
+again and was removed **27 Oct 2026** as dead code. The §3.2 contract (atomic
+resource + index + outbox on direct CRUD) is unchanged.
 
 ### 3.3 Schema renumbering is positional, with no provenance guard
 
@@ -633,7 +640,9 @@ Original §5 numbers in parentheses. These are **not** the live queue.
 1. Clinical HFS env/scripts migrated to `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`
    (4 Sep / §6.1). `.env.abdm.example` NDHM validator + startup fail on leftover
    `HFS_PROFILE_*` + 422 proof script closed 6 Sep (items 21–23 below).
-3. Postgres write + index + outbox in one `WriteTx` (§3.2, `9e69fa873`).
+3. Postgres write + index + outbox in one transaction on direct CRUD (§3.2,
+   `9e69fa873`; implementation is `storage.rs` `client.transaction()` after
+   upstream merges; orphan `WriteTx` removed 27 Oct 2026).
 4. Keep-list corrected in `docs/clinical-reasoning/upstream-merge.md` (§3.4).
 5. Bulk-submit ingest through `IngestValidator` / `check_write` (`4e2b8ebc6`).
 6. Named `schema_migrations` ledger + heal path (§3.3).
@@ -696,7 +705,9 @@ Work on `feat-clinical-reasoning` after this audit, addressing §3.1, the
 package-overlay model, and the converter defects the first clean overlay boot
 exposed (§6.4). Atrius IG Draft was **not** changed. **§3.3** and **§3.4** are
 closed (named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 Sep
-(Postgres write TX; directory-layout regen + runbook). **§3.6** closed 5 Sep
+(Postgres write TX on direct CRUD; directory-layout regen + runbook). **27 Oct
+2026:** removed unused `write_tx.rs` after upstream rewired the same contract
+via `client.transaction()`. **§3.6** closed 5 Sep
 (`Principal::stub`). **§3.7 Redis JTI** closed 5 Sep (timeout, ConnectionManager,
 require `jti`). **§3.7 outbox dead-letter and zero-delivery log** closed 5 Sep.
 **§3.7 SQLite claim CAS and HTS `SYSTEM_ID_CACHE`** closed 5 Sep. No remaining

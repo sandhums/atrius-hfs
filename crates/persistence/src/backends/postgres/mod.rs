@@ -92,7 +92,6 @@ mod subscription_outbox;
 mod sync_failures;
 mod transaction;
 mod user_settings;
-mod write_tx;
 
 pub use backend::{PostgresBackend, PostgresConfig};
 /// The connection pool snapshot returned by
