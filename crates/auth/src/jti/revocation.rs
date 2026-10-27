@@ -1,5 +1,7 @@
-use std::future::Future;
 use std::sync::Arc;
+#[cfg(any(feature = "redis", test))]
+use std::future::Future;
+#[cfg(any(feature = "redis", test))]
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -12,9 +14,6 @@ use crate::error::AuthError;
 /// The BFF writes `SET hfs:revoked:jti:<jti> EX <ttl>` on logout and token refresh;
 /// HFS/HIS check this set before accepting a bearer token.
 pub const REVOKED_JTI_KEY_PREFIX: &str = "hfs:revoked:jti:";
-
-/// How long to wait for Redis itself when opening the connection manager at boot.
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Checks whether an access token JTI has been explicitly revoked (e.g. after logout).
 #[async_trait]
@@ -42,6 +41,10 @@ impl JtiRevocation for NoOpJtiRevocation {
 }
 
 /// Run `fut` and map elapsed time to [`AuthError::RevocationUnavailable`].
+///
+/// Compiled for Redis revocation and for unit tests that assert fail-closed
+/// behavior without enabling the optional `redis` dependency.
+#[cfg(any(feature = "redis", test))]
 async fn with_timeout<T>(
     timeout: Duration,
     fut: impl Future<Output = Result<T, AuthError>>,
@@ -63,6 +66,9 @@ mod redis_impl {
     use super::*;
     use redis::AsyncCommands;
     use redis::aio::ConnectionManager;
+
+    /// How long to wait for Redis itself when opening the connection manager at boot.
+    const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 
     /// Redis-backed JTI revocation blocklist (shared with BFF).
     pub struct RedisJtiRevocation {

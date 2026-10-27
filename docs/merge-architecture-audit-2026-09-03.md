@@ -457,6 +457,21 @@ blank `jti` is `MissingJti` → 401: the token cannot be named on the blocklist.
 `NoOpJtiRevocation` still accepts tokens without `jti`. Boot connects to Redis
 with a 5s cap. This is still a deny-list, not a replay cache.
 
+**Follow-up 27 Oct 2026.** `CONNECT_TIMEOUT` / `with_timeout` in
+`crates/auth/src/jti/revocation.rs` lived at module scope while only the
+`#[cfg(feature = "redis")]` impl used them. HTS (and anything else that pulls
+`helios-auth` without `redis`, e.g. `helios-persistence`) compiled that module
+and hit `dead_code` warnings even though JTI revocation is inactive there.
+Gated Redis-only helpers under `feature = "redis"` (and `with_timeout` under
+`test` for the fail-closed unit test). **Feature wiring:** `redis` is an
+optional feature on **`helios-auth`**, not on `helios-hfs`. HFS enables it
+transitively via `helios-rest` / `helios-hfs` dependency lines
+(`features = ["redis"]` on `helios-auth`). Build the server with
+`cargo build -p helios-hfs` or `cargo build --bin hfs`; do not pass
+`--features redis` on `helios-hfs` (that package has no such feature). To
+compile or test auth with Redis in isolation:
+`cargo check -p helios-auth --features redis`.
+
 - **No dead-letter on the outbox.** After max retries a row is delayed 3600 s with
 `"max retries exceeded"` and retried hourly forever — never tombstoned
 (`subscriptions/src/outbox.rs:106–158`).
@@ -709,7 +724,9 @@ closed (named schema ledger; merge playbook). **§3.2** and **§3.5** closed 5 S
 2026:** removed unused `write_tx.rs` after upstream rewired the same contract
 via `client.transaction()`. **§3.6** closed 5 Sep
 (`Principal::stub`). **§3.7 Redis JTI** closed 5 Sep (timeout, ConnectionManager,
-require `jti`). **§3.7 outbox dead-letter and zero-delivery log** closed 5 Sep.
+require `jti`). **27 Oct 2026:** JTI revocation `cfg` cleanup for non-Redis
+`helios-auth` consumers (HTS build warnings; see §3.7 Redis bullet). **§3.7
+outbox dead-letter and zero-delivery log** closed 5 Sep.
 **§3.7 SQLite claim CAS and HTS `SYSTEM_ID_CACHE`** closed 5 Sep. No remaining
 §3.7 items. **6 Sep:** write-path / `$validate` holes and discriminator
 completeness (§6.7). **6 Sep:** Atrius-valid ⇒ NDHM-valid after remap is a
