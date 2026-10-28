@@ -57,8 +57,9 @@
 //! - `extensible`-strength bindings warn when
 //!   `EffectHandlers::check_extensible_bindings` is set; only `required` is
 //!   checked by default.
-//! - Constraint evaluation resolves `%resource`/`%rootResource` to the root
-//!   resource and evaluates via `path.all(expr)`, so invariants relying on
+//! - Constraint evaluation uses per-node invariant evaluation (see
+//!   `fhirpath_effects`); `%resource`/`%rootResource`/`%context` resolve to
+//!   the root resource, so invariants relying on
 //!   nested-resource `%resource` semantics can misfire (helios-fhirpath
 //!   limitation; see `fhirpath_effects`).
 //! - Schema sets are assembled per node without cross-resource memoization;

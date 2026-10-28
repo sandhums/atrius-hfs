@@ -1312,6 +1312,11 @@ mod count_by_tenant_index;
 #[path = "mongodb/ifnoneexist_resource_params.rs"]
 mod ifnoneexist_resource_params;
 
+/// #1976: lone-transaction ceiling with and without the version-1
+/// `resource_history` copy, per WiredTiger cache size. Ignored by default.
+#[path = "mongodb/v1_history_ceiling.rs"]
+mod v1_history_ceiling;
+
 /// #1405: of several writers holding the same version, one `update` writes and
 /// every loser is a `ConcurrencyError` — the server's `WriteConflict` used to
 /// reach them as `BackendError::Internal`.
@@ -24151,6 +24156,10 @@ mongodb_bundle_identity_test!(
 mongodb_bundle_identity_test!(
     mongodb_integration_changed_conditional_target_after_a_written_reference_rolls_back,
     changed_conditional_target_after_a_written_reference_rolls_back
+);
+mongodb_bundle_identity_test!(
+    mongodb_integration_put_over_a_deleted_id_restores_it,
+    put_over_a_deleted_id_restores_it
 );
 
 #[path = "mongodb/missing_index.rs"]
