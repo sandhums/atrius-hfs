@@ -7259,6 +7259,8 @@ mod tests {
             "bulk_provider_submissions",
             "sof_terminology_tables",
             "sof_terminology_refs",
+            "subscription_outbox",
+            "login_sessions",
         ];
         {
             let conn = backend.get_connection().unwrap();

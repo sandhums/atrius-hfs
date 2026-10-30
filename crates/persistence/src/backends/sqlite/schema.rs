@@ -3948,7 +3948,8 @@ mod tests {
         initialize_schema(&conn).unwrap();
         conn.execute("DROP INDEX idx_bulk_submissions_updated_at", [])
             .unwrap();
-        set_schema_version(&conn, 46).unwrap();
+        unrecord_steps_completing_after(&conn, 46);
+        set_schema_version(&conn, 47).unwrap();
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         let count = |c: &Connection| -> i64 {

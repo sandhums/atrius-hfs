@@ -573,16 +573,13 @@ fn server_with_per_request_principal_tenant() -> TestServer {
                     .get("x-test-principal-tenant")
                     .and_then(|v| v.to_str().ok())
                     .map(str::to_string);
-                request.extensions_mut().insert(Principal {
-                    subject: "client-1".to_string(),
-                    issuer: "https://idp.example.com".to_string(),
-                    tenant_id: tenant,
-                    scopes: ScopeSet::parse("system/reindex"),
-                    jti: None,
-                    expires_at: Utc::now() + chrono::Duration::hours(1),
-                    custom_claims: serde_json::Map::new(),
-                    ..Default::default()
-                });
+                let mut principal =
+                    Principal::stub("client-1", ScopeSet::parse("system/reindex"))
+                        .with_issuer("https://idp.example.com");
+                if let Some(tenant_id) = tenant {
+                    principal = principal.with_tenant_id(tenant_id);
+                }
+                request.extensions_mut().insert(principal);
                 next.run(request).await
             },
         ));
