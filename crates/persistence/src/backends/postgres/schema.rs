@@ -17,7 +17,7 @@ use crate::core::schema_ledger::{
 use crate::error::{BackendError, StorageResult};
 
 /// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 57;
+pub const SCHEMA_VERSION: i32 = 58;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -113,6 +113,7 @@ const PG_STEPS: &[&str] = &[
     "sof_terminology_tables",
     "bulk_manifests_added_at_index_pending",
     "search_index_composite_partial_fast_path",
+    "bulk_submissions_updated_at",
     "search_index_slot2_columns",
     "bulk_manifests_phase_progress",
     OUTBOX_DEAD_LETTER_STEP,
@@ -567,6 +568,7 @@ async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> Stor
         "sof_terminology_tables" => migrate_v50_to_v51(client).await,
         "bulk_manifests_added_at_index_pending" => migrate_v51_to_v52(client).await,
         "search_index_composite_partial_fast_path" => migrate_v52_to_v53(client).await,
+        "bulk_submissions_updated_at" => migrate_v53_to_v54(client).await,
         "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
         "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
         OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
@@ -813,6 +815,23 @@ async fn create_fts_tables(client: &deadpool_postgres::Client) -> StorageResult<
         )
         .await;
 
+    Ok(())
+}
+
+/// v53 -> v54: index `bulk_submissions(updated_at)` for the expired-submission
+/// sweep (#2280), which otherwise sorts the whole table on every pass.
+async fn migrate_v53_to_v54(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    // One multi-statement simple query is one implicit transaction, so the
+    // `SET LOCAL` covers the build without leaking a deployment-wide
+    // `statement_timeout` into the session.
+    client
+        .batch_execute(
+            "SET LOCAL statement_timeout = 0;
+             CREATE INDEX IF NOT EXISTS idx_bulk_submissions_updated_at
+                 ON bulk_submissions(updated_at);",
+        )
+        .await
+        .map_err(|e| pg_error(format!("Migration v53->v54 failed: {}", e)))?;
     Ok(())
 }
 

@@ -473,7 +473,7 @@ mod tests {
 
     #[test]
     fn upstream_postgres_v41_runs_dead_letter_after_secondary_sync() {
-        let idx = implied_applied_indices(41, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(41, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&39), "attempts is Helios v40");
         assert!(idx.contains(&40), "secondary_sync is Helios v41");
@@ -487,14 +487,15 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 40, "all Helios steps through v41 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v44_runs_patient_refs_after_login_sessions() {
-        let idx = implied_applied_indices(44, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(44, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&41), "reference-target-id is Helios v42");
         assert!(idx.contains(&42), "date range is Helios v43");
@@ -508,14 +509,15 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 43, "all Helios steps through v44 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v46_runs_reindex_id_after_file_progress_completed() {
-        let idx = implied_applied_indices(46, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(46, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&43), "login sessions are Helios v44");
         assert!(idx.contains(&44), "patient export refs are Helios v45");
@@ -527,14 +529,15 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 45, "all Helios steps through v46 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v47_runs_slot2_after_reindex_id() {
-        let idx = implied_applied_indices(47, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(47, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&45), "completed is Helios v46");
         assert!(idx.contains(&46), "reindex-id is Helios v47");
@@ -544,14 +547,15 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 46, "all Helios steps through v47 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v48_runs_slot2_after_composite_slot() {
-        let idx = implied_applied_indices(48, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(48, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&46), "reindex-id is Helios v47");
         assert!(idx.contains(&47), "composite slot is Helios v48");
@@ -560,14 +564,15 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 47, "all Helios steps through v48 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v49_runs_date_recent_end_after_live_tenant_index() {
-        let idx = implied_applied_indices(49, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(49, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&47), "composite slot is Helios v48");
         assert!(idx.contains(&48), "live tenant index is Helios v49");
@@ -575,58 +580,74 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 48, "all Helios steps through v49 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v50_runs_terminology_after_date_recent_end() {
-        let idx = implied_applied_indices(50, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(50, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&48), "live tenant index is Helios v49");
         assert!(idx.contains(&49), "date recent end is Helios v50");
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 49, "all Helios steps through v50 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v51_runs_bulk_index_pending_after_terminology() {
-        let idx = implied_applied_indices(51, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(51, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&49), "date recent end is Helios v50");
         assert!(idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 50, "all Helios steps through v51 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v52_runs_composite_partial_after_bulk_index_pending() {
-        let idx = implied_applied_indices(52, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(52, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&50), "sof terminology is Helios v51");
         assert!(idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 51, "all Helios steps through v52 except outbox");
     }
 
     #[test]
     fn upstream_postgres_v53_runs_slot2_after_composite_partial() {
-        let idx = implied_applied_indices(53, Numbering::Upstream, 56);
+        let idx = implied_applied_indices(53, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&51), "bulk index pending is Helios v52");
         assert!(idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "slot-2 is fork-only");
-        assert!(!idx.contains(&55), "outbox dead-letter");
+        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 52, "all Helios steps through v53 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v54_runs_bulk_submissions_index_after_composite_partial() {
+        let idx = implied_applied_indices(54, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&52), "composite partial is Helios v53");
+        assert!(idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 53, "all Helios steps through v54 except outbox");
     }
 }

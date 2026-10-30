@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 48;
+pub const SCHEMA_VERSION: i32 = 49;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -103,6 +103,7 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_v43_noop", migrate_v43_to_v44),
     ("search_index_drop_prefix_indexes", migrate_v44_to_v45),
     ("search_index_token_code_first", migrate_v45_to_v46),
+    ("bulk_submissions_updated_at", migrate_v46_to_v47),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
@@ -2676,6 +2677,18 @@ fn migrate_v45_to_v46(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// Migrate from schema version 46 to 47: index `bulk_submissions(updated_at)`
+/// so the expired-submission sweep (#2280) seeks instead of sorting the table.
+fn migrate_v46_to_v47(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_bulk_submissions_updated_at
+         ON bulk_submissions(updated_at)",
+        [],
+    )
+    .map_err(|e| migration_err(format!("v47 create idx_bulk_submissions_updated_at: {e}")))?;
+    Ok(())
+}
+
 fn migration_err(message: String) -> crate::error::StorageError {
     crate::error::StorageError::Backend(crate::error::BackendError::Internal {
         backend_name: "sqlite".to_string(),
@@ -3926,6 +3939,30 @@ mod tests {
         );
         // Replay is a no-op.
         migrate_v41_to_v42(&conn).unwrap();
+    }
+
+    /// v46 -> v47 indexes `bulk_submissions(updated_at)`; a replay is a no-op.
+    #[test]
+    fn migrate_v46_to_v47_indexes_submission_updated_at() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP INDEX idx_bulk_submissions_updated_at", [])
+            .unwrap();
+        set_schema_version(&conn, 46).unwrap();
+        initialize_schema(&conn).unwrap();
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        let count = |c: &Connection| -> i64 {
+            c.query_row(
+                "SELECT count(*) FROM sqlite_master WHERE type='index' AND name='idx_bulk_submissions_updated_at'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap()
+        };
+        assert_eq!(count(&conn), 1);
+        // A replay is a no-op.
+        migrate_v46_to_v47(&conn).unwrap();
+        assert_eq!(count(&conn), 1);
     }
 
     /// v45 -> v46 drops the two extra code-first indexes of the earlier
