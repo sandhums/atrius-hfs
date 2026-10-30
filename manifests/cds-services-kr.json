@@ -263,7 +263,7 @@
         "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}"
       },
       "libraryId": "AtriusSurgicalSafety",
-      "libraryVersion": "0.1.0",
+      "libraryVersion": "0.1.1",
       "expression": "Surgical Safety Checklist Needed",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
