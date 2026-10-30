@@ -181,7 +181,7 @@
         "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
       },
       "libraryId": "AtriusEDAcuteBreathlessness",
-      "libraryVersion": "0.1.4",
+      "libraryVersion": "0.1.5",
       "expression": "In Scope",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
@@ -205,7 +205,7 @@
         "medicationAdministrations": "MedicationAdministration?patient={{context.patientId}}"
       },
       "libraryId": "AtriusERChestPainPathway",
-      "libraryVersion": "0.4.2",
+      "libraryVersion": "0.4.3",
       "expression": "In Scope",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
