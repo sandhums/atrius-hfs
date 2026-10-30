@@ -67,7 +67,7 @@
         "questionnaireResponses": "QuestionnaireResponse?patient={{context.patientId}}"
       },
       "libraryId": "AtriusDischargeReadiness",
-      "libraryVersion": "0.1.0",
+      "libraryVersion": "0.1.1",
       "expression": "Discharge Readiness Concerns",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
@@ -159,7 +159,7 @@
         "medicationRequests": "MedicationRequest?patient={{context.patientId}}"
       },
       "libraryId": "AtriusVTE",
-      "libraryVersion": "0.1.0",
+      "libraryVersion": "0.1.1",
       "expression": "VTE Prophylaxis Needed",
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
