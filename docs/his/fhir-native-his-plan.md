@@ -85,7 +85,7 @@ flowchart TB
 - No **Task lifecycle operations** (`$accept`, `$start`, `$complete`) — Task is passive storage
 - No **Appointment / Schedule / Slot / EpisodeOfCare Atrius profiles** yet — scheduling and ADT writes use base R4 resources without `meta.profile`
 - No **MPI / patient match** (`$match`, `$everything`, merge)
-- **HFS Location search** — `part-of` and `physical-type` not indexed; bed board uses client-side filter (platform fix deferred)
+- **HFS Location search** — `physical-type` and `partof` are indexed (custom param + spec param); bed board still uses a client-side filter written when the hyphenated `part-of` spelling was silently ignored. R4 names Location's parameter `partof` while Encounter's is `part-of`; HFS now indexes an Atrius `part-of` alias for Location/Organization (`data/atrius-search-params.json`), so both spellings work. Bed board should switch to `Location?part-of=…` and drop the client-side filter.
 - **UI/BFF** for admin workflows lives mostly outside this repo ([`atrius-bff`](../clinical-reasoning/forward-plan.md), `atrius-clinical-ui`)
 
 ---
@@ -431,7 +431,7 @@ Also:
 | Check-in status transition: Appointment `booked` → `arrived` → `fulfilled` | `his-scheduling` |
 | EpisodeOfCare on inpatient admit (optional link to originating Appointment) | `his-adt` |
 | ADT `$validate` smoke; bed board patient display name | `his-adt`, smoke scripts |
-| HFS indexing for `Location.part-of`, `Location.physical-type` (or document as platform backlog) | atrius-hfs persistence |
+| ~~HFS indexing for `Location.part-of`, `Location.physical-type`~~ — done: `partof`/`physical-type` indexed; `part-of` alias added for Location/Organization (`data/atrius-search-params.json`). Remaining: switch bed board to server-side `?part-of=` filter | atrius-hfs persistence, bed board UI |
 
 #### 3.5.3 Subscriptions & CDS (optional in 3.5, required before UI)
 

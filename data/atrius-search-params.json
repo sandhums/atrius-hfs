@@ -13,7 +13,9 @@
         "status": "active",
         "description": "Physical form of the location (e.g. bed = bd)",
         "code": "physical-type",
-        "base": ["Location"],
+        "base": [
+          "Location"
+        ],
         "type": "token",
         "expression": "Location.physicalType",
         "xpathUsage": "normal"
@@ -27,9 +29,11 @@
         "version": "0.1.0",
         "name": "status",
         "status": "active",
-        "description": "ChargeItem lifecycle status (billable, billed, aborted, …)",
+        "description": "ChargeItem lifecycle status (billable, billed, aborted, \u2026)",
         "code": "status",
-        "base": ["ChargeItem"],
+        "base": [
+          "ChargeItem"
+        ],
         "type": "token",
         "expression": "ChargeItem.status",
         "xpathUsage": "normal"
@@ -45,7 +49,9 @@
         "status": "active",
         "description": "Schedule of charges id on ChargeItemDefinition",
         "code": "schedule-id",
-        "base": ["ChargeItemDefinition"],
+        "base": [
+          "ChargeItemDefinition"
+        ],
         "type": "token",
         "expression": "ChargeItemDefinition.extension('https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-schedule-of-charges-ref').value.as(string)",
         "xpathUsage": "normal"
@@ -61,9 +67,74 @@
         "status": "active",
         "description": "GST rate class extension on ChargeItem",
         "code": "gst-rate-class",
-        "base": ["ChargeItem"],
+        "base": [
+          "ChargeItem"
+        ],
         "type": "token",
         "expression": "ChargeItem.extension('https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-gst-rate-class').value.as(code)",
+        "xpathUsage": "normal"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "SearchParameter",
+        "id": "Location-part-of",
+        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/Location-part-of",
+        "version": "0.1.0",
+        "name": "part-of",
+        "status": "active",
+        "description": "Alias for the FHIR R4 spec's Location 'partof' search parameter. R4 names Location.partOf's parameter 'partof' while Encounter and other resources use kebab-case 'part-of'; this alias makes 'part-of' work uniformly. Both spellings are indexed; prefer 'part-of'.",
+        "code": "part-of",
+        "base": [
+          "Location"
+        ],
+        "type": "reference",
+        "expression": "Location.partOf",
+        "target": [
+          "Location"
+        ],
+        "xpathUsage": "normal"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "SearchParameter",
+        "id": "Organization-part-of",
+        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/Organization-part-of",
+        "version": "0.1.0",
+        "name": "part-of",
+        "status": "active",
+        "description": "Alias for the FHIR R4 spec's Organization 'partof' search parameter (same naming quirk as Location 'partof'). Both spellings are indexed; prefer 'part-of'.",
+        "code": "part-of",
+        "base": [
+          "Organization"
+        ],
+        "type": "reference",
+        "expression": "Organization.partOf",
+        "target": [
+          "Organization"
+        ],
+        "xpathUsage": "normal"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "SearchParameter",
+        "id": "ResearchStudy-part-of",
+        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ResearchStudy-part-of",
+        "version": "0.1.0",
+        "name": "part-of",
+        "status": "active",
+        "description": "Alias for the FHIR R4 spec's ResearchStudy 'partof' search parameter (same naming quirk as Location/Organization 'partof'; R5+ drops the parameter entirely). Both spellings are indexed; prefer 'part-of'.",
+        "code": "part-of",
+        "base": [
+          "ResearchStudy"
+        ],
+        "type": "reference",
+        "expression": "ResearchStudy.partOf",
+        "target": [
+          "ResearchStudy"
+        ],
         "xpathUsage": "normal"
       }
     }
