@@ -19,58 +19,61 @@ pub enum EvidenceCiteAs {
 }
 
 /// FHIR Evidence type
-/// 
+///
 /// The Evidence Resource provides a machine-interpretable expression of an
 /// evidence concept including the evidence variables (eg population,
 /// exposures/interventions, comparators, outcomes, measured variables,
 /// confounding variables), the statistics, and the certainty of this evidence.
-/// 
+///
 /// ## Type: Resource type
 /// Base type: http://hl7.org/fhir/StructureDefinition/DomainResource
-/// 
+///
 /// ## Status: draft
 /// FHIR Version: 4.3.0
-/// 
+///
 /// See: [Evidence](http://hl7.org/fhir/StructureDefinition/Evidence)
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
-#[fhir_resource(choice_elements = "citeAs", summary_fields = "id,meta,implicit_rules,url,identifier,version,title,status,date,use_context,publisher,contact,author,endorser")]
+#[fhir_resource(
+    choice_elements = "citeAs",
+    summary_fields = "id,meta,implicit_rules,url,identifier,version,title,status,date,use_context,publisher,contact,author,endorser"
+)]
 pub struct Evidence {
     /// Logical id of this artifact
-    /// 
+    ///
     /// The logical id of the resource, as used in the URL for the resource. Once
     /// assigned, this value never changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The only time that a resource does not have an id is when it is being
     /// submitted to the server using a create operation.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
     pub id: Option<String>,
     /// Metadata about the resource
-    /// 
+    ///
     /// The metadata about the resource. This is content that is maintained by the
     /// infrastructure. Changes to the content might not always be associated with
     /// version changes to the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub meta: Option<Meta>,
     /// A set of rules under which this content was created
-    /// 
+    ///
     /// A reference to a set of rules that were followed when the resource was
     /// constructed, and which must be understood when processing the content. Often,
     /// this is a reference to an implementation guide that defines the special rules
     /// along with other profiles etc.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Asserting this rule set restricts the content to be only understood by a
     /// limited set of trading partners. This inherently limits the usefulness of the
@@ -80,22 +83,22 @@ pub struct Evidence {
     /// specification writers should avoid using this element. Often, when used, the
     /// URL is a reference to an implementation guide that defines these special
     /// rules as part of it's narrative along with other profiles, value sets, etc.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This element is labeled as a modifier because the implicit rules may provide additional knowledge about the resource that modifies it's meaning or interpretation
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "implicitRules")]
     pub implicit_rules: Option<Uri>,
     /// Language of the resource content
-    /// 
+    ///
     /// The base language in which the resource is written.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Language is provided to support indexing and accessibility (typically,
     /// services such as text to speech use the language tag). The html language tag
@@ -106,27 +109,27 @@ pub struct Evidence {
     /// automatically. If a language is specified, it should it also be specified on
     /// the div element in the html (see rules in HTML5 for information about the
     /// relationship between xml:lang and the html lang attribute).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: preferred
     /// - **Description**: IETF language tag
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/languages
     pub language: Option<Code>,
     /// Text summary of the resource, for human interpretation
-    /// 
+    ///
     /// A human-readable narrative that contains a summary of the resource and can be
     /// used to represent the content of the resource to a human. The narrative need
     /// not encode all the structured data, but is required to contain sufficient
     /// detail to make it "clinically safe" for a human to just read the narrative.
     /// Resource definitions may define what content should be represented in the
     /// narrative to ensure clinical safety.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Contained resources do not have narrative. Resources that are not contained
     /// SHOULD have a narrative. In some cases, a resource may only have text with
@@ -134,66 +137,66 @@ pub struct Evidence {
     /// are satisfied). This may be necessary for data from legacy systems where
     /// information is captured as a "text blob" or where text is additionally
     /// entered raw or narrated and encoded information is added later.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// narrative, html, xhtml, display
     pub text: Option<Narrative>,
     /// Contained, inline Resources
-    /// 
+    ///
     /// These resources do not have an independent existence apart from the resource
     /// that contains them - they cannot be identified independently, and nor can
     /// they have their own independent transaction scope.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This should never be done when the content can be identified properly, as
     /// once identification is lost, it is extremely difficult (and context
     /// dependent) to restore it again. Contained resources may have profiles and
     /// tags In their meta elements, but SHALL NOT have security labels.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **dom-r4b**: Containing new R4B resources within R4 resources may cause interoperability issues if instances are shared with R4 systems (warning)
     ///   Expression: `($this is Citation or $this is Evidence or $this is EvidenceReport or $this is EvidenceVariable or $this is MedicinalProductDefinition or $this is PackagedProductDefinition or $this is AdministrableProductDefinition or $this is Ingredient or $this is ClinicalUseDefinition or $this is RegulatedAuthorization or $this is SubstanceDefinition or $this is SubscriptionStatus or $this is SubscriptionTopic) implies (%resource is Citation or %resource is Evidence or %resource is EvidenceReport or %resource is EvidenceVariable or %resource is MedicinalProductDefinition or %resource is PackagedProductDefinition or %resource is AdministrableProductDefinition or %resource is Ingredient or %resource is ClinicalUseDefinition or %resource is RegulatedAuthorization or %resource is SubstanceDefinition or %resource is SubscriptionStatus or %resource is SubscriptionTopic)`
-    /// 
+    ///
     /// ## Aliases
     /// inline resources, anonymous resources, contained resources
     pub contained: Option<Vec<Resource>>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource. To make the use of extensions safe and
     /// manageable, there is a strict set of governance applied to the definition and
     /// use of extensions. Though any implementer can define an extension, there is a
     /// set of requirements that SHALL be met as part of the definition of the
     /// extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the resource and that modifies the understanding of the element
     /// that contains it and/or the understanding of the containing element's
@@ -203,11 +206,11 @@ pub struct Evidence {
     /// implementer is allowed to define an extension, there is a set of requirements
     /// that SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -215,245 +218,245 @@ pub struct Evidence {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the resource that contains them
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Canonical identifier for this evidence, represented as a globally unique URI
-    /// 
+    ///
     /// An absolute URI that is used to identify this evidence when it is referenced
     /// in a specification, model, design or an instance; also called its canonical
     /// identifier. This SHOULD be globally unique and SHOULD be a literal address at
     /// which at which an authoritative instance of this summary is (or will be)
     /// published. This URL can be the target of a canonical reference. It SHALL
     /// remain the same when the summary is stored on different servers.
-    /// 
+    ///
     /// ## Requirements
     /// Allows the evidence to be referenced by a single globally unique identifier.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Can be a urn:uuid: or a urn:oid: but real http: addresses are preferred.
     /// Multiple instances may share the same URL if they have a distinct version.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub url: Option<Uri>,
     /// Additional identifier for the summary
-    /// 
+    ///
     /// A formal identifier that is used to identify this summary when it is
     /// represented in other formats, or referenced in a specification, model, design
     /// or an instance.
-    /// 
+    ///
     /// ## Requirements
     /// Allows externally provided and/or usable business identifiers to be easily
     /// associated with the module.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Typically, this is used for identifiers that can go in an HL7 V3 II (instance
     /// identifier) data type, and can then identify this summary outside of FHIR,
     /// where it is not possible to use the logical URI.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub identifier: Option<Vec<Identifier>>,
     /// Business version of this summary
-    /// 
+    ///
     /// The identifier that is used to identify this version of the summary when it
     /// is referenced in a specification, model, design or instance. This is an
     /// arbitrary value managed by the summary author and is not expected to be
     /// globally unique. For example, it might be a timestamp (e.g. yyyymmdd) if a
     /// managed version is not available. There is also no expectation that versions
     /// can be placed in a lexicographical sequence.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The determination of when to create a new version of a resource (same url,
     /// new version) vs. defining a new artifact is up to the author. Considerations
     /// for making this decision are found in Technical and Business Versions.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub version: Option<String>,
     /// Name for this summary (human friendly)
-    /// 
+    ///
     /// A short, descriptive, user-friendly title for the summary.
-    /// 
+    ///
     /// ## Implementation Notes
     /// In some cases, the resource can no longer be found at the stated url, but the
     /// url itself cannot change. Implementations can use the meta.source element to
     /// indicate where the current master source of the resource can be found.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub title: Option<String>,
     /// Citation for this evidence
-    /// 
+    ///
     /// Citation Resource or display of suggested citation for this evidence.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(flatten)]
     pub cite_as: Option<EvidenceCiteAs>,
     /// draft | active | retired | unknown
-    /// 
+    ///
     /// The status of this summary. Enables tracking the life-cycle of the content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Allows filtering of summarys s that are appropriate for use versus not.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - This is labeled as "Is Modifier" because applications should not use a retired {{title}} without due consideration
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **Description**: The lifecycle status of an artifact.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/publication-status|4.3.0
     pub status: Code,
     /// Date last changed
-    /// 
+    ///
     /// The date (and optionally time) when the summary was published. The date must
     /// change when the business version changes and it must change if the status
     /// code changes. In addition, it should change when the substantive content of
     /// the summary changes.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Note that this is not the same as the resource last-modified-date, since the
     /// resource may be a secondary representation of the summary. Additional
     /// specific dates may be added as extensions or be found by consulting
     /// Provenances associated with past versions of the resource.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Aliases
     /// Revision Date
     pub date: Option<DateTime>,
     /// The context that the content is intended to support
-    /// 
+    ///
     /// The content was developed with a focus and intent of supporting the contexts
     /// that are listed. These contexts may be general categories (gender, age, ...)
     /// or may be references to specific programs (insurance plans, studies, ...) and
     /// may be used to assist with indexing and searching for appropriate evidence
     /// instances.
-    /// 
+    ///
     /// ## Requirements
     /// Assist in searching for appropriate content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When multiple useContexts are specified, there is no expectation that all or
     /// any of the contexts apply.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "useContext")]
     pub use_context: Option<Vec<UsageContext>>,
     /// When the summary was approved by publisher
-    /// 
+    ///
     /// The date on which the resource content was approved by the publisher.
     /// Approval happens once when the content is officially approved for usage.
-    /// 
+    ///
     /// ## Implementation Notes
     /// The 'date' element may be more recent than the approval date because of minor
     /// changes or editorial corrections.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "approvalDate")]
     pub approval_date: Option<Date>,
     /// When the summary was last reviewed
-    /// 
+    ///
     /// The date on which the resource content was last reviewed. Review happens
     /// periodically after approval but does not change the original approval date.
-    /// 
+    ///
     /// ## Requirements
     /// Gives a sense of how "current" the content is. Resources that have not been
     /// reviewed in a long time may have a risk of being less appropriate/relevant.
-    /// 
+    ///
     /// ## Implementation Notes
     /// If specified, this date follows the original approval date.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "lastReviewDate")]
     pub last_review_date: Option<Date>,
     /// Name of the publisher (organization or individual)
-    /// 
+    ///
     /// The name of the organization or individual that published the evidence.
-    /// 
+    ///
     /// ## Requirements
     /// Helps establish the "authority/credibility" of the evidence. May also allow
     /// for contact.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Usually an organization but may be an individual. The publisher (or steward)
     /// of the evidence is the organization or individual primarily responsible for
@@ -462,121 +465,121 @@ pub struct Evidence {
     /// The publisher is the primary point of contact for questions or issues with
     /// the evidence. This item SHOULD be populated unless the information is
     /// available from context.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub publisher: Option<String>,
     /// Contact details for the publisher
-    /// 
+    ///
     /// Contact details to assist a user in finding and communicating with the
     /// publisher.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Extensions to ContactDetail include: contactReference, contactAddress, and
     /// contributionTime (Details at:
     /// http://build.fhir.org/clinicalreasoning-module.html).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub contact: Option<Vec<ContactDetail>>,
     /// Who authored the content
-    /// 
+    ///
     /// An individiual, organization, or device primarily involved in the creation
     /// and maintenance of the content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Extensions to ContactDetail include: contactReference, contactAddress, and
     /// contributionTime (Details at:
     /// http://build.fhir.org/clinicalreasoning-module.html).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub author: Option<Vec<ContactDetail>>,
     /// Who edited the content
-    /// 
+    ///
     /// An individiual, organization, or device primarily responsible for internal
     /// coherence of the content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Extensions to ContactDetail include: contactReference, contactAddress, and
     /// contributionTime (Details at:
     /// http://build.fhir.org/clinicalreasoning-module.html).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub editor: Option<Vec<ContactDetail>>,
     /// Who reviewed the content
-    /// 
+    ///
     /// An individiual, organization, or device primarily responsible for review of
     /// some aspect of the content.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Extensions to ContactDetail include: contactReference, contactAddress, and
     /// contributionTime (Details at:
     /// http://build.fhir.org/clinicalreasoning-module.html).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub reviewer: Option<Vec<ContactDetail>>,
     /// Who endorsed the content
-    /// 
+    ///
     /// An individiual, organization, or device responsible for officially endorsing
     /// the content for use in some setting.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Extensions to ContactDetail include: contactReference, contactAddress, and
     /// contributionTime (Details at:
     /// http://build.fhir.org/clinicalreasoning-module.html).
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub endorser: Option<Vec<ContactDetail>>,
     /// Link or citation to artifact associated with the summary
-    /// 
+    ///
     /// Link or citation to artifact associated with the summary.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "relatedArtifact")]
     pub related_artifact: Option<Vec<RelatedArtifact>>,
     /// Description of the particular summary
-    /// 
+    ///
     /// A free text natural language description of the evidence from a consumer's
     /// perspective.
-    /// 
+    ///
     /// ## Implementation Notes
     /// This description can be used to capture details such as why the evidence was
     /// built, comments about misuse, instructions for clinical use and
@@ -585,54 +588,54 @@ pub struct Evidence {
     /// resource itself. This item SHOULD be populated unless the information is
     /// available from context (e.g. the language of the evidence is presumed to be
     /// the predominant language in the place the evidence was created).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// Declarative description of the Evidence
-    /// 
+    ///
     /// Declarative description of the Evidence.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub assertion: Option<Markdown>,
     /// Footnotes and/or explanatory notes
-    /// 
+    ///
     /// Footnotes and/or explanatory notes.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Evidence variable such as population, exposure, or outcome
-    /// 
+    ///
     /// Evidence variable such as population, exposure, or outcome.
-    /// 
+    ///
     /// ## Cardinality: Required, Multiple (1..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
     #[fhir_serde(rename = "variableDefinition")]
     pub variable_definition: Option<Vec<EvidenceVariableDefinition>>,
     /// The method to combine studies
-    /// 
+    ///
     /// The method to combine studies.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: Types of combining results from a body of evidence (eg. summary data meta-analysis).
@@ -640,15 +643,15 @@ pub struct Evidence {
     #[fhir_serde(rename = "synthesisType")]
     pub synthesis_type: Option<CodeableConcept>,
     /// The type of study that produced this evidence
-    /// 
+    ///
     /// The type of study that produced this evidence.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The type of study the evidence was derived from.
@@ -656,22 +659,22 @@ pub struct Evidence {
     #[fhir_serde(rename = "studyType")]
     pub study_type: Option<CodeableConcept>,
     /// Values and parameters for a single statistic
-    /// 
+    ///
     /// Values and parameters for a single statistic.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
     pub statistic: Option<Vec<EvidenceStatistic>>,
     /// Certainty or quality of the evidence
-    /// 
+    ///
     /// Assessment of certainty, confidence in the estimates, or quality of the
     /// evidence.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
@@ -679,52 +682,52 @@ pub struct Evidence {
 }
 
 /// Certainty or quality of the evidence
-/// 
+///
 /// Assessment of certainty, confidence in the estimates, or quality of the
 /// evidence.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct EvidenceCertainty {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -734,11 +737,11 @@ pub struct EvidenceCertainty {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -746,60 +749,60 @@ pub struct EvidenceCertainty {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Textual description of certainty
-    /// 
+    ///
     /// Textual description of certainty.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// Footnotes and/or explanatory notes
-    /// 
+    ///
     /// Footnotes and/or explanatory notes.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Aspect of certainty being rated
-    /// 
+    ///
     /// Aspect of certainty being rated.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The aspect of quality, confidence, or certainty.
@@ -807,36 +810,36 @@ pub struct EvidenceCertainty {
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// Assessment or judgement of the aspect
-    /// 
+    ///
     /// Assessment or judgement of the aspect.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The assessment of quality, confidence, or certainty.
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/certainty-rating
     pub rating: Option<CodeableConcept>,
     /// Individual or group who did the rating
-    /// 
+    ///
     /// Individual or group who did the rating.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub rater: Option<String>,
     /// A domain or subdomain of certainty
-    /// 
+    ///
     /// A domain or subdomain of certainty.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -844,51 +847,51 @@ pub struct EvidenceCertainty {
 }
 
 /// Values and parameters for a single statistic
-/// 
+///
 /// Values and parameters for a single statistic.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct EvidenceStatistic {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -898,11 +901,11 @@ pub struct EvidenceStatistic {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -910,98 +913,98 @@ pub struct EvidenceStatistic {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Description of content
-    /// 
+    ///
     /// A description of the content value of the statistic.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// Footnotes and/or explanatory notes
-    /// 
+    ///
     /// Footnotes and/or explanatory notes.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Type of statistic, eg relative risk
-    /// 
+    ///
     /// Type of statistic, eg relative risk.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/statistic-type
     #[fhir_serde(rename = "statisticType")]
     pub statistic_type: Option<CodeableConcept>,
     /// Associated category for categorical variable
-    /// 
+    ///
     /// When the measured variable is handled categorically, the category element is
     /// used to define which category the statistic is reporting.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Simple strings can be used for descriptive purposes. Exact matching to
     /// EvidenceVariable.category.name for the
     /// Evidence.variableDefinition[variableRole=measuredVariable].observed=Reference(EvidenceVariable)
     /// could facilitate validation within datasets.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub category: Option<CodeableConcept>,
     /// Statistic value
-    /// 
+    ///
     /// Statistic value.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// The number of events associated with the statistic
-    /// 
+    ///
     /// The number of events associated with the statistic, where the unit of
     /// analysis is different from numberAffected, sampleSize.knownDataCount and
     /// sampleSize.numberOfParticipants.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When the number of events is the statistic, use Evidence.statistic.quantity
     /// and set Evidence.statistic.type.coding.code=C25463 and
@@ -1009,19 +1012,19 @@ pub struct EvidenceStatistic {
     /// Rate (where individual participants may have 2 or more events), use
     /// Evidence.statistic.numberOfEvents to record the total number of events rather
     /// than the number of participants with events.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "numberOfEvents")]
     pub number_of_events: Option<UnsignedInt>,
     /// The number of participants affected
-    /// 
+    ///
     /// The number of participants affected where the unit of analysis is the same as
     /// sampleSize.knownDataCount and sampleSize.numberOfParticipants.
-    /// 
+    ///
     /// ## Implementation Notes
     /// When the number affected is the statistic, use Evidence.statistic.quantity
     /// and set Evidence.statistic.type.coding.code=C25463 and
@@ -1030,42 +1033,42 @@ pub struct EvidenceStatistic {
     /// value. When the statistic is an Event Rate (where individual participants may
     /// have 2 or more events), use Evidence.statistic.numberAffected to record the
     /// number of participants with events rather than the total number of events.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "numberAffected")]
     pub number_affected: Option<UnsignedInt>,
     /// Number of samples in the statistic
-    /// 
+    ///
     /// Number of samples in the statistic.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
     #[fhir_serde(rename = "sampleSize")]
     pub sample_size: Option<EvidenceStatisticSampleSize>,
     /// An attribute of the Statistic
-    /// 
+    ///
     /// A statistical attribute of the statistic such as a measure of heterogeneity.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
     #[fhir_serde(rename = "attributeEstimate")]
     pub attribute_estimate: Option<Vec<EvidenceStatisticAttributeEstimate>>,
     /// An aspect of the statistical model
-    /// 
+    ///
     /// A component of the method to generate the statistic.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
@@ -1074,51 +1077,51 @@ pub struct EvidenceStatistic {
 }
 
 /// An attribute of the Statistic
-/// 
+///
 /// A statistical attribute of the statistic such as a measure of heterogeneity.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct EvidenceStatisticAttributeEstimate {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1128,11 +1131,11 @@ pub struct EvidenceStatisticAttributeEstimate {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1140,110 +1143,110 @@ pub struct EvidenceStatisticAttributeEstimate {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Textual description of the attribute estimate
-    /// 
+    ///
     /// Human-readable summary of the estimate.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// Footnote or explanatory note about the estimate
-    /// 
+    ///
     /// Footnote or explanatory note about the estimate.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// The type of attribute estimate, eg confidence interval or p value
-    /// 
+    ///
     /// The type of attribute estimate, eg confidence interval or p value.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/attribute-estimate-type
     #[fhir_serde(rename = "type")]
     pub r#type: Option<CodeableConcept>,
     /// The singular quantity of the attribute estimate, for attribute estimates represented as single values; also used to report unit of measure
-    /// 
+    ///
     /// The singular quantity of the attribute estimate, for attribute estimates
     /// represented as single values; also used to report unit of measure.
-    /// 
+    ///
     /// ## Implementation Notes
     /// Often the p value
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub quantity: Option<Quantity>,
     /// Level of confidence interval, eg 0.95 for 95% confidence interval
-    /// 
+    ///
     /// Use 95 for a 95% confidence interval.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub level: Option<Decimal>,
     /// Lower and upper bound values of the attribute estimate
-    /// 
+    ///
     /// Lower bound of confidence interval.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub range: Option<Range>,
     /// A nested attribute estimate; which is the attribute estimate of an attribute estimate
-    /// 
+    ///
     /// A nested attribute estimate; which is the attribute estimate of an attribute
     /// estimate.
-    /// 
+    ///
     /// ## Implementation Notes
     /// A nested attribute estimate; which is the attribute estimate of an attribute
     /// estimate
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1252,51 +1255,51 @@ pub struct EvidenceStatisticAttributeEstimate {
 }
 
 /// An aspect of the statistical model
-/// 
+///
 /// A component of the method to generate the statistic.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct EvidenceStatisticModelCharacteristic {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1306,11 +1309,11 @@ pub struct EvidenceStatisticModelCharacteristic {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1318,71 +1321,71 @@ pub struct EvidenceStatisticModelCharacteristic {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Model specification
-    /// 
+    ///
     /// Description of a component of the method to generate the statistic.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/statistic-model-code
     pub code: CodeableConcept,
     /// Numerical value to complete model specification
-    /// 
+    ///
     /// Further specification of the quantified value of the component of the method
     /// to generate the statistic.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub value: Option<Quantity>,
     /// A variable adjusted for in the adjusted analysis
-    /// 
+    ///
     /// A variable adjusted for in the adjusted analysis.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
     ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
     pub variable: Option<Vec<EvidenceStatisticModelCharacteristicVariable>>,
     /// An attribute of the statistic used as a model characteristic
-    /// 
+    ///
     /// An attribute of the statistic used as a model characteristic.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1391,51 +1394,51 @@ pub struct EvidenceStatisticModelCharacteristic {
 }
 
 /// A variable adjusted for in the adjusted analysis
-/// 
+///
 /// A variable adjusted for in the adjusted analysis.
-/// 
+///
 /// ## Cardinality: Optional, Multiple (0..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct EvidenceStatisticModelCharacteristicVariable {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1445,11 +1448,11 @@ pub struct EvidenceStatisticModelCharacteristicVariable {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1457,83 +1460,83 @@ pub struct EvidenceStatisticModelCharacteristicVariable {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Description of the variable
-    /// 
+    ///
     /// Description of the variable.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "variableDefinition")]
     pub variable_definition: Reference,
     /// continuous | dichotomous | ordinal | polychotomous
-    /// 
+    ///
     /// How the variable is classified for use in adjusted analysis.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: required
     /// - **ValueSet**: http://hl7.org/fhir/ValueSet/variable-handling|4.3.0
     pub handling: Option<Code>,
     /// Description for grouping of ordinal or polychotomous variables
-    /// 
+    ///
     /// Description for grouping of ordinal or polychotomous variables.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "valueCategory")]
     pub value_category: Option<Vec<CodeableConcept>>,
     /// Discrete value for grouping of ordinal or polychotomous variables
-    /// 
+    ///
     /// Discrete value for grouping of ordinal or polychotomous variables.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "valueQuantity")]
     pub value_quantity: Option<Vec<Quantity>>,
     /// Range of values for grouping of ordinal or polychotomous variables
-    /// 
+    ///
     /// Range of values for grouping of ordinal or polychotomous variables.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1542,51 +1545,51 @@ pub struct EvidenceStatisticModelCharacteristicVariable {
 }
 
 /// Number of samples in the statistic
-/// 
+///
 /// Number of samples in the statistic.
-/// 
+///
 /// ## Cardinality: Optional (0..1)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct EvidenceStatisticSampleSize {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1596,11 +1599,11 @@ pub struct EvidenceStatisticSampleSize {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1608,78 +1611,78 @@ pub struct EvidenceStatisticSampleSize {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// Textual description of sample size for statistic
-    /// 
+    ///
     /// Human-readable summary of population sample size.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<String>,
     /// Footnote or explanatory note about the sample size
-    /// 
+    ///
     /// Footnote or explanatory note about the sample size.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// Number of contributing studies
-    /// 
+    ///
     /// Number of participants in the population.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "numberOfStudies")]
     pub number_of_studies: Option<UnsignedInt>,
     /// Cumulative number of participants
-    /// 
+    ///
     /// A human-readable string to clarify or explain concepts about the sample size.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     #[fhir_serde(rename = "numberOfParticipants")]
     pub number_of_participants: Option<UnsignedInt>,
     /// Number of participants with known results for measured variables
-    /// 
+    ///
     /// Number of participants with known results for measured variables.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
@@ -1688,51 +1691,51 @@ pub struct EvidenceStatisticSampleSize {
 }
 
 /// Evidence variable such as population, exposure, or outcome
-/// 
+///
 /// Evidence variable such as population, exposure, or outcome.
-/// 
+///
 /// ## Cardinality: Required, Multiple (1..*)
-/// 
+///
 /// ## Constraints
 /// - **ele-1**: All FHIR elements must have a @value or children unless an empty Parameters resource (error)
 ///   Expression: `hasValue() or (children().count() > id.count()) or $this is Parameters`
 #[derive(Debug, Clone, PartialEq, FhirSerde, FhirPath, Default)]
 pub struct EvidenceVariableDefinition {
     /// Unique id for inter-element referencing
-    /// 
+    ///
     /// Unique id for the element within a resource (for internal references). This
     /// may be any string value that does not contain spaces.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
     pub id: Option<String>,
     /// Additional content defined by implementations
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element. To make the use of extensions safe and manageable,
     /// there is a strict set of governance applied to the definition and use of
     /// extensions. Though any implementer can define an extension, there is a set of
     /// requirements that SHALL be met as part of the definition of the extension.
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content
     pub extension: Option<Vec<Extension>>,
     /// Extensions that cannot be ignored even if unrecognized
-    /// 
+    ///
     /// May be used to represent additional information that is not part of the basic
     /// definition of the element and that modifies the understanding of the element
     /// in which it is contained and/or the understanding of the containing element's
@@ -1742,11 +1745,11 @@ pub struct EvidenceVariableDefinition {
     /// implementer can define an extension, there is a set of requirements that
     /// SHALL be met as part of the definition of the extension. Applications
     /// processing a resource are required to check for modifier extensions.
-    /// 
+    ///
     /// Modifier extensions SHALL NOT change the meaning of any elements on Resource
     /// or DomainResource (including cannot change the meaning of modifierExtension
     /// itself).
-    /// 
+    ///
     /// ## Requirements
     /// Modifier extensions allow for extensions that *cannot* be safely ignored to
     /// be clearly distinguished from the vast majority of extensions which can be
@@ -1754,64 +1757,64 @@ pub struct EvidenceVariableDefinition {
     /// implementers to prohibit the presence of extensions. For further information,
     /// see the [definition of modifier
     /// extensions](extensibility.html#modifierExtension).
-    /// 
+    ///
     /// ## Implementation Notes
     /// There can be no stigma associated with the use of extensions by any
     /// application, project, or standard - regardless of the institution or
     /// jurisdiction that uses or defines the extensions. The use of extensions is
     /// what allows the FHIR specification to retain a core level of simplicity for
     /// everyone.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Modifier element - Modifier extensions are expected to modify the meaning or interpretation of the element that contains them
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     /// - **ext-1**: Must have either extensions or value[x], not both (error)
     ///   Expression: `extension.exists() != value.exists()`
-    /// 
+    ///
     /// ## Aliases
     /// extensions, user content, modifiers
     #[fhir_serde(rename = "modifierExtension")]
     pub modifier_extension: Option<Vec<Extension>>,
     /// A text description or summary of the variable
-    /// 
+    ///
     /// A text description or summary of the variable.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub description: Option<Markdown>,
     /// Footnotes and/or explanatory notes
-    /// 
+    ///
     /// Footnotes and/or explanatory notes.
-    /// 
+    ///
     /// ## Cardinality: Optional, Multiple (0..*)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub note: Option<Vec<Annotation>>,
     /// population | subpopulation | exposure | referenceExposure | measuredVariable | confounder
-    /// 
+    ///
     /// population | subpopulation | exposure | referenceExposure | measuredVariable
     /// | confounder.
-    /// 
+    ///
     /// ## Cardinality: Required (1..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The role that the assertion variable plays.
@@ -1819,38 +1822,38 @@ pub struct EvidenceVariableDefinition {
     #[fhir_serde(rename = "variableRole")]
     pub variable_role: CodeableConcept,
     /// Definition of the actual variable related to the statistic(s)
-    /// 
+    ///
     /// Definition of the actual variable related to the statistic(s).
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Special Semantics
     /// - Included in summary
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub observed: Option<Reference>,
     /// Definition of the intended variable related to the Evidence
-    /// 
+    ///
     /// Definition of the intended variable related to the Evidence.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
     pub intended: Option<Reference>,
     /// low | moderate | high | exact
-    /// 
+    ///
     /// Indication of quality of match between intended variable to actual variable.
-    /// 
+    ///
     /// ## Cardinality: Optional (0..1)
-    /// 
+    ///
     /// ## Constraints
     /// - **ele-1**: All FHIR elements must have a @value or children (error)
     ///   Expression: `hasValue() or (children().count() > id.count())`
-    /// 
+    ///
     /// ## Binding
     /// - **Strength**: extensible
     /// - **Description**: The quality of how direct the match is.
@@ -1858,4 +1861,3 @@ pub struct EvidenceVariableDefinition {
     #[fhir_serde(rename = "directnessMatch")]
     pub directness_match: Option<CodeableConcept>,
 }
-

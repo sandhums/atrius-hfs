@@ -463,6 +463,7 @@ where
 
     emit_export_audit(
         state,
+        tenant.tenant_id(),
         principal,
         "kickoff",
         job_id.as_str(),
@@ -941,6 +942,7 @@ where
 
     emit_export_audit(
         &state,
+        tenant.tenant_id(),
         principal.as_ref(),
         "delete",
         job_id.as_str(),
@@ -1006,6 +1008,7 @@ where
 
     emit_export_audit(
         &state,
+        tenant.tenant_id(),
         principal.as_ref(),
         "download",
         job_id.as_str(),
@@ -1046,6 +1049,7 @@ fn streamed_reader_body(reader: Pin<Box<dyn AsyncRead + Send>>) -> Body {
 /// there is one.
 async fn emit_export_audit<S>(
     state: &AppState<S>,
+    tenant: &str,
     principal: Option<&Principal>,
     operation: &str,
     job_id: &str,
@@ -1058,8 +1062,6 @@ async fn emit_export_audit<S>(
     let Some(sink) = state.audit_sink() else {
         return;
     };
-    // Atrius audit attribution: keep the richer agent identity (fhirUser-aware)
-    // and issuer rather than upstream's subject-only helper.
     let mut builder = helios_audit::AuditEventBuilder::new(state.audit_source_observer())
         .event_type(
             "http://terminology.hl7.org/CodeSystem/audit-event-type",
@@ -1070,14 +1072,13 @@ async fn emit_export_audit<S>(
         .detail("audit-operation", "bulk-export")
         .detail("bulk-export-operation", operation)
         .detail("job-id", job_id)
-        .detail("export-level", level.to_string());
+        .detail("export-level", level.to_string())
+        .tenant(tenant);
     if !resource_types.is_empty() {
         builder = builder.detail("resource-types", resource_types.join(","));
     }
-    if let Some(p) = principal
-        && let Some(id) = p.audit_agent_identity()
-    {
-        builder = builder.agent(id, None, true).agent_issuer(p.issuer());
+    if let Some(p) = principal {
+        builder = builder.agent_identity(crate::audit::audit_agent(p));
     }
     sink.record(builder.build()).await;
 }

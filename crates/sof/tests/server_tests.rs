@@ -392,7 +392,12 @@ async fn test_run_view_definition_post_with_source_parameter() {
 
     let response = server.post("/$sql-run").json(&request_body).await;
 
-    assert_eq!(response.status_code(), StatusCode::OK, "{}", response.text());
+    assert_eq!(
+        response.status_code(),
+        StatusCode::OK,
+        "{}",
+        response.text()
+    );
     let rows: serde_json::Value = response.json();
     let ids: Vec<&str> = rows
         .as_array()

@@ -104,10 +104,12 @@ pub mod audit {
     /// Record an audit event for a bulk submit lifecycle event.
     ///
     /// Call this at submission start, completion, abort, or rollback.
+    #[allow(clippy::too_many_arguments)]
     pub async fn record_submit_event(
         sink: &dyn AuditSink,
         source_observer: &str,
         agent: Option<&str>,
+        tenant: Option<&str>,
         submission_id: &SubmissionId,
         phase: &str,
         outcome: &str,
@@ -127,6 +129,9 @@ pub mod audit {
         if let Some(a) = agent {
             builder = builder.agent(a, None, true);
         }
+        if let Some(t) = tenant {
+            builder = builder.tenant(t);
+        }
         if let Some(d) = outcome_desc {
             builder = builder.outcome_desc(d);
         }
@@ -144,7 +149,7 @@ pub mod audit {
         async fn test_submit_event_includes_phase() {
             let sink = NullSink;
             let id = SubmissionId::new("client-a", "sub-123");
-            record_submit_event(&sink, "Device/hfs", None, &id, "start", "0", None).await;
+            record_submit_event(&sink, "Device/hfs", None, None, &id, "start", "0", None).await;
         }
 
         #[test]

@@ -487,7 +487,10 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 40, "all Helios steps through v41 except outbox");
@@ -509,7 +512,10 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 43, "all Helios steps through v44 except outbox");
@@ -529,7 +535,10 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 45, "all Helios steps through v46 except outbox");
@@ -547,7 +556,10 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 46, "all Helios steps through v47 except outbox");
@@ -564,7 +576,10 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 47, "all Helios steps through v48 except outbox");
@@ -580,7 +595,10 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 48, "all Helios steps through v49 except outbox");
@@ -595,7 +613,10 @@ mod tests {
         assert!(!idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 49, "all Helios steps through v50 except outbox");
@@ -609,7 +630,10 @@ mod tests {
         assert!(idx.contains(&50), "sof terminology is Helios v51");
         assert!(!idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 50, "all Helios steps through v51 except outbox");
@@ -622,7 +646,10 @@ mod tests {
         assert!(idx.contains(&50), "sof terminology is Helios v51");
         assert!(idx.contains(&51), "bulk index pending is Helios v52");
         assert!(!idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 51, "all Helios steps through v52 except outbox");
@@ -634,7 +661,10 @@ mod tests {
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&51), "bulk index pending is Helios v52");
         assert!(idx.contains(&52), "composite partial is Helios v53");
-        assert!(!idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 52, "all Helios steps through v53 except outbox");
@@ -645,7 +675,10 @@ mod tests {
         let idx = implied_applied_indices(54, Numbering::Upstream, 57);
         assert!(!idx.contains(&15), "outbox");
         assert!(idx.contains(&52), "composite partial is Helios v53");
-        assert!(idx.contains(&53), "bulk submissions updated_at is Helios v54");
+        assert!(
+            idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
         assert!(!idx.contains(&54), "slot-2 is fork-only");
         assert!(!idx.contains(&56), "outbox dead-letter");
         assert_eq!(idx.len(), 53, "all Helios steps through v54 except outbox");

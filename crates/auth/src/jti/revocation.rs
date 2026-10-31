@@ -1,6 +1,6 @@
-use std::sync::Arc;
 #[cfg(any(feature = "redis", test))]
 use std::future::Future;
+use std::sync::Arc;
 #[cfg(any(feature = "redis", test))]
 use std::time::Duration;
 

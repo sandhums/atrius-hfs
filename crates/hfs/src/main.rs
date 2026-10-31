@@ -3068,6 +3068,7 @@ fn spawn_export_workers<Dp>(
             let worker = DefaultExportWorker::new(jobs.clone(), data, output, worker_id.clone())
                 .with_exclude_since_newly_added(exclude_newly_added)
                 .with_heartbeat_interval(heartbeat)
+                .with_max_attempts(max_attempts)
                 .with_shutdown(shutdown.clone());
             // The claim itself is never raced against shutdown: a claim that
             // commits after its future was dropped would leave a leased job
@@ -5784,6 +5785,50 @@ mod tests {
         );
         let err = entries(Some("lots")).expect_err("invalid value must fail startup");
         assert!(format!("{err}").contains("HFS_MONGODB_TRANSACTION_BUNDLE_DEFERRED_INDEX_ENTRIES"));
+    }
+
+    #[cfg(feature = "mongodb")]
+    #[test]
+    fn test_build_mongodb_config_reads_transaction_bundle_max_payload_bytes_and_rejects_invalid_values()
+     {
+        const VAR: &str = "HFS_MONGODB_TRANSACTION_BUNDLE_MAX_PAYLOAD_BYTES";
+        let config = ServerConfig::default();
+        let limit = |value: Option<&'static str>| {
+            build_mongodb_config_with_env(&config, false, |name| match name {
+                VAR => value.map(str::to_string),
+                _ => None,
+            })
+        };
+
+        assert_eq!(
+            limit(None).unwrap().transaction_bundle_max_payload_bytes,
+            None
+        );
+        assert_eq!(
+            limit(Some("50000000"))
+                .unwrap()
+                .transaction_bundle_max_payload_bytes,
+            Some(50_000_000)
+        );
+        assert_eq!(
+            limit(Some(" 1024 "))
+                .unwrap()
+                .transaction_bundle_max_payload_bytes,
+            Some(1024)
+        );
+        for off in ["0", "off"] {
+            assert_eq!(
+                limit(Some(off))
+                    .unwrap()
+                    .transaction_bundle_max_payload_bytes,
+                None,
+                "{off}"
+            );
+        }
+        for invalid in ["lots", "-1", "1.5", "50MB"] {
+            let err = limit(Some(invalid)).expect_err("invalid value must fail startup");
+            assert!(format!("{err}").contains(VAR), "{invalid}: {err}");
+        }
     }
 
     #[cfg(feature = "mongodb")]

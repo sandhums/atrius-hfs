@@ -17,7 +17,9 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use helios_audit::{AuditAction, AuditAgent, AuditEventBuilder, AuditSink, ExclusionFilter};
+use helios_audit::{AuditAction, AuditEventBuilder, AuditSink, ExclusionFilter};
+
+use crate::audit::AttributeToPrincipal;
 use helios_auth::{
     AccessScope, AuthConfig, AuthError, AuthProvider, FhirOperation, Principal, SmartPermissions,
     SmartScopePolicy,
@@ -175,17 +177,13 @@ pub async fn auth_middleware(
                 let event = AuditEventBuilder::new(&auth_state.audit_source_observer)
                     .action(AuditAction::Execute)
                     .outcome("0")
-                    .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
-                    .agent_issuer(principal.issuer())
+                    .principal(&principal)
                     .build();
                 auth_state.audit_sink.record(event).await;
             }
-            request.extensions_mut().insert(AuditAgent(
-                principal
-                    .audit_agent_identity()
-                    .unwrap_or_default()
-                    .to_string(),
-            ));
+            request
+                .extensions_mut()
+                .insert(crate::audit::audit_agent(&principal));
             request.extensions_mut().insert(principal);
             next.run(request).await
         }
@@ -263,8 +261,7 @@ pub async fn authz_middleware(
                             .outcome_desc(format!(
                                 "Forbidden: {operation} on {resource_type} under a patient/ scope"
                             ))
-                            .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
-                            .agent_issuer(principal.issuer())
+                            .principal(&principal)
                             .resource(&resource_type, "")
                             .build();
                         auth_state.audit_sink.record(event).await;
@@ -281,8 +278,7 @@ pub async fn authz_middleware(
                         .action(AuditAction::Execute)
                         .outcome("0")
                         .outcome_desc(format!("Granted: {operation} on {resource_type}"))
-                        .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
-                        .agent_issuer(principal.issuer())
+                        .principal(&principal)
                         .resource(&resource_type, "")
                         .build();
                     auth_state.audit_sink.record(event).await;
@@ -299,8 +295,7 @@ pub async fn authz_middleware(
                         .action(AuditAction::Execute)
                         .outcome("8")
                         .outcome_desc(format!("Forbidden: {operation} on {resource_type}"))
-                        .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
-                        .agent_issuer(principal.issuer())
+                        .principal(&principal)
                         .resource(&resource_type, "")
                         .build();
                     auth_state.audit_sink.record(event).await;
@@ -326,8 +321,7 @@ pub async fn authz_middleware(
                 .action(AuditAction::Execute)
                 .outcome("8")
                 .outcome_desc(format!("Forbidden: {path} under a patient/ scope"))
-                .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
-                .agent_issuer(principal.issuer())
+                .principal(&principal)
                 .build();
             auth_state.audit_sink.record(event).await;
             return forbidden_response(PATIENT_SCOPE_ENDPOINT_REFUSED);
@@ -439,8 +433,7 @@ pub async fn admin_authz_middleware(
             .action(AuditAction::Execute)
             .outcome("0")
             .outcome_desc(format!("Granted: console admin access to {path}"))
-            .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
-            .agent_issuer(principal.issuer())
+            .principal(&principal)
             .build();
         auth_state.audit_sink.record(event).await;
         next.run(request).await
@@ -456,8 +449,7 @@ pub async fn admin_authz_middleware(
             .outcome_desc(format!(
                 "Forbidden: console admin access to {path} requires a system-level scope"
             ))
-            .agent(principal.audit_agent_identity().unwrap_or(""), None, true)
-            .agent_issuer(principal.issuer())
+            .principal(&principal)
             .build();
         auth_state.audit_sink.record(event).await;
         forbidden_response("This endpoint requires a system-level scope (system/*.read)")
@@ -491,6 +483,7 @@ fn extract_operation_for_routing(
 ) -> Option<(String, FhirOperation)> {
     extract_operation(&routed_path(path, tenant_url_routing), method)
 }
+
 /// The path the FHIR router will dispatch to: the request path with its
 /// URL-path tenant prefix stripped, when that routing mode is on.
 ///
@@ -572,13 +565,6 @@ fn extract_operation(path: &str, method: &str) -> Option<(String, FhirOperation)
         return None;
     }
 
-    // Bulk Data Export job list / poll / download. Ownership is enforced in
-    // the handlers (`owns_job` / `list_owner_filter`); treating these as FHIR
-    // resource types would require a fake Search/Read on "export-jobs".
-    if matches!(first, "export-jobs" | "export-status" | "export-file") {
-        return None;
-    }
-
     // The first segment is the resource type (or tenant — handled by prefix stripping)
     let resource_type = first.to_string();
 
@@ -646,10 +632,6 @@ fn extract_operation(path: &str, method: &str) -> Option<(String, FhirOperation)
         "POST" => {
             if segments.len() >= 2 && segments.get(1) == Some(&"_search") {
                 FhirOperation::Search
-            } else if segments.contains(&"$validate") {
-                // POST /{type}/$validate and /{type}/{id}/$validate are read-only
-                // checks — require read, not create (export preflight / UI validate).
-                FhirOperation::Read
             } else {
                 // POST /Patient → create
                 FhirOperation::Create
@@ -1141,20 +1123,6 @@ mod tests {
         // A first segment starting with '$' is a system-level operation → None.
         assert!(extract_operation("/$export", "GET").is_none());
         assert!(extract_operation("/$export", "POST").is_none());
-        assert!(extract_operation("/export-jobs", "GET").is_none());
-        assert!(extract_operation("/export-status/job-1", "GET").is_none());
-        assert!(extract_operation("/export-file/job-1/Patient-0", "GET").is_none());
-    }
-
-    #[test]
-    fn test_extract_operation_type_validate_is_read() {
-        let (rt, op) = extract_operation("/Bundle/$validate", "POST").unwrap();
-        assert_eq!(rt, "Bundle");
-        assert_eq!(op, FhirOperation::Read);
-
-        let (rt, op) = extract_operation("/Patient/abc/$validate", "POST").unwrap();
-        assert_eq!(rt, "Patient");
-        assert_eq!(op, FhirOperation::Read);
     }
 
     #[test]

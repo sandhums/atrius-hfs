@@ -284,11 +284,14 @@ pub(crate) fn drop_search_value_indexes(conn: &Connection) -> StorageResult<()> 
 /// Dispatch consults `schema_migrations` by step name. The integer
 /// `schema_version` is stamped at the tip for operators and used only to
 /// bootstrap the ledger on databases that predate it.
+///
+/// A database that records a newer `schema_version` than [`SCHEMA_VERSION`] is
+/// refused before anything is written ([#2365]).
 pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
     debug_assert_eq!(SQLITE_STEPS.len() as i32 + 1, SCHEMA_VERSION);
     debug_assert_eq!(SQLITE_STEPS[OUTBOX_STEP_INDEX].0, OUTBOX_STEP);
 
-    let current_version = get_schema_version(conn)?;
+    let current_version = require_supported_schema_version(conn)?;
     ensure_schema_flavour_column(conn)?;
     ensure_schema_migrations_table(conn)?;
 
@@ -576,8 +579,10 @@ fn backfill_legacy_integer(
 }
 
 /// Get the current schema version.
+///
+/// The table normally holds one row, but legacy writes could leave several.
+/// The read is the highest row (`ORDER BY version DESC`) ([#2365]).
 fn get_schema_version(conn: &Connection) -> StorageResult<i32> {
-    // Create version table if it doesn't exist
     conn.execute(
         "CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER NOT NULL
@@ -587,40 +592,103 @@ fn get_schema_version(conn: &Connection) -> StorageResult<i32> {
     .map_err(|e| {
         crate::error::StorageError::Backend(crate::error::BackendError::Internal {
             backend_name: "sqlite".to_string(),
-            message: format!("Failed to create schema_version table: {}", e),
-            source: None,
+            message: format!("Failed to create schema_version table: {e}"),
+            source: Some(Box::new(e)),
         })
     })?;
 
-    let version: Option<i32> = conn
-        .query_row("SELECT version FROM schema_version LIMIT 1", [], |row| {
-            row.get(0)
-        })
-        .ok();
-
-    Ok(version.unwrap_or(0))
+    match conn.query_row(
+        "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1",
+        [],
+        |row| row.get::<_, i32>(0),
+    ) {
+        Ok(version) if version < 1 => Err(crate::error::StorageError::Backend(
+            crate::error::BackendError::Internal {
+                backend_name: "sqlite".to_string(),
+                message: format!(
+                    "schema_version holds {version}, which is below 1; refusing to initialize: \
+                     an existing database must not be treated as new. Check the database file \
+                     and its schema_version table."
+                ),
+                source: None,
+            },
+        )),
+        Ok(version) => Ok(version),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(0),
+        Err(e) => Err(crate::error::StorageError::Backend(
+            crate::error::BackendError::Internal {
+                backend_name: "sqlite".to_string(),
+                message: format!(
+                    "Failed to read schema_version ({e}); refusing to initialize: an existing \
+                     database must not be treated as new. Check the database file and its \
+                     schema_version table."
+                ),
+                source: Some(Box::new(e)),
+            },
+        )),
+    }
 }
 
-/// Set the schema version.
-fn set_schema_version(conn: &Connection, version: i32) -> StorageResult<()> {
-    conn.execute("DELETE FROM schema_version", [])
-        .map_err(|e| {
-            crate::error::StorageError::Backend(crate::error::BackendError::Internal {
-                backend_name: "sqlite".to_string(),
-                message: format!("Failed to clear schema_version: {}", e),
-                source: None,
-            })
-        })?;
+fn require_supported_schema_version(conn: &Connection) -> StorageResult<i32> {
+    let recorded = get_schema_version(conn)?;
+    if recorded > SCHEMA_VERSION {
+        return Err(newer_schema_error(
+            &database_name(conn),
+            recorded,
+            SCHEMA_VERSION,
+        ));
+    }
+    Ok(recorded)
+}
 
+fn newer_schema_error(
+    database_name: &str,
+    recorded: i32,
+    build: i32,
+) -> crate::error::StorageError {
+    crate::error::StorageError::Backend(crate::error::BackendError::Internal {
+        backend_name: "sqlite".to_string(),
+        message: format!(
+            "SQLite database '{database_name}' has schema_version {recorded}, newer than the \
+             {build} this HFS build supports: the database was written by a newer HFS. The \
+             schema was not changed; run an HFS release that supports schema version \
+             {recorded} or later."
+        ),
+        source: None,
+    })
+}
+
+fn database_name(conn: &Connection) -> String {
+    match conn.path() {
+        Some(path) if !path.is_empty() => path.to_string(),
+        _ => ":memory:".to_string(),
+    }
+}
+
+/// Record `version` without ever lowering the stored value or leaving the table empty ([#2365]).
+fn set_schema_version(conn: &Connection, version: i32) -> StorageResult<()> {
     conn.execute(
-        "INSERT INTO schema_version (version) VALUES (?1)",
+        "UPDATE schema_version SET version = ?1 WHERE version < ?1",
         [version],
     )
     .map_err(|e| {
         crate::error::StorageError::Backend(crate::error::BackendError::Internal {
             backend_name: "sqlite".to_string(),
-            message: format!("Failed to set schema_version: {}", e),
-            source: None,
+            message: format!("Failed to raise schema_version: {e}"),
+            source: Some(Box::new(e)),
+        })
+    })?;
+
+    conn.execute(
+        "INSERT INTO schema_version (version) \
+         SELECT ?1 WHERE NOT EXISTS (SELECT 1 FROM schema_version)",
+        [version],
+    )
+    .map_err(|e| {
+        crate::error::StorageError::Backend(crate::error::BackendError::Internal {
+            backend_name: "sqlite".to_string(),
+            message: format!("Failed to set schema_version: {e}"),
+            source: Some(Box::new(e)),
         })
     })?;
 

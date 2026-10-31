@@ -184,6 +184,33 @@ fn check_server_version(version_num: i32, version: &str) -> StorageResult<()> {
     )))
 }
 
+fn newer_schema_error(
+    database_name: &str,
+    recorded: i32,
+    build: i32,
+) -> crate::error::StorageError {
+    pg_error(format!(
+        "PostgreSQL database '{database_name}' has schema_version {recorded}, newer than the \
+         {build} this HFS build supports: the database was written by a newer HFS. The schema \
+         was not changed; run an HFS release that supports schema version {recorded} or later."
+    ))
+}
+
+async fn require_supported_schema_version(
+    client: &deadpool_postgres::Client,
+    recorded: i32,
+) -> StorageResult<()> {
+    if recorded <= SCHEMA_VERSION {
+        return Ok(());
+    }
+    let database: String = client
+        .query_one("SELECT current_database()::text", &[])
+        .await
+        .map_err(|e| pg_error(format!("Failed to read the PostgreSQL database name: {e}")))?
+        .get(0);
+    Err(newer_schema_error(&database, recorded, SCHEMA_VERSION))
+}
+
 /// Initialize the database schema.
 ///
 /// Dispatch consults `schema_migrations` by step name. The integer
@@ -264,6 +291,7 @@ async fn run_migrations(client: &mut deadpool_postgres::Client) -> StorageResult
     debug_assert_eq!(PG_STEPS[OUTBOX_STEP_INDEX], OUTBOX_STEP);
 
     let current_version = get_schema_version(client).await?;
+    require_supported_schema_version(client, current_version).await?;
     ensure_schema_flavour_column(client).await?;
     ensure_schema_migrations_table(client).await?;
 
@@ -325,7 +353,10 @@ async fn get_schema_version(client: &deadpool_postgres::Client) -> StorageResult
         .map_err(|e| pg_error(format!("Failed to create schema_version table: {}", e)))?;
 
     let row = client
-        .query_opt("SELECT version FROM schema_version LIMIT 1", &[])
+        .query_opt(
+            "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1",
+            &[],
+        )
         .await
         .map_err(|e| pg_error(format!("Failed to query schema version: {}", e)))?;
 
@@ -576,19 +607,21 @@ async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> Stor
     }
 }
 
-/// Set the schema version.
+/// Records `version` unless the table already records it or a newer one ([#2367]).
 async fn set_schema_version<C>(client: &C, version: i32) -> StorageResult<()>
 where
     C: GenericClient + ?Sized,
 {
     client
-        .execute("DELETE FROM schema_version", &[])
-        .await
-        .map_err(|e| pg_error(format!("Failed to clear schema_version: {}", e)))?;
-
-    client
         .execute(
-            "INSERT INTO schema_version (version) VALUES ($1)",
+            "WITH lower_versions AS (
+                 DELETE FROM schema_version WHERE version < $1::integer
+             )
+             INSERT INTO schema_version (version)
+             SELECT $1::integer
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM schema_version WHERE version >= $1::integer
+             )",
             &[&version],
         )
         .await

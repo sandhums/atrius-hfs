@@ -573,9 +573,8 @@ fn server_with_per_request_principal_tenant() -> TestServer {
                     .get("x-test-principal-tenant")
                     .and_then(|v| v.to_str().ok())
                     .map(str::to_string);
-                let mut principal =
-                    Principal::stub("client-1", ScopeSet::parse("system/reindex"))
-                        .with_issuer("https://idp.example.com");
+                let mut principal = Principal::stub("client-1", ScopeSet::parse("system/reindex"))
+                    .with_issuer("https://idp.example.com");
                 if let Some(tenant_id) = tenant {
                     principal = principal.with_tenant_id(tenant_id);
                 }
