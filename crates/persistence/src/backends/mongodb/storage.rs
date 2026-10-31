@@ -29,6 +29,7 @@ use crate::core::{
 use crate::error::{
     BackendError, ConcurrencyError, QueryErrorExt, ResourceError, SearchError, StorageError,
     StorageResult, TooLargeForCacheCause, TransactionError, classify_mongodb_error,
+    mongodb_error_code as driver_error_code, mongodb_unavailable,
 };
 use crate::search::converters::IndexValue;
 use crate::search::extractor::ExtractedValue;
@@ -84,27 +85,20 @@ pub(super) fn internal_driver_error(context: &str, err: MongoError) -> StorageEr
 /// ([`is_transient_mongo_error`]), no server to select, or a server that refused the read with a
 /// state-change or retryable-read code, for example during an election
 /// ([`is_transient_read_server_error`], #2302; the driver has already retried the read once on
-/// every such code but 10058). Its message names the read and nothing else; the driver error goes
-/// to the log. Anything else is what [`classify_mongodb_error`] makes of it: `Timeout` (504) for a
-/// server deadline, otherwise `Internal` (500) with the driver error as its source and the
-/// `"{context}: {err}"` message the stringifying spelling produced. Used by `read`, `vread`,
-/// `exists` and the #2301 reads; not by the cursor reads or the reads that go through
-/// `or_query_error`. Not retried here: the driver already retried the read once (`retryReads`).
+/// every such code but 10058). Its message names the read and nothing else; the `Unavailable` and
+/// its `warn` line come from [`crate::error::mongodb_unavailable`], the one text and log shape
+/// shared with `classify_mongodb_error` (#2325). Anything else is what [`classify_mongodb_error`]
+/// makes of it: `Timeout` (504) for a server deadline, otherwise `Internal` (500) with the driver
+/// error as its source and the `"{context}: {err}"` message the stringifying spelling produced.
+/// Used by `read`, `vread`, `exists` and the #2301 reads; not by the cursor reads or the reads that
+/// go through `or_query_error`. Not retried here: the driver already retried the read once
+/// (`retryReads`).
 fn read_driver_error(context: &str, err: MongoError) -> StorageError {
     if is_transient_mongo_error(&err)
         || is_transient_read_server_error(&err)
         || matches!(err.kind.as_ref(), MongoErrorKind::ServerSelection { .. })
     {
-        tracing::warn!(
-            error_code = driver_error_code(&err),
-            "mongodb {context} failed transiently: {err}"
-        );
-        return StorageError::Backend(BackendError::Unavailable {
-            backend_name: "mongodb".to_string(),
-            message: format!(
-                "{context}: the database is temporarily unavailable; retry the request"
-            ),
-        });
+        return StorageError::Backend(mongodb_unavailable(context, &err));
     }
     StorageError::Backend(classify_mongodb_error(context, err))
 }
@@ -228,20 +222,36 @@ enum BundleAttemptError {
         /// Raw driver detail. Log-only.
         reason: String,
     },
+    /// The server refused the transaction as an illegal operation (code 20,
+    /// [`ILLEGAL_OPERATION_CODE`]), as a server without transactions does
+    /// (#2308). Nothing was applied. The bundle loop forgets the kept
+    /// transactional answer and ends the Bundle as
+    /// [`TransactionError::Transient`] (a retryable `503`) without replaying it:
+    /// the next write asks `hello` again.
+    TransactionsRefused {
+        /// Position of the entry that was running when the refusal arrived, or
+        /// `None` when it arrived at commit or in the ledger.
+        entry: Option<usize>,
+        /// Raw driver detail. Log-only.
+        reason: String,
+    },
+    /// No usable server inside the transaction ([`no_usable_server`], #2308):
+    /// the attempt waited out the server-selection timeout. Nothing was applied.
+    /// The bundle loop forgets the kept transactional answer and ends the Bundle
+    /// as [`TransactionError::Transient`] (a retryable `503`) without replaying
+    /// it, since each replay would wait the same selection timeout. The attempt
+    /// is not aborted in the foreground ([`abort_failed_attempt`]): the dropped
+    /// session aborts in the background, so the Bundle answers after one
+    /// selection timeout, not two.
+    NoUsableServer {
+        /// Position of the entry that was running when the failure arrived, or
+        /// `None` when it arrived in the ledger.
+        entry: Option<usize>,
+        /// Raw driver detail. Log-only.
+        reason: String,
+    },
     /// Anything else, already in its final form. Not retried.
     Failed(TransactionError),
-}
-
-/// The server error code a driver error carries, for the retry log line.
-fn driver_error_code(err: &MongoError) -> Option<i32> {
-    match err.kind.as_ref() {
-        MongoErrorKind::Command(command) => Some(command.code),
-        MongoErrorKind::Write(mongodb::error::WriteFailure::WriteError(write)) => Some(write.code),
-        MongoErrorKind::Write(mongodb::error::WriteFailure::WriteConcernError(concern)) => {
-            Some(concern.code)
-        }
-        _ => None,
-    }
 }
 
 fn serialization_error(message: String) -> StorageError {
@@ -254,6 +264,16 @@ pub(super) fn is_duplicate_key_error(err: &MongoError) -> bool {
 
 /// The server's `WriteConflict` code.
 const WRITE_CONFLICT_CODE: i32 = 112;
+
+/// The server's `IllegalOperation` code. A standalone server (or any member that
+/// is neither a replica-set member nor a mongos) answers it to every command
+/// that carries a `txnNumber`, so to every command in a transaction:
+/// "Transaction numbers are only allowed on a replica set member or mongos"
+/// (`uassert(ErrorCodes::IllegalOperation, ...)` in
+/// `src/mongo/db/initialize_operation_session_info.cpp`). The driver (mongodb
+/// 3.7, `client/executor.rs`) rewrites that message to its own "does not support
+/// retryable writes" text, so only the code is matched (#2308).
+const ILLEGAL_OPERATION_CODE: i32 = 20;
 
 /// The server's `TemporarilyUnavailable` code. WiredTiger rolled the
 /// transaction back under cache pressure ("oldest pinned transaction ID rolled
@@ -351,9 +371,13 @@ impl WriteAttemptError {
     /// catalog change ([`is_catalog_change_conflict`]). A transaction the
     /// server aborted for any other reason keeps its driver error so
     /// [`replay_aborted_writes`] can decide what to do with it. This is for the
-    /// resource document and its history row; a plain `WriteConflict` in the
-    /// write's search-index step is marked ([`in_search_index_step`]) and
-    /// replayed instead (#2269).
+    /// resource document of an update or a delete (its in-session read and its
+    /// compare-and-swap), and for a restore's compare-and-swap on the resource
+    /// document. A plain `WriteConflict` in the write's search-index step is
+    /// marked ([`in_search_index_step`]) and replayed instead (#2269), as are a
+    /// create's resource insert, history insert and commit, a restore's
+    /// history insert and commit (#2300), and an update's or a delete's
+    /// history insert and commit ([`ReplayedStep`], #2342).
     fn driver(context: &str, err: MongoError) -> Self {
         if has_server_code(&err, WRITE_CONFLICT_CODE)
             && !is_eviction_rollback(&err)
@@ -375,15 +399,23 @@ impl WriteAttemptError {
 /// another attempt must still check the original version precondition. An
 /// eviction rollback is not one: see [`rolled_back_for_eviction`].
 ///
-/// A plain `WriteConflict` raised in the write's search-index step counts as
-/// one too ([`raised_in_search_index_step`], #2269). The rows of `search_index`
-/// are also written by writers that leave the resource's version alone (the
-/// deferred-rows batch, `$reindex`), so that 112 does not say another write won
-/// the resource; reporting it as a conflict would answer an `If-Match` update
-/// or a versioned delete with a 409 for a resource that did not move. The
-/// replay's own version check, in a new session, still catches a real winner.
+/// A plain `WriteConflict` raised in a marked [`ReplayedStep`] counts as one
+/// too: the search-index step (#2269), a create's resource insert, history
+/// insert or commit and a restore's history insert or commit (#2300), and an
+/// update's or a delete's history insert or commit (#2342). The rows of
+/// `search_index` are also written by writers that leave the resource's
+/// version alone (the deferred-rows batch, `$reindex`), so that 112 does not say
+/// another write won the resource; reporting it as a conflict would answer an
+/// `If-Match` update or a versioned delete with a 409 for a resource that did
+/// not move. The other steps carry no version a conflict could say was lost: a
+/// create has none, and a restore, an update and a delete already hold the
+/// resource document by their history insert: their compare-and-swap ran first
+/// in the same transaction, so a writer that wanted the document met it there.
+/// The replay's own check, in a new session, still catches a real winner
+/// (`VersionConflict` or `NotFound` for an update and a delete,
+/// `AlreadyExists` for a create, a missing tombstone for a restore).
 fn aborted_without_conflicting_writer(err: &StorageError) -> Option<&MongoError> {
-    let search_index_step = raised_in_search_index_step(err);
+    let marked_step = replayed_step(err).is_some();
     kept_driver_error(err).filter(|driver| {
         replayable_abort(
             driver.contains_label(mongodb::error::TRANSIENT_TRANSACTION_ERROR),
@@ -391,7 +423,7 @@ fn aborted_without_conflicting_writer(err: &StorageError) -> Option<&MongoError>
             has_server_code(driver, WRITE_CONFLICT_CODE),
             is_catalog_change_conflict(driver),
             is_eviction_rollback(driver),
-            search_index_step,
+            marked_step,
         )
     })
 }
@@ -406,48 +438,87 @@ fn aborted_without_conflicting_writer(err: &StorageError) -> Option<&MongoError>
 /// (`unknown_commit_result`), the abort is not a cache-pressure rollback
 /// (`eviction`), and it was not a lost race on the resource: no
 /// `WriteConflict` (`write_conflict`), or one that names a catalog change
-/// (`catalog_change`), or one raised in the search-index step
-/// (`search_index_step`, #2269).
+/// (`catalog_change`), or one raised in a marked step ([`ReplayedStep`],
+/// `marked_step`, #2269, #2300, #2342).
 fn replayable_abort(
     transient_label: bool,
     unknown_commit_result: bool,
     write_conflict: bool,
     catalog_change: bool,
     eviction: bool,
-    search_index_step: bool,
+    marked_step: bool,
 ) -> bool {
     transient_label
         && !unknown_commit_result
         && !eviction
-        && (!write_conflict || catalog_change || search_index_step)
+        && (!write_conflict || catalog_change || marked_step)
 }
 
-/// A driver error raised by a single-resource write's search-index step
-/// (`index_resource` / `delete_search_index`), #2269. It wraps the driver error
-/// and is placed in an error's [`source`](std::error::Error::source) chain by
-/// [`in_search_index_step`], so [`kept_driver_error`] still finds the driver
-/// error beneath it and the message is unchanged.
+/// A single-resource write step whose plain `WriteConflict` (112) does not say
+/// that another write won the resource, so [`replay_aborted_writes`] runs the
+/// write again and the rerun's own precondition check decides (a create: its
+/// existence check; a restore: its tombstone read; an update and a delete: their
+/// version check). See [`in_replayed_step`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReplayedStep {
+    /// `index_resource` / `delete_search_index` (#2269). The rows of
+    /// `search_index` are also written by writers that leave the resource's
+    /// version alone.
+    SearchIndex,
+    /// A create's `resources` insert (#2300). Usually only another write of the
+    /// same id conflicts, and the rerun's existence check finds it once it has
+    /// committed; a server-assigned id has no rival.
+    ResourceInsert,
+    /// A create's, a restore's, an update's or a delete's `resource_history`
+    /// insert (#2300, #2342). The write already holds the resource document,
+    /// and the row's unique (tenant, type, id, version) key is written only by
+    /// writers that changed that document first.
+    HistoryInsert,
+    /// A create's, a restore's, an update's or a delete's commit that applied
+    /// nothing (#2300, #2342).
+    Commit,
+}
+
+impl ReplayedStep {
+    /// The step's name, for the log.
+    fn name(self) -> &'static str {
+        match self {
+            Self::SearchIndex => "search_index",
+            Self::ResourceInsert => "resource_insert",
+            Self::HistoryInsert => "history_insert",
+            Self::Commit => "commit",
+        }
+    }
+}
+
+/// A driver error raised by a [`ReplayedStep`]. It wraps the driver error and is
+/// placed in an error's [`source`](std::error::Error::source) chain by
+/// [`in_replayed_step`], so [`kept_driver_error`] still finds the driver error
+/// beneath it and the message is unchanged.
 #[derive(Debug)]
-struct SearchIndexStepError(MongoError);
+struct ReplayedStepError {
+    step: ReplayedStep,
+    driver: MongoError,
+}
 
-impl std::fmt::Display for SearchIndexStepError {
+impl std::fmt::Display for ReplayedStepError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
+        std::fmt::Display::fmt(&self.driver, f)
     }
 }
 
-impl std::error::Error for SearchIndexStepError {
+impl std::error::Error for ReplayedStepError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0)
+        Some(&self.driver)
     }
 }
 
-/// Marks `err`, raised by a single-resource write's search-index step, so
-/// [`raised_in_search_index_step`] can tell it from the same driver error
-/// raised on the resource document (#2269). Only an `Internal` error whose
-/// source is a driver error is re-boxed; anything else passes through, and the
-/// message is never changed.
-fn in_search_index_step(err: StorageError) -> StorageError {
+/// Marks `err`, raised by `step` of a single-resource write, so
+/// [`replayed_step`] can tell it from the same driver error raised on the
+/// resource document (#2269, #2300). Only an `Internal` error whose source is a
+/// driver error is re-boxed; anything else passes through, and the message is
+/// never changed.
+fn in_replayed_step(step: ReplayedStep, err: StorageError) -> StorageError {
     match err {
         StorageError::Backend(BackendError::Internal {
             backend_name,
@@ -455,8 +526,10 @@ fn in_search_index_step(err: StorageError) -> StorageError {
             source: Some(source),
         }) => {
             let source = match source.downcast::<MongoError>() {
-                Ok(driver) => Box::new(SearchIndexStepError(*driver))
-                    as Box<dyn std::error::Error + Send + Sync>,
+                Ok(driver) => Box::new(ReplayedStepError {
+                    step,
+                    driver: *driver,
+                }) as Box<dyn std::error::Error + Send + Sync>,
                 Err(source) => source,
             };
             StorageError::Backend(BackendError::Internal {
@@ -469,17 +542,23 @@ fn in_search_index_step(err: StorageError) -> StorageError {
     }
 }
 
-/// True when `err` was marked by [`in_search_index_step`]: a driver error from
-/// a single-resource write's search-index step.
-fn raised_in_search_index_step(err: &StorageError) -> bool {
+/// Marks `err`, raised by a single-resource write's search-index step, so
+/// [`replayed_step`] can tell it from the same driver error raised on the
+/// resource document (#2269); see [`in_replayed_step`].
+fn in_search_index_step(err: StorageError) -> StorageError {
+    in_replayed_step(ReplayedStep::SearchIndex, err)
+}
+
+/// The [`ReplayedStep`] `err` was marked with by [`in_replayed_step`], if any.
+fn replayed_step(err: &StorageError) -> Option<ReplayedStep> {
     let mut source = std::error::Error::source(err);
     while let Some(cause) = source {
-        if cause.is::<SearchIndexStepError>() {
-            return true;
+        if let Some(marked) = cause.downcast_ref::<ReplayedStepError>() {
+            return Some(marked.step);
         }
         source = cause.source();
     }
-    false
+    None
 }
 
 /// The driver error behind `err` when WiredTiger rolled the write's
@@ -494,12 +573,17 @@ fn rolled_back_for_eviction(err: &StorageError) -> Option<&MongoError> {
 
 /// Runs one single-resource write again, up to [`WRITE_ABORT_RETRY`], while
 /// the server aborts its transaction without a conflicting writer
-/// ([`aborted_without_conflicting_writer`]); a plain `WriteConflict` in the
-/// write's search-index step is one (#2269). Every attempt starts its own
+/// ([`aborted_without_conflicting_writer`]); a plain `WriteConflict` in a
+/// [`ReplayedStep`] is one (#2269, #2300, #2342). Every attempt starts its own
 /// session, so it begins from its first read. A write that keeps being
 /// aborted ends as `Unavailable`, which the REST layer answers with a
 /// retryable 503, as does an eviction rollback ([`rolled_back_for_eviction`])
-/// without a second attempt. Any other error ends the write at once.
+/// without a second attempt. Any other error ends the write at once. So does a
+/// failure with no usable server ([`no_usable_server`]): such a write is not run
+/// again, whether or not it skipped the `hello` check, because another attempt
+/// would wait the same server-selection timeout and push the answer past the
+/// REST request timeout; its caller answers it as `Unavailable`
+/// ([`MongoBackend::unavailable_write_error`], #2308).
 ///
 /// The client-facing message names the write and nothing else; the driver
 /// error goes to the log only.
@@ -511,6 +595,7 @@ where
     let mut attempts = 1;
     loop {
         let err = match attempt().await {
+            Err(err) if no_usable_server(&err).is_some() => return Err(err),
             Err(err) if aborted_without_conflicting_writer(&err).is_some() => err,
             Err(err) if rolled_back_for_eviction(&err).is_some() => {
                 tracing::warn!(
@@ -527,7 +612,7 @@ where
             tracing::warn!(
                 attempts,
                 error_code = aborted_without_conflicting_writer(&err).and_then(driver_error_code),
-                search_index_step = raised_in_search_index_step(&err),
+                step = replayed_step(&err).map(ReplayedStep::name),
                 "mongodb aborted the {what} transaction {attempts} times without a conflicting writer; giving up: {err}"
             );
             return Err(write_unavailable(format!(
@@ -538,7 +623,7 @@ where
         tracing::warn!(
             attempt = attempts,
             error_code = aborted_without_conflicting_writer(&err).and_then(driver_error_code),
-            search_index_step = raised_in_search_index_step(&err),
+            step = replayed_step(&err).map(ReplayedStep::name),
             backoff_ms = backoff.as_millis() as u64,
             "mongodb aborted the {what} transaction without a conflicting writer; running it again: {err}"
         );
@@ -708,9 +793,16 @@ struct TransientEntryAbort {
 ///   an `ifNoneExist` probe (`or_query_error`, so `classify_mongodb_error`)
 ///   turn a transport failure — an `Io` error, a cleared connection pool, a
 ///   failed server selection — into `Unavailable` and drop the driver error
-///   with its labels, so the first shape cannot see it. Inside a transaction
-///   the driver labels exactly those failures `TransientTransactionError`: the
-///   transaction is gone and none of its writes can have committed.
+///   with its labels, so the first shape cannot see it. Since #2334
+///   `classify_mongodb_error` also turns a command the server refused with a
+///   state-change or retryable-read code ([`is_transient_read_server_error`])
+///   into `Unavailable`. An entry runs before the commit, and the attempt
+///   aborts the transaction before any replay, so none of its writes can have
+///   committed. Such an abort has `code: None`: the server code is in the
+///   `warn` line `mongodb_unavailable` wrote when it classified the error. A
+///   failed commit never comes here: `CommitAttempts::after_failure` reads the
+///   driver error and its labels, and an unknown outcome is re-sent, never
+///   replayed.
 ///
 /// Local to the bundle loop on purpose: `classify_mongodb_error` and
 /// `BackendError` keep the shape the rest of the backend and the REST layer
@@ -724,8 +816,9 @@ fn transient_entry_abort(err: &StorageError) -> Option<TransientEntryAbort> {
             reason: format!("Entry processing failed: {err}"),
         });
     }
-    // `Unavailable`'s own `Display` renders only the backend name, so the
-    // detail for the log comes from its message.
+    // `Unavailable`'s `Display` is `backend unavailable: {backend_name}: {message}`;
+    // the reason takes the message alone, which names the failure without the
+    // driver text (that went to the `warn` log, #2303).
     if let StorageError::Backend(BackendError::Unavailable { message, .. }) = err {
         return Some(TransientEntryAbort {
             code: None,
@@ -762,7 +855,14 @@ fn write_set_too_large_for_cache(entries: usize, reason: String) -> TransactionE
 /// Why a bundle attempt failed, given the error entry `index` raised in a
 /// transaction of `entries` entries (#1586, #1837).
 ///
-/// - `TransactionTooLargeForCache` (388) comes first, whatever labels ride on
+/// - A refused transaction (`IllegalOperation`, 20, [`transactions_refused`]) comes
+///   before everything: it is [`BundleAttemptError::TransactionsRefused`], not an
+///   entry's fault and not replayed (#2308).
+/// - A failure with no usable server ([`no_usable_server`]) is
+///   [`BundleAttemptError::NoUsableServer`], also not replayed (#2308): the
+///   driver labels it a transient abort, but every replay would wait out the
+///   server-selection timeout again.
+/// - `TransactionTooLargeForCache` (388) comes next, whatever labels ride on
 ///   it: the Bundle's own write set does not fit WiredTiger's cache, so it is
 ///   [`TransactionError::TooLargeForCache`] and is never replayed, because every
 ///   replay would meet the same cache. No entry is blamed for it.
@@ -771,6 +871,18 @@ fn write_set_too_large_for_cache(entries: usize, reason: String) -> TransactionE
 ///   loop's call (#1895).
 /// - Anything else is a [`TransactionError::BundleError`] at the entry.
 fn entry_attempt_error(index: usize, entries: usize, err: &StorageError) -> BundleAttemptError {
+    if transactions_refused(err).is_some() {
+        return BundleAttemptError::TransactionsRefused {
+            entry: Some(index),
+            reason: format!("Entry {index} processing failed: {err}"),
+        };
+    }
+    if no_usable_server(err).is_some() {
+        return BundleAttemptError::NoUsableServer {
+            entry: Some(index),
+            reason: format!("Entry {index} processing failed: {err}"),
+        };
+    }
     if kept_driver_error(err).is_some_and(is_too_large_for_cache) {
         return BundleAttemptError::Failed(write_set_too_large_for_cache(
             entries,
@@ -789,6 +901,31 @@ fn entry_attempt_error(index: usize, entries: usize, err: &StorageError) -> Bund
         index,
         message: format!("Entry processing failed: {err}"),
     })
+}
+
+/// Aborts the attempt's transaction and hands `error` back, except after a
+/// failure with no usable server ([`BundleAttemptError::NoUsableServer`]),
+/// where it hands `error` back at once (#2308).
+///
+/// The driver moves a transaction from starting to in-progress once its first
+/// operation returns, whatever the result, a server-selection failure included
+/// (mongodb 3.7 `client/executor.rs`). An in-progress transaction's
+/// `abortTransaction` runs as a full operation (`client/session/action.rs`), so
+/// it selects a server and waits out the server-selection timeout a second time:
+/// measured 2.0-2.2 s for a Bundle against a 1000 ms timeout, so twice the
+/// default 15 s would reach the REST request timeout (inferred). The Bundle loop
+/// ends the Bundle at once on `NoUsableServer` and drops the session;
+/// `ClientSession`'s `Drop` spawns the abort in the background
+/// (`client/session.rs`, `impl Drop for ClientSession`), as on the single-write
+/// path.
+async fn abort_failed_attempt(
+    session: &mut ClientSession,
+    error: BundleAttemptError,
+) -> BundleAttemptError {
+    if !matches!(error, BundleAttemptError::NoUsableServer { .. }) {
+        let _ = session.abort_transaction().await;
+    }
+    error
 }
 
 /// Why a bundle attempt failed when its deferred-search-index ledger could not
@@ -812,6 +949,16 @@ fn ledger_attempt_error(entries: usize, err: &StorageError) -> BundleAttemptErro
             entry: None,
             code,
             eviction,
+            reason,
+        },
+        BundleAttemptError::TransactionsRefused { reason, .. } => {
+            BundleAttemptError::TransactionsRefused {
+                entry: None,
+                reason,
+            }
+        }
+        BundleAttemptError::NoUsableServer { reason, .. } => BundleAttemptError::NoUsableServer {
+            entry: None,
             reason,
         },
         too_large @ BundleAttemptError::Failed(TransactionError::TooLargeForCache { .. }) => {
@@ -1012,6 +1159,16 @@ impl CommitAttempts {
     /// (#1991). This holds only while nothing says the commit may have applied
     /// ([`too_large_for_cache_at_commit`]).
     fn after_failure(&mut self, err: &MongoError) -> CommitStep {
+        // A refused transaction (#2308) stops the Bundle as such, unless an
+        // earlier commit may have applied: that one stays unknown. A commit's
+        // selection failure is labelled `UnknownTransactionCommitResult`, so
+        // `no_usable_server` does not apply here and it keeps its handling below.
+        if !self.outcome_unknown && refuses_transactions(err) {
+            return CommitStep::Stop(BundleAttemptError::TransactionsRefused {
+                entry: None,
+                reason: format!("Commit failed: {err}"),
+            });
+        }
         match classify_commit_failure(err, self.outcome_unknown) {
             CommitFailure::TransientAbort => CommitStep::Stop(BundleAttemptError::TransientAbort {
                 entry: None,
@@ -1313,7 +1470,7 @@ async fn collect_documents(mut cursor: Cursor<Document>) -> StorageResult<Vec<Do
     while cursor
         .advance()
         .await
-        .map_err(|e| internal_error(format!("Failed to advance MongoDB cursor: {}", e)))?
+        .or_query_error("Failed to advance MongoDB cursor")?
     {
         let doc = cursor.deserialize_current().map_err(|e| {
             internal_error(format!("Failed to deserialize MongoDB document: {}", e))
@@ -1454,6 +1611,103 @@ fn system_history_sort() -> Document {
 /// `limit(0)` as "unlimited", which would silently undo the bound.
 fn history_fetch_limit(count: u32) -> i64 {
     i64::from(count.saturating_add(1))
+}
+
+/// Most versions one document fetch of an instance-history page names in its
+/// `version_id: { $in: [...] }` list (#2375). It bounds the size of one command
+/// and the server work of one fetch. It is above REST's default largest page
+/// (`HFS_MAX_PAGE_SIZE` defaults to 1,000) plus one, so with the default the
+/// first fetch of a REST page is never split. A larger configured page size is
+/// fetched in batches of at most this many versions and returns the same page.
+const INSTANCE_HISTORY_MAX_BATCH: usize = 1_024;
+
+/// Projection of the version-id read of instance history (#2375): `_id` is
+/// dropped and only `version_id` is asked for, so the read is covered by
+/// `idx_history_identity` (`{ tenant_id, resource_type, id, version_id }`) and
+/// examines no document.
+fn instance_history_version_projection() -> Document {
+    doc! { "_id": 0, "version_id": 1 }
+}
+
+/// The versions an instance-history page can come from, newest first (#2375):
+/// each stored `version_id` with its number (`parse_version_id`, so a
+/// non-numeric id counts as 0), the version cursor applied, ordered by number
+/// descending (then by id, so the order is deterministic) and without duplicate
+/// ids. The cursor depends only on the version id, so applying it to the ids is
+/// the same as applying it to the rows.
+fn instance_history_candidates(
+    version_ids: Vec<String>,
+    cursor_version: Option<i64>,
+) -> Vec<(i64, String)> {
+    let mut candidates: Vec<(i64, String)> = version_ids
+        .into_iter()
+        .map(|version_id| (parse_version_id(&version_id), version_id))
+        .collect();
+    if let Some(cursor_version) = cursor_version {
+        candidates.retain(|(number, _)| *number < cursor_version);
+    }
+    candidates.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    candidates.dedup_by(|a, b| a.1 == b.1);
+    candidates
+}
+
+/// End (exclusive) of the batch of about `len` candidates that starts at `start`
+/// (#2375). A run of candidates with the same number is never split: the final
+/// order breaks a tie on the number by `last_updated`, which needs every member
+/// of the run in the rows being sorted. Only non-canonical ids (`07` and `7`, or
+/// any non-numeric id) share a number.
+fn instance_history_batch_end(candidates: &[(i64, String)], start: usize, len: usize) -> usize {
+    let mut end = start.saturating_add(len.max(1)).min(candidates.len());
+    while end > start && end < candidates.len() && candidates[end].0 == candidates[end - 1].0 {
+        end += 1;
+    }
+    end
+}
+
+/// Size of the next batch of candidates to fetch (#2375): `needed` more rows are
+/// wanted, and the last batch of `last_len` candidates matched `last_matched`
+/// of them. A batch that matched nothing doubles, so a filter that drops a long
+/// run (a `before` window at the old end) costs a logarithmic number of fetches;
+/// otherwise the batch is sized by the match rate, so a few deleted versions
+/// cost a few more documents, not another page. Never below `needed`, never
+/// above [`INSTANCE_HISTORY_MAX_BATCH`], never 0.
+fn next_instance_history_batch(needed: usize, last_len: usize, last_matched: usize) -> usize {
+    let grown = if last_matched == 0 {
+        last_len.saturating_mul(2)
+    } else {
+        needed.saturating_mul(last_len).div_ceil(last_matched)
+    };
+    grown.max(needed).clamp(1, INSTANCE_HISTORY_MAX_BATCH)
+}
+
+/// The filter of one document fetch of an instance-history page (#2375): the
+/// resource's identity, the batch's version ids and the history filters
+/// (`include_deleted`, `since`, `before`) exactly as `apply_history_params_filter`
+/// builds them.
+fn instance_history_batch_filter(
+    identity: &Document,
+    batch: &[(i64, String)],
+    params: &HistoryParams,
+) -> Document {
+    let mut filter = identity.clone();
+    let version_ids: Vec<&str> = batch
+        .iter()
+        .map(|(_, version_id)| version_id.as_str())
+        .collect();
+    filter.insert("version_id", doc! { "$in": version_ids });
+    apply_history_params_filter(&mut filter, params);
+    filter
+}
+
+/// The order of an instance-history page (#2375): number descending, then
+/// `last_updated` descending. This is the comparator the single full read used
+/// before; the stable sort keeps the fetch order for rows tied on both.
+fn sort_instance_history_rows(rows: &mut [ParsedHistoryRow]) {
+    rows.sort_by(|a, b| {
+        parse_version_id(&b.version_id)
+            .cmp(&parse_version_id(&a.version_id))
+            .then_with(|| b.last_updated.cmp(&a.last_updated))
+    });
 }
 
 #[derive(Debug, Clone)]
@@ -1731,7 +1985,18 @@ fn write_topology_from_hello(hello: &Document) -> WriteTopology {
     }
 }
 
+/// Starts the transaction a transaction Bundle runs in.
+///
+/// The session comes first, as on the single-resource path
+/// ([`MongoBackend::begin_single_write_session`]). The topology check (`hello`)
+/// is asked only while `backend` holds no transactional answer (#2308): a
+/// standalone answer is refused here with
+/// [`TransactionError::UnsupportedIsolationLevel`] and not recorded, so the next
+/// Bundle asks again, and a transactional one is recorded through
+/// [`MongoBackend::note_write_topology`], where the writes after it find it. A
+/// transaction that cannot start forgets the kept answer.
 async fn begin_required_bundle_transaction_session(
+    backend: &MongoBackend,
     db: &mongodb::Database,
 ) -> Result<ClientSession, TransactionError> {
     let mut session =
@@ -1742,27 +2007,31 @@ async fn begin_required_bundle_transaction_session(
                 reason: format!("Failed to start MongoDB session: {}", e),
             })?;
 
-    let hello = db.run_command(doc! { "hello": 1_i32 }).await.map_err(|e| {
-        TransactionError::RolledBack {
-            reason: format!("Failed to inspect MongoDB topology: {}", e),
+    if !backend.write_topology.transactional_answer_kept() {
+        let hello = db.run_command(doc! { "hello": 1_i32 }).await.map_err(|e| {
+            TransactionError::RolledBack {
+                reason: format!("Failed to inspect MongoDB topology: {}", e),
+            }
+        })?;
+
+        let supports_transactions =
+            write_topology_from_hello(&hello) == WriteTopology::Transactional;
+
+        if !supports_transactions {
+            return Err(TransactionError::UnsupportedIsolationLevel {
+                level: "transaction bundles for mongodb require replica-set or sharded topology"
+                    .to_string(),
+            });
         }
-    })?;
-
-    let supports_transactions = write_topology_from_hello(&hello) == WriteTopology::Transactional;
-
-    if !supports_transactions {
-        return Err(TransactionError::UnsupportedIsolationLevel {
-            level: "transaction bundles for mongodb require replica-set or sharded topology"
-                .to_string(),
-        });
+        backend.note_write_topology(WriteTopology::Transactional);
     }
 
-    session
-        .start_transaction()
-        .await
-        .map_err(|e| TransactionError::RolledBack {
+    session.start_transaction().await.map_err(|e| {
+        backend.write_topology.forget_transactional_answer();
+        TransactionError::RolledBack {
             reason: format!("Failed to start MongoDB transaction: {}", e),
-        })?;
+        }
+    })?;
 
     Ok(session)
 }
@@ -1821,15 +2090,50 @@ fn single_write_topology(
     }
 }
 
-/// The last [`WriteTopology`] a backend's writes saw, so the standalone
-/// fallback is logged once per backend and again on each change (#2258).
+/// The last [`WriteTopology`] a backend's writes saw.
+///
+/// A transactional answer is kept (#2308): while it is, a single-resource write
+/// and a transaction Bundle skip the `hello` that would ask again
+/// ([`Self::transactional_answer_kept`]), until a refused transaction, a failed
+/// transaction start or a write that found no usable server forgets it
+/// ([`Self::forget_transactional_answer`]). A standalone answer is never kept:
+/// it is remembered only so that the fallback is logged once per backend and
+/// again on each change (#2258), and a write that found one asks again at its
+/// next write, so a standalone server restarted as a replica set gets
+/// transactional writes at once.
+///
+/// Driver topology (SDAM) events are not observed: no handler is registered in
+/// `connect_client`, which is shared with the SOF runner, and with
+/// `directConnection` the topology type is `Single` for both deployment kinds.
+/// A change of deployment is learnt from a refused transaction, a failed
+/// transaction start or a write with no usable server.
 #[derive(Debug, Default)]
 pub(super) struct WriteTopologyMemo(std::sync::atomic::AtomicU8);
 
 impl WriteTopologyMemo {
-    // 0 is "no answer yet".
+    // 0 is "no answer yet", or a forgotten transactional one.
     const TRANSACTIONAL: u8 = 1;
     const STANDALONE: u8 = 2;
+
+    /// Whether the last answer was transactional and has not been forgotten:
+    /// the `hello` can be skipped. Never true after a standalone answer.
+    fn transactional_answer_kept(&self) -> bool {
+        self.0.load(std::sync::atomic::Ordering::Relaxed) == Self::TRANSACTIONAL
+    }
+
+    /// Forgets a kept transactional answer, so the next write asks `hello`
+    /// again. Returns whether there was one. A standalone answer is left as it
+    /// is: it was never kept.
+    fn forget_transactional_answer(&self) -> bool {
+        self.0
+            .compare_exchange(
+                Self::TRANSACTIONAL,
+                0,
+                std::sync::atomic::Ordering::Relaxed,
+                std::sync::atomic::Ordering::Relaxed,
+            )
+            .is_ok()
+    }
 
     /// Stores `now` and returns the answer it replaced, `None` for the first.
     fn record(&self, now: WriteTopology) -> Option<WriteTopology> {
@@ -1845,6 +2149,45 @@ impl WriteTopologyMemo {
     }
 }
 
+/// True when `err` is the server's `IllegalOperation` (20): what a server
+/// without transactions answers to a command in one ([`ILLEGAL_OPERATION_CODE`]).
+/// Matched by code alone. A false positive costs one `hello` and a retryable
+/// `503` instead of a `500` (#2308).
+fn refuses_transactions(err: &MongoError) -> bool {
+    has_server_code(err, ILLEGAL_OPERATION_CODE)
+}
+
+/// The driver error kept by `err` when it is [`refuses_transactions`], wherever
+/// the failing site kept it ([`kept_driver_error`]). A commit whose outcome is
+/// unknown carries no driver error, so it is never mistaken for a refusal.
+fn transactions_refused(err: &StorageError) -> Option<&MongoError> {
+    kept_driver_error(err).filter(|driver| refuses_transactions(driver))
+}
+
+/// The driver error kept by `err` when it is a server-selection failure: the
+/// attempt already waited the whole server-selection timeout for a usable
+/// server. A commit whose result is unknown
+/// ([`UNKNOWN_TRANSACTION_COMMIT_RESULT`]) is excluded, because it may have
+/// applied.
+///
+/// A write or Bundle that finds this ends at once, whether or not it skipped the
+/// check, and is answered after that one timeout: a single write is dropped with
+/// its session, and a Bundle attempt is not aborted in the foreground
+/// ([`abort_failed_attempt`]), since the abort would select a server again.
+///
+/// With a kept transactional answer this is how an outage is first seen
+/// (#2308): `start_transaction` sends nothing, and the driver labels the first
+/// command's selection failure `TransientTransactionError` (mongodb 3.7
+/// `client/executor.rs`, `add_labels_and_update_pin`), which
+/// [`replay_aborted_writes`] and the Bundle loop would run again, each replay
+/// waiting out the same timeout.
+fn no_usable_server(err: &StorageError) -> Option<&MongoError> {
+    kept_driver_error(err).filter(|driver| {
+        matches!(driver.kind.as_ref(), MongoErrorKind::ServerSelection { .. })
+            && !driver.contains_label(UNKNOWN_TRANSACTION_COMMIT_RESULT)
+    })
+}
+
 /// What a change of [`WriteTopology`] is worth a log line for.
 #[derive(Debug, PartialEq, Eq)]
 enum TopologyLog {
@@ -1856,7 +2199,9 @@ enum TopologyLog {
 
 /// The log line owed when a write found `now` after `previous`: one on the
 /// first standalone answer of a backend and one on each change, never one per
-/// write.
+/// write. The transitions are the same as before a transactional answer was
+/// kept (#2308); only a transactional answer after a transactional one no
+/// longer happens, because the write skips the check.
 fn topology_log(previous: Option<WriteTopology>, now: WriteTopology) -> Option<TopologyLog> {
     match (previous, now) {
         (Some(WriteTopology::Standalone), WriteTopology::Standalone) => None,
@@ -1868,24 +2213,29 @@ fn topology_log(previous: Option<WriteTopology>, now: WriteTopology) -> Option<T
     }
 }
 
-async fn commit_best_effort_multi_write_session(
-    session: &mut Option<ClientSession>,
-    transaction_active: bool,
-    operation: &str,
-) -> StorageResult<()> {
-    try_commit_best_effort_multi_write_session(session, transaction_active, operation)
-        .await
-        .map_err(|e| match e {
-            SingleWriteCommitError::NotApplied(e) => internal_driver_error(
+/// The error a create or a restore answers with when its commit did not
+/// succeed ([`MongoBackend::commit_single_write`]).
+fn replayed_commit_error(operation: &str, e: SingleWriteCommitError) -> StorageError {
+    match e {
+        // Only a create and a restore commit through here. A conflict at
+        // their commit names no winner of the resource, so it is marked and
+        // replayed, and the rerun's own check decides (#2300).
+        SingleWriteCommitError::NotApplied(e) => in_replayed_step(
+            ReplayedStep::Commit,
+            internal_driver_error(
                 &format!("Failed to commit MongoDB transaction after {operation}"),
                 e,
             ),
-            SingleWriteCommitError::OutcomeUnknown(e) => e,
-        })
+        ),
+        SingleWriteCommitError::OutcomeUnknown(e) => e,
+    }
 }
 
-/// [`commit_best_effort_multi_write_session`] with the driver's error intact,
-/// for the writes that classify a commit-time `WriteConflict`.
+/// Commits a single-resource write with the driver's error intact, for the
+/// writes that classify a commit-time `WriteConflict`. Its caller is
+/// [`MongoBackend::commit_single_write`], which settles an unknown outcome
+/// with a read (#2304); a create and a restore map the error with
+/// [`replayed_commit_error`].
 ///
 /// A commit whose outcome is unknown (`UnknownTransactionCommitResult`, or a
 /// write-concern error) is sent again up to [`SINGLE_WRITE_COMMIT_RETRIES`]
@@ -1939,13 +2289,13 @@ impl ResourceStorage for MongoBackend {
 
     async fn readiness_check(&self) -> Result<(), BackendError> {
         <Self as crate::core::Backend>::health_check(self).await?;
-        let database = self
-            .get_database()
-            .await
-            .map_err(|error| BackendError::Unavailable {
-                backend_name: "mongodb".to_string(),
-                message: format!("Unable to check the required query indexes: {error}"),
-            })?;
+        let database = self.get_database().await.map_err(|error| {
+            crate::error::mongodb_unavailable_detail(
+                "Unable to check the required query indexes",
+                None,
+                &error,
+            )
+        })?;
         super::schema::check_required_query_indexes(&database, self.missing_params_index_ready())
             .await
     }
@@ -2007,7 +2357,8 @@ impl ResourceStorage for MongoBackend {
         let outcome = replay_aborted_writes("create", || {
             self.create_attempt(tenant, resource_type, &id, &resource, fhir_version)
         })
-        .await?;
+        .await
+        .map_err(|err| self.unavailable_write_error("create", err))?;
         Ok(outcome.into_resource(tenant, resource_type, resource))
     }
 
@@ -2147,7 +2498,10 @@ impl ResourceStorage for MongoBackend {
         // has, or is about to have, moved it on. The honest answer is the one
         // PostgreSQL gives for the same race — `VersionConflict` -> 409 — not
         // a second attempt. A transaction the server aborted for any other
-        // reason is run again, checking the original version each time.
+        // reason is run again, checking the original version each time. A
+        // `WriteConflict` on its history row or at its commit is not a lost
+        // race: the update holds the resource document by then, so it is run
+        // again too (#2342).
         let mut resource = resource;
         ensure_resource_identity(current.resource_type(), current.id(), &mut resource);
         let outcome = replay_aborted_writes("update", || async {
@@ -2165,7 +2519,8 @@ impl ResourceStorage for MongoBackend {
                     .await),
             }
         })
-        .await?;
+        .await
+        .map_err(|err| self.unavailable_write_error("update", err))?;
         Ok(outcome.into_resource(tenant, current.resource_type(), resource))
     }
 
@@ -2344,8 +2699,8 @@ impl ResourceStorage for MongoBackend {
             crate::core::bucket_floor(since, bucket_seconds).timestamp_millis(),
         );
 
-        // Bucket on the server: `$match` narrows to this tenant/type/window (covered
-        // by the `(tenant_id, last_updated)` history index), then `$group` floors each
+        // Bucket on the server: `$match` narrows to this tenant/type/window (an
+        // `idx_history_type_updated` range scan), then `$group` floors each
         // version to its epoch-aligned bucket by subtracting the remainder of its
         // epoch-millis modulo the bucket width — the same arithmetic the SQL backends
         // do, so bucket boundaries agree across backends. Delta rule per the trait
@@ -2729,12 +3084,12 @@ impl ResourceStorage for MongoBackend {
             .find(doc! {})
             .sort(doc! { "created_at": 1, "id": 1 })
             .await
-            .map_err(|e| internal_error(format!("query list_tenants: {}", e)))?;
+            .or_query_error("query list_tenants")?;
         let mut out = Vec::new();
         while cursor
             .advance()
             .await
-            .map_err(|e| internal_error(format!("list_tenants cursor advance: {}", e)))?
+            .or_query_error("list_tenants cursor advance")?
         {
             let doc = cursor
                 .deserialize_current()
@@ -3043,6 +3398,12 @@ pub(super) fn with_missing_metadata_update(
 impl MongoBackend {
     /// Logs the standalone fallback the first time this backend sees it and
     /// again on each change of answer ([`topology_log`], #2258).
+    ///
+    /// The lines fire at the same transitions as before a transactional answer
+    /// was kept (#2308). A write that skips the check records nothing, and a
+    /// forgotten answer ([`WriteTopologyMemo::forget_transactional_answer`]) reads
+    /// as none, so a standalone answer after it is logged again. A transaction
+    /// Bundle's `hello` can now emit the "replica set again" line too.
     fn note_write_topology(&self, now: WriteTopology) {
         match topology_log(self.write_topology.record(now), now) {
             Some(TopologyLog::WritesWithoutTransactions) => tracing::warn!(
@@ -3064,14 +3425,25 @@ impl MongoBackend {
     ///
     /// The order is the one of [`begin_required_bundle_transaction_session`]:
     /// the session, then the topology check (`hello`), then the transaction.
-    /// The check is asked before every write. Only a successful answer with
-    /// neither `setName` nor `msg: "isdbgrid"` is a standalone server, and only
-    /// that runs the write without a transaction (`(None, false)`, the session
-    /// is dropped; logged by [`Self::note_write_topology`]). On a deployment
-    /// with transactions a failure of the session, of the check or of the
-    /// transaction start is an error: a transient one is retried (the check
-    /// only, briefly) and then answered as retryable, never a write without a
-    /// transaction (#2258).
+    /// The check is asked until a transactional answer is kept (#2308): a
+    /// backend's first write asks, and once the server has answered as a
+    /// replica-set member or a mongos, later writes skip it. A standalone answer
+    /// is never kept, so a standalone server is asked before every write. Only a
+    /// successful answer with neither `setName` nor `msg: "isdbgrid"` is a
+    /// standalone server, and only that runs the write without a transaction
+    /// (`(None, false)`, the session is dropped; logged by
+    /// [`Self::note_write_topology`]). On a deployment with transactions a
+    /// failure of the session, of the check or of the transaction start is an
+    /// error: a transient one is retried (the check only, briefly) and then
+    /// answered as retryable, never a write without a transaction (#2258).
+    ///
+    /// A kept answer only ever leads to a write in a transaction. If the server
+    /// has lost its transactions since, the write's first transactional command
+    /// is refused (see [`Self::unavailable_write_error`]), and a transaction that
+    /// cannot start forgets the kept answer here. An outage is seen at the
+    /// write's first command, since `start_transaction` sends nothing, and is
+    /// answered at once ([`Self::unavailable_write_error`]) instead of being
+    /// replayed.
     ///
     /// The `bool` equals `session.is_some()`; it keeps the shape the commit
     /// helpers take.
@@ -3089,7 +3461,9 @@ impl MongoBackend {
         // instead, and `write_abort_retry::an_update_aborted_at_commit_is_run_again`
         // hit `WriteConflict` on every replay. `start_session` sends no command
         // and cannot fail in this driver version, so starting it first adds no
-        // failure mode on a standalone server.
+        // failure mode on a standalone server. It also comes first when the
+        // check is skipped (#2308), so nothing else takes a server session
+        // ahead of it.
         let mut session = db.client().start_session().await.map_err(|e| {
             single_write_setup_error(
                 &format!("Failed to start a MongoDB session for the {what}"),
@@ -3097,27 +3471,126 @@ impl MongoBackend {
             )
         })?;
 
-        let checked = super::retry::retry_transient_with(
-            &super::retry::SETTINGS_RETRY,
-            None,
-            "the MongoDB topology check before a single-resource write",
-            move || async move { db.run_command(doc! { "hello": 1_i32 }).await },
-        )
-        .await;
-        let topology = single_write_topology(what, checked.result)?;
-        self.note_write_topology(topology);
-        if topology == WriteTopology::Standalone {
-            drop(session);
-            return Ok((None, false));
+        if !self.write_topology.transactional_answer_kept() {
+            let checked = super::retry::retry_transient_with(
+                &super::retry::SETTINGS_RETRY,
+                None,
+                "the MongoDB topology check before a single-resource write",
+                move || async move { db.run_command(doc! { "hello": 1_i32 }).await },
+            )
+            .await;
+            let topology = single_write_topology(what, checked.result)?;
+            self.note_write_topology(topology);
+            if topology == WriteTopology::Standalone {
+                drop(session);
+                return Ok((None, false));
+            }
         }
 
-        session.start_transaction().await.map_err(|e| {
-            single_write_setup_error(
+        if let Err(e) = session.start_transaction().await {
+            self.write_topology.forget_transactional_answer();
+            return Err(single_write_setup_error(
                 &format!("Failed to start a MongoDB transaction for the {what}"),
                 e,
-            )
-        })?;
+            ));
+        }
         Ok((Some(session), true))
+    }
+
+    /// Forgets the kept transactional answer after the server refused a
+    /// transaction as an illegal operation (code 20, what a server without
+    /// transactions answers, [`ILLEGAL_OPERATION_CODE`]), and logs it once: a
+    /// warning when an answer was actually forgotten, a debug line when a write
+    /// in flight at the same change finds it already forgotten. `entry` is the
+    /// Bundle entry that was running, when there is one.
+    fn note_refused_transaction(
+        &self,
+        what: &str,
+        entry: Option<usize>,
+        detail: &dyn std::fmt::Display,
+    ) {
+        let forgot = self.write_topology.forget_transactional_answer();
+        if forgot {
+            tracing::warn!(
+                error_code = ILLEGAL_OPERATION_CODE,
+                failed_entry = entry,
+                kept_answer_forgotten = forgot,
+                "mongodb refused the {what}'s transaction as an illegal operation, as a server \
+                 without transactions does: nothing was applied, the request is answered as \
+                 retryable, and the next write asks the server again (`hello`): {detail}"
+            );
+        } else {
+            tracing::debug!(
+                error_code = ILLEGAL_OPERATION_CODE,
+                failed_entry = entry,
+                kept_answer_forgotten = forgot,
+                "mongodb refused the {what}'s transaction as an illegal operation, as a server \
+                 without transactions does: nothing was applied, the request is answered as \
+                 retryable, and the next write asks the server again (`hello`): {detail}"
+            );
+        }
+    }
+
+    /// Forgets the kept transactional answer after a write found no usable
+    /// server ([`no_usable_server`]), and logs it once: a warning when an answer
+    /// was actually forgotten, a debug line when a write in flight at the same
+    /// outage finds it already forgotten. The first write after the outage asks
+    /// `hello` again. `entry` is the Bundle entry that was running, when there is
+    /// one.
+    fn note_no_usable_server(
+        &self,
+        what: &str,
+        entry: Option<usize>,
+        detail: &dyn std::fmt::Display,
+    ) {
+        let forgot = self.write_topology.forget_transactional_answer();
+        if forgot {
+            tracing::warn!(
+                failed_entry = entry,
+                kept_answer_forgotten = forgot,
+                "mongodb found no usable server for the {what}: nothing was applied, it is \
+                 not run again, the request is answered as retryable, and the next write asks \
+                 the server's topology again (`hello`): {detail}"
+            );
+        } else {
+            tracing::debug!(
+                failed_entry = entry,
+                kept_answer_forgotten = forgot,
+                "mongodb found no usable server for the {what}: nothing was applied, it is \
+                 not run again, the request is answered as retryable, and the next write asks \
+                 the server's topology again (`hello`): {detail}"
+            );
+        }
+    }
+
+    /// The answer of a single-resource write (`what`) that did not run, because
+    /// the server refused its transaction as an illegal operation or because it
+    /// found no usable server (#2308). Both forget the kept transactional answer
+    /// ([`Self::note_refused_transaction`], [`Self::note_no_usable_server`]) and
+    /// become a retryable [`BackendError::Unavailable`] (`503` with
+    /// `Retry-After`, no driver text). Any other error is returned as it is.
+    ///
+    /// The write is not replayed and never runs without a transaction: nothing
+    /// was applied, and the next write asks `hello` again, so a deployment that
+    /// is now a standalone server gets its writes without a transaction (logged,
+    /// #2258), one that is a replica set gets them in one, and one that is still
+    /// down answers `503` again. A commit whose outcome is unknown carries no
+    /// driver error, so it is never mapped here.
+    fn unavailable_write_error(&self, what: &str, err: StorageError) -> StorageError {
+        if transactions_refused(&err).is_some() {
+            self.note_refused_transaction(what, None, &err);
+            return write_unavailable(format!(
+                "The {what} could not run in a database transaction; retry the request"
+            ));
+        }
+        if let Some(driver) = no_usable_server(&err) {
+            self.note_no_usable_server(what, None, driver);
+            return write_unavailable(format!(
+                "The {what} found no usable database server; the database is temporarily \
+                 unavailable; retry the request"
+            ));
+        }
+        err
     }
 
     /// One attempt at [`ResourceStorage::create`]: the existence check, the
@@ -3189,6 +3662,9 @@ impl MongoBackend {
             "fhir_version": &fhir_version_str,
         });
 
+        // A WriteConflict here, on the history row or at the commit is replayed
+        // (#2300): the rerun's existence check answers AlreadyExists when another
+        // write of the same id won, and a server-assigned id has no rival.
         if let Some(active_session) = session.as_mut() {
             resources
                 .insert_one(resource_doc.clone())
@@ -3201,7 +3677,10 @@ impl MongoBackend {
                             id: id.to_string(),
                         })
                     } else {
-                        internal_driver_error("Failed to insert resource (session)", e)
+                        in_replayed_step(
+                            ReplayedStep::ResourceInsert,
+                            internal_driver_error("Failed to insert resource (session)", e),
+                        )
                     }
                 })?;
         } else {
@@ -3236,7 +3715,10 @@ impl MongoBackend {
                 .session(active_session)
                 .await
                 .map_err(|e| {
-                    internal_driver_error("Failed to insert resource history (session)", e)
+                    in_replayed_step(
+                        ReplayedStep::HistoryInsert,
+                        internal_driver_error("Failed to insert resource history (session)", e),
+                    )
                 })?;
         } else {
             history
@@ -3256,7 +3738,20 @@ impl MongoBackend {
         .await
         .map_err(in_search_index_step)?;
 
-        commit_best_effort_multi_write_session(&mut session, transaction_active, "create").await?;
+        let written = WrittenVersion {
+            operation: "create",
+            tenant_id,
+            resource_type,
+            id,
+            version_id: &version_id,
+            last_updated: now_bson,
+            is_deleted: false,
+            reloads_search_parameters: resource_type == "SearchParameter"
+                && self.tenant_registries().create_affects_overlay(resource),
+        };
+        self.commit_single_write(&db, &mut session, transaction_active, &written)
+            .await
+            .map_err(|e| replayed_commit_error("create", e))?;
 
         // An overlay-affecting SearchParameter write: refresh the stored-param
         // cache (which the per-tenant loader reads) and drop the cached
@@ -3265,9 +3760,7 @@ impl MongoBackend {
         // transaction is still open the write above is invisible to it. Seeded
         // spec copies never affect the overlay (see `create_affects_overlay`),
         // which keeps bulk seeding from triggering an O(n²) reload storm.
-        if resource_type == "SearchParameter"
-            && self.tenant_registries().create_affects_overlay(resource)
-        {
+        if written.reloads_search_parameters {
             if let Err(e) = self.reload_stored_cache_for_tenant(tenant_id).await {
                 tracing::warn!("SearchParameter cache reload failed: {e}");
             }
@@ -3286,7 +3779,9 @@ impl MongoBackend {
     /// `current`'s version, the history row and the search index, in one
     /// transaction where the deployment has them. A write the server refused
     /// because another writer holds the document comes back as
-    /// [`WriteAttemptError::Conflict`] rather than as an `Internal` error.
+    /// [`WriteAttemptError::Conflict`] rather than as an `Internal` error. A
+    /// `WriteConflict` on the history row or at the commit is not one: it is
+    /// marked ([`ReplayedStep`]) and replayed (#2342).
     async fn update_attempt(
         &self,
         tenant: &TenantContext,
@@ -3434,13 +3929,20 @@ impl MongoBackend {
             "fhir_version": fhir_version_str,
         };
 
+        // The update already holds the resource document (its compare-and-swap
+        // ran first in this transaction), so a WriteConflict here or at its
+        // commit names no winner; it is replayed and the rerun's version check
+        // decides (#2342).
         if let Some(active_session) = session.as_mut() {
             history
                 .insert_one(history_doc)
                 .session(active_session)
                 .await
                 .map_err(|e| {
-                    WriteAttemptError::driver("Failed to insert updated history row (session)", e)
+                    in_replayed_step(
+                        ReplayedStep::HistoryInsert,
+                        internal_driver_error("Failed to insert updated history row (session)", e),
+                    )
                 })?;
         } else {
             history.insert_one(history_doc).await.map_err(|e| {
@@ -3459,13 +3961,29 @@ impl MongoBackend {
         .await
         .map_err(in_search_index_step)?;
 
-        try_commit_best_effort_multi_write_session(&mut session, transaction_active, "update")
+        let written = WrittenVersion {
+            operation: "update",
+            tenant_id,
+            resource_type,
+            id,
+            version_id: &new_version,
+            last_updated: now_bson,
+            is_deleted: false,
+            reloads_search_parameters: resource_type == "SearchParameter",
+        };
+        self.commit_single_write(&db, &mut session, transaction_active, &written)
             .await
             .map_err(|e| match e {
-                SingleWriteCommitError::NotApplied(e) => WriteAttemptError::driver(
-                    "Failed to commit MongoDB transaction after update",
-                    e,
-                ),
+                // A conflict at the commit names no winner either (#2342).
+                SingleWriteCommitError::NotApplied(e) => {
+                    WriteAttemptError::Storage(in_replayed_step(
+                        ReplayedStep::Commit,
+                        internal_driver_error(
+                            "Failed to commit MongoDB transaction after update",
+                            e,
+                        ),
+                    ))
+                }
                 SingleWriteCommitError::OutcomeUnknown(e) => WriteAttemptError::Storage(e),
             })?;
 
@@ -3474,7 +3992,7 @@ impl MongoBackend {
         // This must run after the commit above: the reload reads the
         // `resources` collection without the session, so it cannot observe the
         // update while the transaction is still open.
-        if resource_type == "SearchParameter" {
+        if written.reloads_search_parameters {
             if let Err(e) = self.reload_stored_cache_for_tenant(tenant_id).await {
                 tracing::warn!("SearchParameter cache reload failed: {e}");
             }
@@ -3522,9 +4040,10 @@ impl MongoBackend {
     /// deleted whatever version was current by the time it got here (#1404).
     ///
     /// Two retries nest here. [`replay_aborted_writes`] runs the whole thing
-    /// again when the server aborts it without a conflicting writer, and inside
-    /// each of those runs an unconditional delete that lost a race gets its one
-    /// extra attempt. So an unconditional delete makes at most
+    /// again when the server aborts it without a conflicting writer (a
+    /// `WriteConflict` on its history row or at its commit is one, #2342), and
+    /// inside each of those runs an unconditional delete that lost a race gets
+    /// its one extra attempt. So an unconditional delete makes at most
     /// `2 * WRITE_ABORT_RETRY.max_attempts` attempts, which needs a lost race
     /// and an abort on every run.
     async fn soft_delete(
@@ -3577,6 +4096,7 @@ impl MongoBackend {
             }
         })
         .await
+        .map_err(|err| self.unavailable_write_error("delete", err))
     }
 
     /// Reports a write the server refused with `WriteConflict` as the
@@ -3782,13 +4302,20 @@ impl MongoBackend {
             "fhir_version": fhir_version,
         };
 
+        // The delete already holds the resource document (its compare-and-swap
+        // ran first in this transaction), so a WriteConflict here or at its
+        // commit names no winner; it is replayed and the rerun's version check
+        // decides (#2342).
         if let Some(active_session) = session.as_mut() {
             history
                 .insert_one(history_doc)
                 .session(active_session)
                 .await
                 .map_err(|e| {
-                    WriteAttemptError::driver("Failed to insert deletion history row (session)", e)
+                    in_replayed_step(
+                        ReplayedStep::HistoryInsert,
+                        internal_driver_error("Failed to insert deletion history row (session)", e),
+                    )
                 })?;
         } else {
             history.insert_one(history_doc).await.map_err(|e| {
@@ -3800,13 +4327,29 @@ impl MongoBackend {
             .await
             .map_err(in_search_index_step)?;
 
-        try_commit_best_effort_multi_write_session(&mut session, transaction_active, "delete")
+        let written = WrittenVersion {
+            operation: "delete",
+            tenant_id,
+            resource_type,
+            id,
+            version_id: &new_version,
+            last_updated: now_bson,
+            is_deleted: true,
+            reloads_search_parameters: resource_type == "SearchParameter",
+        };
+        self.commit_single_write(&db, &mut session, transaction_active, &written)
             .await
             .map_err(|e| match e {
-                SingleWriteCommitError::NotApplied(e) => WriteAttemptError::driver(
-                    "Failed to commit MongoDB transaction after delete",
-                    e,
-                ),
+                // A conflict at the commit names no winner either (#2342).
+                SingleWriteCommitError::NotApplied(e) => {
+                    WriteAttemptError::Storage(in_replayed_step(
+                        ReplayedStep::Commit,
+                        internal_driver_error(
+                            "Failed to commit MongoDB transaction after delete",
+                            e,
+                        ),
+                    ))
+                }
                 SingleWriteCommitError::OutcomeUnknown(e) => WriteAttemptError::Storage(e),
             })?;
 
@@ -3815,7 +4358,7 @@ impl MongoBackend {
         // commit above: the reload reads the `resources` collection
         // without the session, so it cannot observe the delete while the
         // transaction is still open.
-        if resource_type == "SearchParameter" {
+        if written.reloads_search_parameters {
             if let Err(e) = self.reload_stored_cache_for_tenant(tenant_id).await {
                 tracing::warn!("SearchParameter cache reload failed: {e}");
             }
@@ -3840,7 +4383,8 @@ impl MongoBackend {
     /// a tombstone exists, so either only happens under a concurrent write.
     ///
     /// The attempt is run again when the server aborts it without a
-    /// conflicting writer ([`replay_aborted_writes`]).
+    /// conflicting writer ([`replay_aborted_writes`]), also after a
+    /// `WriteConflict` on its history row or commit (#2300).
     async fn restore_deleted(
         &self,
         tenant: &TenantContext,
@@ -3853,7 +4397,8 @@ impl MongoBackend {
         let outcome = replay_aborted_writes("restore", || {
             self.restore_attempt(tenant, resource_type, id, &resource)
         })
-        .await?;
+        .await
+        .map_err(|err| self.unavailable_write_error("restore", err))?;
         Ok(outcome.into_resource(tenant, resource_type, resource))
     }
 
@@ -4045,13 +4590,19 @@ impl MongoBackend {
             "fhir_version": fhir_version_str,
         };
 
+        // The restore already holds the resource document, so a WriteConflict
+        // here or at its commit names no winner; it is replayed and the rerun's
+        // tombstone read decides (#2300).
         if let Some(active_session) = session.as_mut() {
             history
                 .insert_one(history_doc)
                 .session(active_session)
                 .await
                 .map_err(|e| {
-                    internal_driver_error("Failed to insert restore history row (session)", e)
+                    in_replayed_step(
+                        ReplayedStep::HistoryInsert,
+                        internal_driver_error("Failed to insert restore history row (session)", e),
+                    )
                 })?;
         } else {
             history.insert_one(history_doc).await.map_err(|e| {
@@ -4072,14 +4623,26 @@ impl MongoBackend {
         .await
         .map_err(in_search_index_step)?;
 
-        commit_best_effort_multi_write_session(&mut session, transaction_active, "restore").await?;
+        let written = WrittenVersion {
+            operation: "restore",
+            tenant_id,
+            resource_type,
+            id,
+            version_id: &new_version,
+            last_updated: now_bson,
+            is_deleted: false,
+            reloads_search_parameters: resource_type == "SearchParameter",
+        };
+        self.commit_single_write(&db, &mut session, transaction_active, &written)
+            .await
+            .map_err(|e| replayed_commit_error("restore", e))?;
 
         // A restored SearchParameter re-enters a tenant's overlay: refresh the
         // stored-param cache and drop registries. This must run after the
         // commit above: the reload reads the `resources` collection
         // without the session, so it cannot observe the restore while the
         // transaction is still open.
-        if resource_type == "SearchParameter" {
+        if written.reloads_search_parameters {
             if let Err(e) = self.reload_stored_cache_for_tenant(tenant_id).await {
                 tracing::warn!("SearchParameter cache reload failed: {e}");
             }
@@ -4766,6 +5329,32 @@ impl VersionedStorage for MongoBackend {
 
 #[async_trait]
 impl InstanceHistoryProvider for MongoBackend {
+    /// One page of a resource's history, newest version first (#2375).
+    ///
+    /// `version_id` is a decimal string, so a server-side sort or `$lt` on it is
+    /// lexicographic (`"10"` before `"9"`). The order and the version cursor stay
+    /// in Rust, but a page reads about one page of documents: the resource's
+    /// version ids come from a covered read of `idx_history_identity` (no
+    /// document), and only the documents of the next `count + 1` versions are
+    /// fetched (see the steps below).
+    ///
+    /// The page is not a snapshot, and the single read it replaces was not one
+    /// either. It relies on history rows being immutable, and on each version's
+    /// history row being visible no later than the next version's.
+    ///
+    /// That holds where a single-resource write commits its `resources` and
+    /// `resource_history` writes in one transaction (a replica set or a sharded
+    /// cluster). There, a version written after the version-id read is
+    /// numerically above every candidate and every cursor of an earlier page, so
+    /// it is missing from this page and never appears below it.
+    ///
+    /// On a standalone server, and in bulk ingest, the two writes are separate
+    /// commands. A slower writer's history row for version `k` can then appear
+    /// after the row for `k + 1`, and a walk whose cursor has already passed `k`
+    /// skips it, exactly as the full read before #2375 did [inferred from the
+    /// write order].
+    ///
+    /// A version purged between the two reads is not returned.
     async fn history_instance(
         &self,
         tenant: &TenantContext,
@@ -4777,35 +5366,69 @@ impl InstanceHistoryProvider for MongoBackend {
         let history = db.collection::<Document>(MongoBackend::RESOURCE_HISTORY_COLLECTION);
         let tenant_id = tenant.tenant_id().as_str();
 
-        let mut filter = doc! {
+        let identity = doc! {
             "tenant_id": tenant_id,
             "resource_type": resource_type,
             "id": id,
         };
-        apply_history_params_filter(&mut filter, params);
 
-        let cursor = history
-            .find(filter)
+        // Step 1: the resource's version ids, key only. The filter is the
+        // identity prefix and the projection is `{ _id: 0, version_id: 1 }`, so
+        // `idx_history_identity` covers the read and no document is examined.
+        // The history filters are left to step 3 on purpose: a filter on a
+        // field outside the index would force a fetch of every row.
+        let key_cursor = history
+            .find(identity.clone())
+            .projection(instance_history_version_projection())
             .await
             .or_query_error("Failed to query instance history")?;
-
-        let docs = collect_documents(cursor).await?;
-        let mut rows = docs
+        let version_ids = collect_documents(key_cursor)
+            .await?
             .iter()
-            .map(|doc| parse_history_row(doc, Some(resource_type), Some(id)))
+            .map(|doc| {
+                doc.get_str("version_id")
+                    .map(str::to_string)
+                    .map_err(|e| internal_error(format!("Missing history version_id: {}", e)))
+            })
             .collect::<StorageResult<Vec<_>>>()?;
 
-        rows.sort_by(|a, b| {
-            parse_version_id(&b.version_id)
-                .cmp(&parse_version_id(&a.version_id))
-                .then_with(|| b.last_updated.cmp(&a.last_updated))
-        });
+        // Step 2: order them by number, newest first, and apply the version
+        // cursor to the ids (it depends on nothing else).
+        let candidates = instance_history_candidates(version_ids, parse_cursor_version(params));
 
-        if let Some(cursor_version) = parse_cursor_version(params) {
-            rows.retain(|row| parse_version_id(&row.version_id) < cursor_version);
+        // Step 3: fetch the documents of the next `count + 1` candidates,
+        // another batch while the history filters drop rows. Every candidate
+        // not yet fetched has a smaller number than every fetched row (a run of
+        // equal numbers is never split), so the fetched rows are the first rows
+        // of the full ordering and the page, `has_more` and the cursor equal
+        // what a read of every version gave.
+        let page_len = params.pagination.count as usize;
+        let wanted = page_len.saturating_add(1);
+        let mut rows: Vec<ParsedHistoryRow> = Vec::new();
+        let mut start = 0;
+        let mut batch_len = wanted.min(INSTANCE_HISTORY_MAX_BATCH);
+        while rows.len() < wanted && start < candidates.len() {
+            let end = instance_history_batch_end(&candidates, start, batch_len);
+            let filter = instance_history_batch_filter(&identity, &candidates[start..end], params);
+            let cursor = history
+                .find(filter)
+                .projection(doc! { "_id": 0, "created_at": 0 })
+                .await
+                .or_query_error("Failed to query instance history")?;
+            let docs = collect_documents(cursor).await?;
+            for doc in &docs {
+                rows.push(parse_history_row(doc, Some(resource_type), Some(id))?);
+            }
+            batch_len = next_instance_history_batch(
+                wanted.saturating_sub(rows.len()),
+                end - start,
+                docs.len(),
+            );
+            start = end;
         }
 
-        let page_len = params.pagination.count as usize;
+        sort_instance_history_rows(&mut rows);
+
         let has_more = rows.len() > page_len;
         if has_more {
             rows.truncate(page_len);
@@ -5103,7 +5726,16 @@ impl BundleProvider for MongoBackend {
     /// [`TransactionError::TooLargeForCache`] (#1837, #1991). A Bundle that held the
     /// whole admission room ran alone, and when WiredTiger rolls it back for
     /// cache pressure (112 "rolled back for eviction", or 365) it is not run
-    /// again either; it ends at once as `TooLargeForCache` (#1895).
+    /// again either; it ends at once as `TooLargeForCache` (#1895). A Bundle
+    /// whose transaction the server refuses as an illegal operation (code 20,
+    /// what a server without transactions answers) applied nothing and is not
+    /// run again either: it ends at once as `Transient`, and the next write asks
+    /// the server's topology again (#2308). So does a Bundle that finds no usable
+    /// server inside its transaction ([`no_usable_server`]), whether or not the
+    /// backend held a kept answer: each replay would wait out the same
+    /// server-selection timeout, so it ends at once as `Transient` too after one
+    /// attempt and one timeout, its transaction dropped rather than aborted in
+    /// the foreground ([`abort_failed_attempt`], #2308).
     ///
     /// Every attempt starts from the original entries (see
     /// [`Self::bundle_transaction_attempt`]) and reuses one session: the abort
@@ -5112,6 +5744,14 @@ impl BundleProvider for MongoBackend {
     /// `MongoBackendConfig::bundle_transaction_budget` and
     /// `bundle_transaction_deadline`, which an embedder that serves requests
     /// under a timeout sets to fit inside it.
+    ///
+    /// Payload limit (#2351): with
+    /// `MongoBackendConfig::transaction_bundle_max_payload_bytes` set, a Bundle
+    /// whose POST and PUT resources are above it in BSON bytes is refused before
+    /// anything else: no admission, no session, no transaction, so nothing ran
+    /// and nothing is rolled back. It ends as
+    /// [`TransactionError::TooLargeForCache`] with
+    /// [`TooLargeForCacheCause::PayloadOverLimit`] and one WARN.
     ///
     /// Admission (#1776, #1806): Bundles are admitted while their entries fit
     /// in `max_concurrent_transaction_bundles` standard Bundles of
@@ -5153,6 +5793,22 @@ impl BundleProvider for MongoBackend {
         fhir_version: helios_fhir::FhirVersion,
         validator: Option<&dyn PatchCandidateValidator>,
     ) -> Result<BundleResult, TransactionError> {
+        // #2351: an opt-in refusal of a Bundle whose payload is above the
+        // configured limit, before the admission and the session, so nothing
+        // runs and nothing is rolled back. Unset, nothing is counted.
+        if let Some(refusal) = super::bundle_payload_limit::PayloadLimitRefusal::check(
+            self.config().transaction_bundle_max_payload_bytes,
+            &entries,
+        ) {
+            tracing::warn!(
+                entries = entries.len(),
+                payload_bytes = refusal.payload_bytes,
+                limit_bytes = refusal.limit_bytes,
+                "transaction bundle refused before admission: its resource payload is over the configured limit (HFS_MONGODB_TRANSACTION_BUNDLE_MAX_PAYLOAD_BYTES); no session or transaction was started"
+            );
+            return Err(refusal.into_error(entries.len()));
+        }
+
         let db = self
             .get_database()
             .await
@@ -5202,7 +5858,7 @@ impl BundleProvider for MongoBackend {
             );
         }
 
-        let mut session = begin_required_bundle_transaction_session(&db).await?;
+        let mut session = begin_required_bundle_transaction_session(self, &db).await?;
 
         let mut attempts: u32 = 1;
         let committed = loop {
@@ -5221,7 +5877,32 @@ impl BundleProvider for MongoBackend {
             let attempt_duration = attempt_started.elapsed();
             let (entry, code, eviction, reason) = match attempt {
                 Ok(committed) => break committed,
-                Err(BundleAttemptError::Failed(error)) => return Err(error),
+                Err(BundleAttemptError::Failed(error)) => {
+                    // The commit may have stored the Bundle's SearchParameter
+                    // writes (#2304). The attempt hands back no staged changes on
+                    // this path, so the entries are read instead.
+                    if matches!(error, TransactionError::CommitOutcomeUnknown { .. }) {
+                        drop(admission);
+                        self.reload_after_unknown_bundle_commit(tenant, &entries)
+                            .await;
+                    }
+                    return Err(error);
+                }
+                Err(BundleAttemptError::TransactionsRefused { entry, reason }) => {
+                    // Nothing was applied; the Bundle is answered as retryable
+                    // and not replayed, and the next write asks `hello` again
+                    // (#2308).
+                    self.note_refused_transaction("transaction bundle", entry, &reason);
+                    return Err(TransactionError::Transient { attempts, reason });
+                }
+                Err(BundleAttemptError::NoUsableServer { entry, reason }) => {
+                    // The attempt waited out the server-selection timeout and
+                    // nothing was applied; another attempt would wait the same
+                    // timeout, so the Bundle is answered as retryable at once
+                    // and the next write asks `hello` again (#2308).
+                    self.note_no_usable_server("transaction bundle", entry, &reason);
+                    return Err(TransactionError::Transient { attempts, reason });
+                }
                 Err(BundleAttemptError::TransientAbort {
                     entry,
                     code,
@@ -5341,6 +6022,117 @@ impl BundleProvider for MongoBackend {
     }
 }
 
+/// How long the settling read of a commit whose outcome is unknown waits for
+/// the majority to reach that commit (`maxTimeMS` of the read, #2304).
+///
+/// The read is causally consistent with the failed commit, so the server holds
+/// it until its majority snapshot has caught up with the commit's operation
+/// time. A commit that applied is normally a few milliseconds short of that, so
+/// the wait is short; a commit the majority never reaches (a failover that will
+/// roll it back, a lost majority) must not hold the request, so on expiry the
+/// server answers `MaxTimeMSExpired` ([`MAX_TIME_MS_EXPIRED_CODE`]) and the
+/// outcome stays unknown. The request deadline work (#2320) builds on this
+/// bound.
+const SETTLE_READ_MAX_TIME: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// The server error code of `MaxTimeMSExpired`: an operation ran past its
+/// `maxTimeMS`.
+const MAX_TIME_MS_EXPIRED_CODE: i32 = 50;
+
+/// Starts the session the settling read of a failed commit runs in (#2304): a
+/// new explicit session, which is causally consistent by default, advanced to
+/// the operation and cluster times `failed` had seen, so the driver sends
+/// `readConcern.afterClusterTime` with the read.
+///
+/// `failed` is `None` only when there was no session to commit, which has no
+/// unknown outcome to settle; the read then has no floor and is a plain
+/// majority read.
+async fn settling_session(
+    client: &mongodb::Client,
+    failed: Option<&ClientSession>,
+) -> Result<ClientSession, MongoError> {
+    let mut settling = client.start_session().await?;
+    if let Some(failed) = failed {
+        if let Some(operation_time) = failed.operation_time() {
+            settling.advance_operation_time(operation_time);
+        }
+        if let Some(cluster_time) = failed.cluster_time() {
+            settling.advance_cluster_time(cluster_time);
+        }
+    }
+    Ok(settling)
+}
+
+/// A single-resource write's version as its `resource_history` row holds it,
+/// used to settle a commit whose outcome stayed unknown (#2304).
+struct WrittenVersion<'a> {
+    /// The write, as the commit's log lines name it: `create`, `update`,
+    /// `delete` or `restore`.
+    operation: &'static str,
+    tenant_id: &'a str,
+    resource_type: &'a str,
+    id: &'a str,
+    /// The version this write stamped.
+    version_id: &'a str,
+    /// The `last_updated` this write stamped, to the millisecond.
+    last_updated: BsonDateTime,
+    /// Whether the row is a tombstone.
+    is_deleted: bool,
+    /// Whether the write changes the tenant's SearchParameter overlay, so the
+    /// stored-SearchParameter cache has to be reloaded once it is settled or
+    /// still unknown.
+    reloads_search_parameters: bool,
+}
+
+impl WrittenVersion<'_> {
+    /// The filter that finds this write's history row, and no other.
+    ///
+    /// `(tenant_id, resource_type, id, version_id)` is the key of the unique
+    /// index `idx_history_identity`, so there is at most one row per version
+    /// and the lookup is a single index seek. The version alone is not exact:
+    /// when our commit never applied, a rival can store the same next version.
+    /// The millisecond `last_updated` and the tombstone flag tell the two apart.
+    /// A rival only writes the document after our transaction leaves it: inside
+    /// a transaction, a write to a document our open transaction holds fails at
+    /// once with `WriteConflict`, and ours ends only after the compare-and-swap,
+    /// the history insert, the index writes and the re-sent commits. A rival
+    /// that took its timestamp in our millisecond therefore runs into our open
+    /// transaction. What is left is a writer outside a transaction, such as bulk
+    /// ingest, that takes the same millisecond for the same id and version and
+    /// then waits on our lock; that is negligible.
+    ///
+    /// The payload (`data`) is not compared: that would ship the document and
+    /// depend on its field order. A client-generated history `_id` would be
+    /// exact, but it means changing every history document literal.
+    fn history_filter(&self) -> Document {
+        doc! {
+            "tenant_id": self.tenant_id,
+            "resource_type": self.resource_type,
+            "id": self.id,
+            "version_id": self.version_id,
+            "last_updated": self.last_updated,
+            "is_deleted": self.is_deleted,
+        }
+    }
+}
+
+/// Whether a Bundle entry may write a SearchParameter: not a read, and its
+/// resource or its URL names a `SearchParameter`.
+///
+/// Read off the entries, because an attempt whose commit outcome is unknown
+/// hands back no staged changes. An extra reload is idempotent (#2304).
+fn entry_targets_search_parameter(entry: &BundleEntry) -> bool {
+    entry.method != BundleMethod::Get
+        && (entry
+            .resource
+            .as_ref()
+            .and_then(|resource| resource.get("resourceType"))
+            .and_then(Value::as_str)
+            == Some("SearchParameter")
+            || parse_bundle_entry_target(&entry.url)
+                .is_ok_and(|target| target.resource_type() == "SearchParameter"))
+}
+
 impl MongoBackend {
     /// Any SearchParameter change in a Bundle transaction alters a tenant's
     /// overlay — refresh the stored-param cache and drop the cached registries
@@ -5354,11 +6146,195 @@ impl MongoBackend {
         if changes.is_empty() {
             return;
         }
-        if let Err(e) = self
-            .reload_stored_cache_for_tenant(tenant.tenant_id().as_str())
-            .await
-        {
+        self.reload_search_parameters_or_warn(tenant.tenant_id().as_str())
+            .await;
+    }
+
+    /// Reloads the tenant's stored-SearchParameter cache and drops its cached
+    /// registries; a failure is logged and not returned, since the write it
+    /// follows is already answered.
+    async fn reload_search_parameters_or_warn(&self, tenant_id: &str) {
+        if let Err(e) = self.reload_stored_cache_for_tenant(tenant_id).await {
             tracing::warn!("SearchParameter cache reload failed: {e}");
+        }
+    }
+
+    /// Reloads the SearchParameter cache after a transaction Bundle whose
+    /// commit outcome stayed unknown, when any of its entries may have written
+    /// a SearchParameter: the commit may have stored them (#2304). There is no
+    /// settling read for a Bundle yet, so the Bundle is still answered as
+    /// unknown.
+    async fn reload_after_unknown_bundle_commit(
+        &self,
+        tenant: &TenantContext,
+        entries: &[BundleEntry],
+    ) {
+        if entries.iter().any(entry_targets_search_parameter) {
+            self.reload_search_parameters_or_warn(tenant.tenant_id().as_str())
+                .await;
+        }
+    }
+
+    /// Whether the history row of `written` is stored, read with
+    /// `readConcern: majority` that waits for the majority to reach the failed
+    /// commit (#2304).
+    ///
+    /// The read never reports a write that a failover could roll back.
+    /// `PrimaryPreferred` lets a secondary answer during the failover that
+    /// usually causes the unknown outcome: a secondary's majority snapshot can
+    /// lag, which keeps the answer unknown, but it never contains a write that
+    /// is not durable.
+    ///
+    /// A commit can have applied and still be a few milliseconds short of the
+    /// majority snapshot when the read arrives, notably after a write-concern
+    /// error, which returns without the server's majority wait. A plain majority
+    /// read would then miss the row. So the read is causally consistent with the
+    /// commit: it runs in a new explicit session advanced to `failed`, the
+    /// session whose commit failed, and the driver sends `afterClusterTime` set
+    /// to that session's operation time. The server holds the read until its
+    /// majority snapshot reaches the commit, for at most
+    /// [`SETTLE_READ_MAX_TIME`] (`maxTimeMS`). The failed session's operation
+    /// time is the one the commit's own reply carried, including a reply that
+    /// was `ok: 1` with a `writeConcernError` (the driver records
+    /// `operationTime` of every reply before it interprets the reply). When no
+    /// reply arrived, as after a network error, the session keeps the last
+    /// operation time it saw: the read then guarantees less, and still sees a
+    /// commit that reached the majority. The failed session itself is not used
+    /// for the read: its transaction is in the `Committed` state, and the
+    /// driver sends `afterClusterTime` only for a session outside a
+    /// transaction. There is no loop and no setting of its own.
+    ///
+    /// `false` means unknown, not "not committed": a majority read that misses
+    /// the row, one that waited out [`SETTLE_READ_MAX_TIME`] (code 50,
+    /// `MaxTimeMSExpired`) because the majority never reached the commit, and
+    /// one that failed do not prove the commit never applies.
+    async fn written_version_is_stored(
+        &self,
+        db: &mongodb::Database,
+        written: &WrittenVersion<'_>,
+        failed: Option<&ClientSession>,
+    ) -> bool {
+        let stored = match settling_session(db.client(), failed).await {
+            Ok(mut settling) => {
+                db.collection::<Document>(MongoBackend::RESOURCE_HISTORY_COLLECTION)
+                    .find_one(written.history_filter())
+                    .projection(doc! { "_id": 1_i32 })
+                    .read_concern(mongodb::options::ReadConcern::majority())
+                    .selection_criteria(mongodb::options::SelectionCriteria::ReadPreference(
+                        mongodb::options::ReadPreference::PrimaryPreferred { options: None },
+                    ))
+                    .max_time(SETTLE_READ_MAX_TIME)
+                    .session(&mut settling)
+                    .await
+            }
+            Err(e) => Err(e),
+        };
+        match stored {
+            Ok(Some(_)) => {
+                tracing::info!(
+                    operation = written.operation,
+                    resource_type = written.resource_type,
+                    id = written.id,
+                    version_id = written.version_id,
+                    "mongodb {} commit outcome resolved by a read: the version is stored; answering as committed",
+                    written.operation
+                );
+                true
+            }
+            Ok(None) => {
+                tracing::warn!(
+                    operation = written.operation,
+                    resource_type = written.resource_type,
+                    id = written.id,
+                    version_id = written.version_id,
+                    "mongodb {} commit outcome still unknown: the version is not visible to a majority read",
+                    written.operation
+                );
+                false
+            }
+            Err(e) if driver_error_code(&e) == Some(MAX_TIME_MS_EXPIRED_CODE) => {
+                tracing::warn!(
+                    operation = written.operation,
+                    resource_type = written.resource_type,
+                    id = written.id,
+                    version_id = written.version_id,
+                    "mongodb {} commit outcome still unknown: the majority did not reach the commit within {:?}",
+                    written.operation,
+                    SETTLE_READ_MAX_TIME
+                );
+                false
+            }
+            Err(e) => {
+                tracing::warn!(
+                    operation = written.operation,
+                    resource_type = written.resource_type,
+                    id = written.id,
+                    version_id = written.version_id,
+                    error = %e,
+                    "mongodb {} commit outcome still unknown: the settling read failed",
+                    written.operation
+                );
+                false
+            }
+        }
+    }
+
+    /// Commits a single-resource write, and settles a commit whose outcome
+    /// stayed unknown with one read of the history row the write produced
+    /// (#2304).
+    ///
+    /// Only here is the stamped version known, which is why the read does not
+    /// live in the public `create`/`update`/`delete`/`restore_deleted`.
+    /// [`replay_aborted_writes`] never runs a [`SingleWriteCommitError::OutcomeUnknown`]
+    /// again, so settling it here changes no replay decision.
+    ///
+    /// The read waits, for at most [`SETTLE_READ_MAX_TIME`], for the majority
+    /// to reach the failed commit: it is causally consistent with the failed
+    /// session (see [`Self::written_version_is_stored`]). A commit that applied
+    /// and is only briefly short of the majority is therefore settled, and a
+    /// commit the majority does not reach within the bound stays unknown.
+    ///
+    /// - Row found: `Ok(())`. The attempt continues as after a normal commit:
+    ///   its own SearchParameter reload, the outcome it returns, the composite
+    ///   sync and every REST post-write step.
+    /// - Row not found, the majority not reaching the commit within the bound
+    ///   (`MaxTimeMSExpired`), or the read failed: the same
+    ///   [`SingleWriteCommitError::OutcomeUnknown`] comes back. A majority read
+    ///   that misses the row is never turned into a definite failure. The
+    ///   SearchParameter cache is reloaded here when the write may have changed
+    ///   it, because the commit may have applied; the reload reads `resources`
+    ///   outside the session, so it sees the real outcome.
+    ///
+    /// Either way the cache is reloaded at most once: on the settled path by
+    /// the attempt, on the unknown path here.
+    async fn commit_single_write(
+        &self,
+        db: &mongodb::Database,
+        session: &mut Option<ClientSession>,
+        transaction_active: bool,
+        written: &WrittenVersion<'_>,
+    ) -> Result<(), SingleWriteCommitError> {
+        match try_commit_best_effort_multi_write_session(
+            session,
+            transaction_active,
+            written.operation,
+        )
+        .await
+        {
+            Err(SingleWriteCommitError::OutcomeUnknown(unknown)) => {
+                if self
+                    .written_version_is_stored(db, written, session.as_ref())
+                    .await
+                {
+                    return Ok(());
+                }
+                if written.reloads_search_parameters {
+                    self.reload_search_parameters_or_warn(written.tenant_id)
+                        .await;
+                }
+                Err(SingleWriteCommitError::OutcomeUnknown(unknown))
+            }
+            committed => committed,
         }
     }
 
@@ -5409,10 +6385,7 @@ impl MongoBackend {
             .await
         {
             Ok(targets) => targets,
-            Err(e) => {
-                let _ = session.abort_transaction().await;
-                return Err(e);
-            }
+            Err(e) => return Err(abort_failed_attempt(session, e).await),
         };
 
         let mut results = Vec::with_capacity(entries.len());
@@ -5432,8 +6405,8 @@ impl MongoBackend {
         {
             Ok(references) => references,
             Err((index, error)) => {
-                let _ = session.abort_transaction().await;
-                return Err(entry_attempt_error(index, entries.len(), &error));
+                let error = entry_attempt_error(index, entries.len(), &error);
+                return Err(abort_failed_attempt(session, error).await);
             }
         };
         let mut bundle_state = BundleTransactionState::new(references);
@@ -5523,13 +6496,20 @@ impl MongoBackend {
                     }
                 }
                 Err(e) => {
+                    let error = entry_attempt_error(idx, entry_count, &e);
+                    // No usable server: the staged creates would wait out the
+                    // selection timeout again, so the attempt ends at once with
+                    // neither a flush nor an abort (#2308).
+                    if matches!(error, BundleAttemptError::NoUsableServer { .. }) {
+                        return Err(error);
+                    }
                     // The creates staged before this entry went first in the
                     // order the Bundle ran them, so a refused one is reported
                     // instead of this entry's error (#1977).
                     self.send_staged_creates(db, session, tenant_id, entry_count, &mut writes)
                         .await?;
                     let _ = session.abort_transaction().await;
-                    return Err(entry_attempt_error(idx, entry_count, &e));
+                    return Err(error);
                 }
             }
         }
@@ -5566,14 +6546,14 @@ impl MongoBackend {
                 .session(&mut *session)
                 .await
             {
-                let _ = session.abort_transaction().await;
-                return Err(ledger_attempt_error(
+                let error = ledger_attempt_error(
                     entry_count,
                     &internal_driver_error(
                         "Failed to write the deferred search index ledger in transaction",
                         e,
                     ),
-                ));
+                );
+                return Err(abort_failed_attempt(session, error).await);
             }
             deferred = Some(DeferredCommit {
                 bundle_id: set.bundle_id().to_string(),
@@ -5625,8 +6605,8 @@ impl MongoBackend {
             .flush_bundle_creates(db, session, tenant_id, &mut writes.creates)
             .await
         {
-            let _ = session.abort_transaction().await;
-            return Err(entry_attempt_error(at, entry_count, &err));
+            let error = entry_attempt_error(at, entry_count, &err);
+            return Err(abort_failed_attempt(session, error).await);
         }
         Ok(())
     }
@@ -7742,14 +8722,14 @@ impl MongoBackend {
             .limit(limit as i64)
             .hint(Hint::Name(hint.to_string()))
             .await
-            .map_err(|e| internal_error(format!("Failed to fetch resources: {e}")))?;
+            .or_query_error("Failed to fetch resources")?;
         let mut docs: Vec<Document> = Vec::new();
         let mut bytes: u64 = 0;
         let mut capped = false;
         while stream
             .advance()
             .await
-            .map_err(|e| internal_error(format!("Failed to advance cursor: {e}")))?
+            .or_query_error("Failed to advance cursor")?
         {
             let row_bytes = stream.current().as_bytes().len() as u64;
             if !reindex_page_admits(docs.len(), bytes, row_bytes, max_bytes) {
@@ -8420,11 +9400,11 @@ impl ReindexSource for MongoBackend {
                 .find(filter)
                 .hint(Hint::Name(RESOURCES_IDENTITY_INDEX.to_string()))
                 .await
-                .map_err(|e| internal_error(format!("Failed to fetch resources by ids: {e}")))?;
+                .or_query_error("Failed to fetch resources by ids")?;
             while cursor
                 .advance()
                 .await
-                .map_err(|e| internal_error(format!("Failed to advance cursor: {e}")))?
+                .or_query_error("Failed to advance cursor")?
             {
                 let doc: Document = cursor
                     .deserialize_current()
@@ -8460,6 +9440,74 @@ impl ReindexSource for MongoBackend {
 
 #[async_trait]
 impl ReindexTarget for MongoBackend {
+    /// Lists the distinct `resource_id`s the type has entries for, in
+    /// `search_index` and `search_index_contained` (a contained row is keyed by
+    /// its container's id), in id order. The cursor is the last id returned.
+    ///
+    /// Both collections lead their `(tenant_id, resource_type, resource_id)`
+    /// index with the `$match` keys, so each page is an index range scan.
+    async fn list_indexed_resource_ids_page(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        cursor: Option<&str>,
+        limit: u32,
+    ) -> StorageResult<(Vec<String>, Option<String>)> {
+        // Honors `is_search_offloaded()`: this backend keeps no index then.
+        if self.is_search_offloaded() || limit == 0 {
+            return Ok((Vec::new(), None));
+        }
+        let db = self.get_database().await?;
+        let mut matched = doc! {
+            "tenant_id": tenant.tenant_id().as_str(),
+            "resource_type": resource_type,
+        };
+        if let Some(after) = cursor {
+            matched.insert("resource_id", doc! { "$gt": after });
+        }
+
+        let mut merged: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let mut any_full = false;
+        for collection in [
+            MongoBackend::SEARCH_INDEX_COLLECTION,
+            MongoBackend::SEARCH_INDEX_CONTAINED_COLLECTION,
+        ] {
+            let pipeline = vec![
+                doc! { "$match": matched.clone() },
+                doc! { "$group": { "_id": "$resource_id" } },
+                doc! { "$sort": { "_id": 1 } },
+                doc! { "$limit": i64::from(limit) },
+            ];
+            let mut rows = db
+                .collection::<Document>(collection)
+                .aggregate(pipeline)
+                .await
+                .map_err(|e| internal_error(format!("Failed to list indexed ids: {e}")))?;
+            let mut count = 0u32;
+            while rows
+                .advance()
+                .await
+                .map_err(|e| internal_error(format!("Failed to list indexed ids: {e}")))?
+            {
+                let row = rows
+                    .deserialize_current()
+                    .map_err(|e| internal_error(format!("Failed to read indexed id: {e}")))?;
+                if let Ok(id) = row.get_str("_id") {
+                    merged.insert(id.to_string());
+                }
+                count += 1;
+            }
+            any_full |= count >= limit;
+        }
+
+        // Each collection returned its smallest `limit` ids, so the smallest
+        // `limit` of the union are all present; anything cut here comes back
+        // on the next page.
+        let ids: Vec<String> = merged.into_iter().take(limit as usize).collect();
+        let next = if any_full { ids.last().cloned() } else { None };
+        Ok((ids, next))
+    }
+
     async fn delete_search_entries(
         &self,
         tenant: &TenantContext,
@@ -9520,6 +10568,168 @@ mod history_query_tests {
             doc! { "last_updated": -1_i32, "resource_type": -1_i32, "id": -1_i32 }
         );
     }
+
+    // --- #2375: instance history pages ---
+
+    fn ids(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| value.to_string()).collect()
+    }
+
+    fn history_row_at(version_id: &str, last_updated: &str) -> ParsedHistoryRow {
+        ParsedHistoryRow {
+            resource_type: "Patient".to_string(),
+            id: "p1".to_string(),
+            version_id: version_id.to_string(),
+            content: serde_json::json!({}),
+            last_updated: DateTime::parse_from_rfc3339(last_updated)
+                .unwrap()
+                .with_timezone(&Utc),
+            is_deleted: false,
+            deleted_at: None,
+            fhir_version: FhirVersion::default_enabled(),
+        }
+    }
+
+    #[test]
+    fn instance_history_candidates_order_by_number_then_id_and_apply_the_cursor() {
+        let stored = ids(&["9", "10", "1", "100", "x", "2", "07", "7", "9", "-3"]);
+
+        let all = instance_history_candidates(stored.clone(), None);
+        assert_eq!(
+            all.iter().map(|(_, v)| v.as_str()).collect::<Vec<_>>(),
+            ["100", "10", "9", "07", "7", "2", "1", "x", "-3"],
+            "numeric order, ties by id, duplicates removed"
+        );
+        assert_eq!(
+            all.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
+            [100, 10, 9, 7, 7, 2, 1, 0, -3]
+        );
+
+        // The cursor keeps the versions below it, by number.
+        let below_10 = instance_history_candidates(stored.clone(), Some(10));
+        assert_eq!(
+            below_10.iter().map(|(_, v)| v.as_str()).collect::<Vec<_>>(),
+            ["9", "07", "7", "2", "1", "x", "-3"]
+        );
+        let below_0 = instance_history_candidates(stored.clone(), Some(0));
+        assert_eq!(
+            below_0.iter().map(|(_, v)| v.as_str()).collect::<Vec<_>>(),
+            ["-3"]
+        );
+        assert!(instance_history_candidates(stored, Some(i64::MIN)).is_empty());
+    }
+
+    #[test]
+    fn instance_history_batch_end_never_splits_equal_numbers() {
+        let candidates = vec![
+            (5, "5".to_string()),
+            (0, "a".to_string()),
+            (0, "b".to_string()),
+            (0, "c".to_string()),
+            (-1, "-1".to_string()),
+        ];
+        assert_eq!(instance_history_batch_end(&candidates, 0, 1), 1);
+        // The run of three zeros is taken whole.
+        assert_eq!(instance_history_batch_end(&candidates, 0, 2), 4);
+        assert_eq!(instance_history_batch_end(&candidates, 1, 1), 4);
+        assert_eq!(instance_history_batch_end(&candidates, 0, 10), 5);
+        assert_eq!(instance_history_batch_end(&candidates, 4, 1), 5);
+        // A length of 0 still advances.
+        assert_eq!(instance_history_batch_end(&candidates, 0, 0), 1);
+    }
+
+    #[test]
+    fn next_instance_history_batch_grows_by_match_rate_and_doubles_on_no_match() {
+        // One short of a page after a nearly full batch: a couple more candidates.
+        assert_eq!(next_instance_history_batch(1, 51, 50), 2);
+        // Nothing matched: double.
+        assert_eq!(next_instance_history_batch(51, 51, 0), 102);
+        // Capped.
+        assert_eq!(next_instance_history_batch(10, 600, 0), 1_024);
+        assert_eq!(next_instance_history_batch(2_000, 10, 10), 1_024);
+        // By the match rate: half matched, so twice what is needed.
+        assert_eq!(next_instance_history_batch(5, 8, 4), 10);
+        // Never 0.
+        assert_eq!(next_instance_history_batch(0, 0, 0), 1);
+    }
+
+    #[test]
+    fn instance_history_batch_filter_names_the_batch_and_the_history_filters() {
+        let identity = doc! { "tenant_id": "t1", "resource_type": "Patient", "id": "p1" };
+        let batch = vec![
+            (10, "10".to_string()),
+            (9, "9".to_string()),
+            (8, "8".to_string()),
+        ];
+
+        let since = DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let before = DateTime::parse_from_rfc3339("2024-06-01T00:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let params = HistoryParams::new().since(since).before(before);
+        let filter = instance_history_batch_filter(&identity, &batch, &params);
+        assert_eq!(
+            filter.keys().map(String::as_str).collect::<Vec<_>>(),
+            [
+                "tenant_id",
+                "resource_type",
+                "id",
+                "version_id",
+                "is_deleted",
+                "last_updated"
+            ]
+        );
+        assert_eq!(
+            filter.get_document("version_id").unwrap(),
+            &doc! { "$in": ["10", "9", "8"] }
+        );
+        assert_eq!(filter.get_bool("is_deleted").ok(), Some(false));
+        let range = filter.get_document("last_updated").unwrap();
+        assert_eq!(range.get("$gte"), Some(&Bson::from(chrono_to_bson(since))));
+        assert_eq!(range.get("$lt"), Some(&Bson::from(chrono_to_bson(before))));
+
+        // Deleted versions included and no window: only the identity and the batch.
+        let params = HistoryParams::new().include_deleted(true);
+        let filter = instance_history_batch_filter(&identity, &batch, &params);
+        assert_eq!(
+            filter.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["tenant_id", "resource_type", "id", "version_id"]
+        );
+        // The identity document is not changed.
+        assert_eq!(identity.len(), 3);
+    }
+
+    #[test]
+    fn instance_history_version_projection_names_only_version_id() {
+        // idx_history_identity = {tenant_id, resource_type, id, version_id}: the
+        // read names only its last field and drops `_id`. This pins the
+        // projection only. Coverage itself (0 documents, no FETCH stage) is
+        // checked by `instance_history_page_examines_about_one_page_of_documents`
+        // and by the `history_index_plans` probe.
+        assert_eq!(
+            instance_history_version_projection(),
+            doc! { "_id": 0, "version_id": 1 }
+        );
+    }
+
+    #[test]
+    fn sort_instance_history_rows_breaks_number_ties_by_last_updated() {
+        // '7' and '07' are both 7; the newer one comes first. '8' is above both.
+        let mut rows = vec![
+            history_row_at("7", "2024-01-01T00:00:01Z"),
+            history_row_at("07", "2024-01-01T00:00:02Z"),
+            history_row_at("8", "2024-01-01T00:00:00Z"),
+        ];
+        sort_instance_history_rows(&mut rows);
+        assert_eq!(
+            rows.iter()
+                .map(|row| row.version_id.as_str())
+                .collect::<Vec<_>>(),
+            ["8", "07", "7"]
+        );
+    }
 }
 
 #[cfg(test)]
@@ -10144,7 +11354,29 @@ mod read_driver_error_tests {
             );
         }
 
-        assert!(logs_contain("failed transiently"));
+        // One shared `warn` line per code (#2325). The closure returns `Err`
+        // instead of asserting: it runs under the global buffer lock, and a
+        // panic there would poison it for every other traced test in the binary.
+        logs_assert(|lines: &[&str]| {
+            let found: Vec<&&str> = lines
+                .iter()
+                .filter(|line| line.contains("MongoDB is temporarily unavailable"))
+                .collect();
+            if found.len() != 13 {
+                return Err(format!(
+                    "expected 13 log lines, got {}: {found:?}",
+                    found.len()
+                ));
+            }
+            if let Some(line) = found
+                .iter()
+                .find(|l| !l.contains("WARN") || !l.contains("Failed to read resource"))
+            {
+                return Err(format!("the line is not a WARN with its context: {line}"));
+            }
+            Ok(())
+        });
+        assert!(logs_contain("error_code=10107"));
         assert!(logs_contain(DRIVER_DETAIL));
     }
 
@@ -10395,6 +11627,67 @@ mod transient_abort_tests {
         );
     }
 
+    /// #2334: a state-change code that `classify_mongodb_error` answers `Unavailable` (an
+    /// `or_query_error` site, such as a session-scoped `ifNoneExist` search) is a transient entry
+    /// abort, so the Bundle runs again. That is safe: an entry runs before the commit, and the
+    /// attempt aborts the transaction before any replay, so none of its writes can have committed.
+    /// The abort carries no server code (`code` is `None`): `mongodb_unavailable` logs the driver
+    /// error, with its code, at `warn`.
+    #[test]
+    fn a_classified_state_change_code_is_a_transient_entry_abort() {
+        /// The server's message, which the abort's reason must never carry.
+        const SERVER_TEXT: &str = "node is not in primary or recovering state";
+
+        for code in crate::backends::mongodb::retry::TRANSIENT_READ_SERVER_CODES {
+            let err = StorageError::Backend(classify_mongodb_error(
+                "Failed to execute MongoDB search",
+                command_error_with_message(code, "Test", SERVER_TEXT),
+            ));
+            assert!(
+                matches!(err, StorageError::Backend(BackendError::Unavailable { .. })),
+                "code {code} should be Unavailable, got {err:?}"
+            );
+            let Some(abort) = transient_entry_abort(&err) else {
+                panic!("code {code}: an Unavailable entry error should be a transient abort");
+            };
+            assert_eq!(abort.code, None, "code {code}");
+            assert!(!abort.eviction, "code {code}");
+            assert!(
+                abort
+                    .reason
+                    .contains("the database is temporarily unavailable"),
+                "code {code}: {}",
+                abort.reason
+            );
+            assert!(
+                !abort.reason.contains(SERVER_TEXT),
+                "code {code}: the reason must not carry the driver text: {}",
+                abort.reason
+            );
+        }
+    }
+
+    /// #2334: the other half of that safety argument. A commit that fails with a state-change
+    /// code and no `TransientTransactionError` label is decided by `CommitAttempts::after_failure`
+    /// from the driver error and its labels, not by `classify_mongodb_error`: it is a rollback,
+    /// not a transient abort, so the Bundle is not replayed. A refactor that routed commit errors
+    /// through the classifier would turn it into a replay.
+    #[test]
+    fn a_state_change_code_on_a_commit_is_not_a_transient_abort() {
+        for code in crate::backends::mongodb::retry::TRANSIENT_READ_SERVER_CODES {
+            let step = CommitAttempts::new(1).after_failure(&command_error(code, "Test"));
+            match stopped_with(&step) {
+                BundleAttemptError::Failed(TransactionError::RolledBack { reason }) => {
+                    assert!(
+                        reason.starts_with("Commit failed: "),
+                        "code {code}: {reason}"
+                    );
+                }
+                other => panic!("code {code}: expected RolledBack, got {other:?}"),
+            }
+        }
+    }
+
     #[test]
     fn the_bundle_classifier_keeps_a_labelled_driver_error_and_its_code() {
         let err = internal_driver_error(
@@ -10521,19 +11814,21 @@ mod transient_abort_tests {
         assert!(!message.contains("WiredTiger"), "{message}");
     }
 
-    /// #2269: the decision behind [`aborted_without_conflicting_writer`]. A
-    /// plain `WriteConflict` raised in the search-index step is replayed; the
-    /// same conflict on the resource document is not, and an eviction rollback
-    /// never is, wherever it was raised. With `search_index_step` false the
-    /// decision is the one it was before #2269.
+    /// #2269, #2300, #2342: the decision behind
+    /// [`aborted_without_conflicting_writer`]. A plain `WriteConflict` raised in
+    /// a marked step (the search-index step, a create's or restore's insert or
+    /// commit, or an update's or a delete's history insert or commit) is
+    /// replayed; the same conflict on the resource document of an update or a
+    /// delete is not, and an eviction rollback never is, wherever it was raised.
+    /// With `marked_step` false the decision is the one it was before #2269.
     #[test]
-    fn a_write_conflict_in_the_search_index_step_is_replayed_unless_it_is_an_eviction() {
-        // replayable_abort(transient, unknown_commit, write_conflict, catalog, eviction, index_step)
+    fn a_write_conflict_in_a_marked_step_is_replayed_unless_it_is_an_eviction() {
+        // replayable_abort(transient, unknown_commit, write_conflict, catalog, eviction, marked_step)
         let table = [
             (
                 (true, false, true, false, false, true),
                 true,
-                "a plain labelled 112 in the search-index step is replayed",
+                "a plain labelled 112 in a marked step (the search-index step, #2269, a create's or restore's insert or commit, #2300, or an update's or a delete's history insert or commit, #2342) is replayed",
             ),
             (
                 (true, false, true, false, false, false),
@@ -10548,7 +11843,7 @@ mod transient_abort_tests {
             (
                 (true, false, true, false, true, true),
                 false,
-                "an eviction rollback is not replayed, even in the search-index step",
+                "an eviction rollback is not replayed, even in a marked step (the search-index step, #2269, a create's or restore's insert or commit, #2300, or an update's or a delete's history insert or commit, #2342)",
             ),
             (
                 (true, false, true, true, true, false),
@@ -10573,17 +11868,22 @@ mod transient_abort_tests {
             (
                 (true, false, false, false, false, true),
                 true,
-                "an abort with no write conflict is replayed in the search-index step too",
+                "an abort with no write conflict is replayed in a marked step too (the search-index step, #2269, a create's or restore's insert or commit, #2300, or an update's or a delete's history insert or commit, #2342)",
             ),
         ];
-        for ((transient, unknown, conflict, catalog, eviction, index_step), expected, why) in table
+        for ((transient, unknown, conflict, catalog, eviction, marked_step), expected, why) in table
         {
             assert_eq!(
-                replayable_abort(transient, unknown, conflict, catalog, eviction, index_step),
+                replayable_abort(transient, unknown, conflict, catalog, eviction, marked_step),
                 expected,
                 "{why}"
             );
         }
+    }
+
+    /// True when `err` was marked as raised in the search-index step (#2269).
+    fn raised_in_search_index_step(err: &StorageError) -> bool {
+        replayed_step(err) == Some(ReplayedStep::SearchIndex)
     }
 
     /// #2269: marking an error as raised in the search-index step changes
@@ -10642,6 +11942,114 @@ mod transient_abort_tests {
         // error is not itself replayable here; the label is what the pure
         // decision above takes as input.
         assert!(aborted_without_conflicting_writer(&marked).is_none());
+    }
+
+    /// #2300, #2342: marking a create's, a restore's, an update's or a delete's
+    /// insert or commit changes neither the message nor the driver error behind
+    /// it, names the step, and leaves the eviction rule and a non-driver error
+    /// alone.
+    #[test]
+    fn marking_a_replayed_step_keeps_the_message_and_the_driver_error() {
+        let steps = [
+            (
+                ReplayedStep::ResourceInsert,
+                "Failed to insert resource (session)",
+            ),
+            (
+                ReplayedStep::HistoryInsert,
+                "Failed to insert resource history (session)",
+            ),
+            (
+                ReplayedStep::HistoryInsert,
+                "Failed to insert restore history row (session)",
+            ),
+            (
+                ReplayedStep::HistoryInsert,
+                "Failed to insert updated history row (session)",
+            ),
+            (
+                ReplayedStep::HistoryInsert,
+                "Failed to insert deletion history row (session)",
+            ),
+            (
+                ReplayedStep::Commit,
+                "Failed to commit MongoDB transaction after create",
+            ),
+            (
+                ReplayedStep::Commit,
+                "Failed to commit MongoDB transaction after restore",
+            ),
+            (
+                ReplayedStep::Commit,
+                "Failed to commit MongoDB transaction after update",
+            ),
+            (
+                ReplayedStep::Commit,
+                "Failed to commit MongoDB transaction after delete",
+            ),
+        ];
+        for (step, context) in steps {
+            let make = || {
+                internal_driver_error(context, command_error(WRITE_CONFLICT_CODE, "WriteConflict"))
+            };
+            let plain = make();
+            let marked = in_replayed_step(step, make());
+            assert_eq!(marked.to_string(), plain.to_string(), "{context}");
+            assert_eq!(
+                kept_driver_error(&marked).and_then(driver_error_code),
+                Some(WRITE_CONFLICT_CODE),
+                "{context}"
+            );
+            assert_eq!(replayed_step(&marked), Some(step), "{context}");
+            assert_eq!(replayed_step(&plain), None, "{context}");
+            assert!(!raised_in_search_index_step(&marked), "{context}");
+
+            // Marking twice keeps the first step.
+            let twice = in_replayed_step(ReplayedStep::SearchIndex, in_replayed_step(step, make()));
+            assert_eq!(replayed_step(&twice), Some(step), "{context}");
+
+            // An eviction rollback marked with the step is still one.
+            let eviction = in_replayed_step(
+                step,
+                internal_driver_error(
+                    context,
+                    command_error_with_message(WRITE_CONFLICT_CODE, "WriteConflict", EVICTION_112),
+                ),
+            );
+            assert!(rolled_back_for_eviction(&eviction).is_some(), "{context}");
+            assert!(
+                aborted_without_conflicting_writer(&eviction).is_none(),
+                "{context}"
+            );
+
+            // A constructed driver error has no `TransientTransactionError`
+            // label (the driver offers no public way to attach one), so the
+            // marked error is not itself replayable here; the label is what the
+            // pure decision above takes as input.
+            assert!(
+                aborted_without_conflicting_writer(&marked).is_none(),
+                "{context}"
+            );
+        }
+
+        // A duplicate key stays AlreadyExists and carries no mark.
+        let exists = in_replayed_step(
+            ReplayedStep::ResourceInsert,
+            StorageError::Resource(ResourceError::AlreadyExists {
+                resource_type: "Observation".to_string(),
+                id: "1".to_string(),
+            }),
+        );
+        assert!(matches!(
+            exists,
+            StorageError::Resource(ResourceError::AlreadyExists { .. })
+        ));
+        assert_eq!(replayed_step(&exists), None);
+
+        assert_eq!(ReplayedStep::SearchIndex.name(), "search_index");
+        assert_eq!(ReplayedStep::ResourceInsert.name(), "resource_insert");
+        assert_eq!(ReplayedStep::HistoryInsert.name(), "history_insert");
+        assert_eq!(ReplayedStep::Commit.name(), "commit");
     }
 
     /// Drives a [`SingleWriteCommitAttempts`] through the failures `errors`,
@@ -12089,6 +13497,438 @@ mod single_write_topology_tests {
                 }
                 other => panic!("{what}: expected Unavailable, got {other:?}"),
             }
+        }
+    }
+
+    /// A write-concern failure, as the driver builds it from a reply that
+    /// carries `writeConcernError`: an unknown commit result without a label.
+    fn write_concern_error(code: i32, code_name: &str) -> MongoError {
+        let concern: mongodb::error::WriteConcernError = bson::from_document(doc! {
+            "code": code,
+            "codeName": code_name,
+            "errmsg": "write concern not satisfied",
+        })
+        .expect("a WriteConcernError deserializes from a server reply");
+        MongoError::from(MongoErrorKind::Write(
+            mongodb::error::WriteFailure::WriteConcernError(concern),
+        ))
+    }
+
+    /// #2308: only a transactional answer is kept. A standalone one is
+    /// remembered for the log lines and never lets a write skip its check.
+    #[test]
+    fn a_transactional_answer_is_kept_and_a_standalone_one_never_is() {
+        use WriteTopology::{Standalone, Transactional};
+
+        let memo = WriteTopologyMemo::default();
+        assert!(!memo.transactional_answer_kept(), "no answer yet");
+
+        memo.record(Transactional);
+        assert!(memo.transactional_answer_kept());
+
+        memo.record(Standalone);
+        assert!(
+            !memo.transactional_answer_kept(),
+            "a standalone answer replaces a kept transactional one"
+        );
+
+        memo.record(Transactional);
+        assert!(
+            memo.forget_transactional_answer(),
+            "there was one to forget"
+        );
+        assert!(!memo.transactional_answer_kept());
+        assert!(
+            !memo.forget_transactional_answer(),
+            "nothing left to forget"
+        );
+
+        memo.record(Standalone);
+        assert!(
+            !memo.forget_transactional_answer(),
+            "a standalone answer was never kept"
+        );
+        assert!(!memo.transactional_answer_kept());
+    }
+
+    /// A forgotten answer reads as none, so a standalone answer after it is
+    /// logged again, as for a backend that has not asked yet.
+    #[test]
+    fn a_forgotten_answer_logs_the_standalone_fallback_again() {
+        use WriteTopology::{Standalone, Transactional};
+
+        let memo = WriteTopologyMemo::default();
+        memo.record(Transactional);
+        assert!(memo.forget_transactional_answer());
+        assert_eq!(
+            topology_log(memo.record(Standalone), Standalone),
+            Some(TopologyLog::WritesWithoutTransactions)
+        );
+    }
+
+    #[test]
+    fn illegal_operation_is_a_refused_transaction_wherever_the_driver_error_is_kept() {
+        assert!(refuses_transactions(&command_error(20, "IllegalOperation")));
+        for (code, name) in [
+            (112, "WriteConflict"),
+            (8, "UnknownError"),
+            (251, "NoSuchTransaction"),
+        ] {
+            assert!(!refuses_transactions(&command_error(code, name)), "{code}");
+        }
+
+        assert!(
+            transactions_refused(&internal_driver_error(
+                "x",
+                command_error(20, "IllegalOperation")
+            ))
+            .is_some()
+        );
+        assert!(
+            transactions_refused(&read_driver_error(
+                "x",
+                command_error(20, "IllegalOperation")
+            ))
+            .is_some()
+        );
+        // A commit whose outcome is unknown carries no driver error, and an
+        // error that stringified the driver's has none to match.
+        assert!(
+            transactions_refused(&StorageError::Transaction(
+                TransactionError::CommitOutcomeUnknown {
+                    reason: "r".to_string()
+                }
+            ))
+            .is_none()
+        );
+        assert!(transactions_refused(&internal_error("x".to_string())).is_none());
+    }
+
+    #[test]
+    fn a_refused_transaction_ends_a_bundle_attempt_as_refused() {
+        let refused = || internal_driver_error("x", command_error(20, "IllegalOperation"));
+
+        assert!(matches!(
+            entry_attempt_error(3, 10, &refused()),
+            BundleAttemptError::TransactionsRefused { entry: Some(3), .. }
+        ));
+        assert!(matches!(
+            ledger_attempt_error(10, &refused()),
+            BundleAttemptError::TransactionsRefused { entry: None, .. }
+        ));
+        assert!(matches!(
+            CommitAttempts::new(10).after_failure(&command_error(20, "IllegalOperation")),
+            CommitStep::Stop(BundleAttemptError::TransactionsRefused { entry: None, .. })
+        ));
+
+        // A refusal after a commit with an unknown result stays unknown: the
+        // earlier commit may have applied.
+        let mut commit = CommitAttempts::new(10);
+        assert!(matches!(
+            commit.after_failure(&write_concern_error(79, "UnknownReplWriteConcern")),
+            CommitStep::RetryCommit
+        ));
+        assert!(matches!(
+            commit.after_failure(&command_error(20, "IllegalOperation")),
+            CommitStep::Stop(BundleAttemptError::Failed(
+                TransactionError::CommitOutcomeUnknown { .. }
+            ))
+        ));
+
+        // Any other server failure is still the entry's.
+        let other = internal_driver_error("x", command_error(8, "UnknownError"));
+        assert!(matches!(
+            entry_attempt_error(3, 10, &other),
+            BundleAttemptError::Failed(TransactionError::BundleError { .. })
+        ));
+    }
+
+    /// #2308: with a transactional answer kept, a write sends no `hello`, so
+    /// against a server that is gone the failure is the transaction start's (no
+    /// command is sent, but the driver selects a server first) and not the
+    /// check's, and that failure forgets the kept answer, so the next write
+    /// asks.
+    ///
+    /// It relies on mongodb 3.7's `start_transaction` selecting a server while
+    /// the client's transaction support is still undetermined
+    /// (`client/executor.rs`, `transaction_support_status`): a fresh client has
+    /// not heard from any server, so the start fails at server selection. A
+    /// client that has seen a server does not select there (see
+    /// `single_write_topology::a_write_that_finds_no_usable_server_is_unavailable_at_once`).
+    #[tokio::test]
+    async fn a_kept_answer_skips_the_check_and_a_failed_transaction_start_forgets_it() {
+        let backend = MongoBackend::new(MongoBackendConfig {
+            connection_string: "mongodb://127.0.0.1:1/".to_string(),
+            connect_timeout_ms: 200,
+            server_selection_timeout_ms: 200,
+            ..Default::default()
+        })
+        .expect("lazy client");
+        let tenant = TenantContext::new(TenantId::new("t1"), TenantPermissions::full_access());
+        let patient = serde_json::json!({ "resourceType": "Patient", "id": "p1" });
+        backend.write_topology.record(WriteTopology::Transactional);
+
+        match backend
+            .create(&tenant, "Patient", patient.clone(), FhirVersion::default())
+            .await
+        {
+            Err(StorageError::Backend(BackendError::Unavailable { message, .. })) => {
+                assert!(
+                    message.starts_with("Failed to start a MongoDB transaction for the create"),
+                    "{message}"
+                );
+                assert!(!message.contains("topology"), "{message}");
+            }
+            other => panic!("expected Unavailable from the transaction start, got {other:?}"),
+        }
+        assert!(
+            !backend.write_topology.transactional_answer_kept(),
+            "a transaction that could not start forgets the kept answer"
+        );
+
+        let current = StoredResource::from_storage(
+            "Patient",
+            "p1",
+            "1",
+            TenantId::new("t1"),
+            patient.clone(),
+            Utc::now(),
+            Utc::now(),
+            None,
+            FhirVersion::default(),
+        );
+        match backend.update(&tenant, &current, patient).await {
+            Err(StorageError::Backend(BackendError::Unavailable { message, .. })) => {
+                assert!(
+                    message.contains("topology") && message.contains("update"),
+                    "the check runs again: {message}"
+                );
+            }
+            other => panic!("expected Unavailable from the check, got {other:?}"),
+        }
+    }
+
+    /// #2308: a failure with no usable server is told from the other driver
+    /// errors, answered as `Unavailable` without driver text, forgets the kept
+    /// answer, and ends a Bundle attempt as `NoUsableServer`.
+    ///
+    /// The error is a real one: a client pointed at a port nothing listens on.
+    /// It carries no `UnknownTransactionCommitResult` label (the driver adds
+    /// labels only inside a session and the crate keeps `add_label` private), so
+    /// the commit exclusion is covered by the Bundle commit path not using
+    /// [`no_usable_server`] at all, not here.
+    #[tokio::test]
+    async fn no_usable_server_is_unavailable_and_forgets_the_kept_answer() {
+        let options = mongodb::options::ClientOptions::parse(
+            "mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=200&connectTimeoutMS=200",
+        )
+        .await
+        .expect("client options");
+        let client = mongodb::Client::with_options(options).expect("lazy client");
+        let selection = client
+            .database("x")
+            .run_command(doc! { "ping": 1_i32 })
+            .await
+            .expect_err("nothing listens on port 1");
+        assert!(
+            matches!(
+                selection.kind.as_ref(),
+                MongoErrorKind::ServerSelection { .. }
+            ),
+            "{selection:?}"
+        );
+
+        assert!(no_usable_server(&internal_driver_error("x", selection.clone())).is_some());
+        assert!(
+            no_usable_server(&internal_driver_error(
+                "x",
+                command_error(20, "IllegalOperation")
+            ))
+            .is_none()
+        );
+        assert!(
+            no_usable_server(&internal_driver_error(
+                "x",
+                command_error(112, "WriteConflict")
+            ))
+            .is_none()
+        );
+        assert!(
+            transactions_refused(&internal_driver_error("x", selection.clone())).is_none(),
+            "a selection failure is not a refused transaction"
+        );
+
+        let backend = MongoBackend::new(MongoBackendConfig {
+            connection_string: "mongodb://127.0.0.1:1/".to_string(),
+            connect_timeout_ms: 200,
+            server_selection_timeout_ms: 200,
+            ..Default::default()
+        })
+        .expect("lazy client");
+        backend.write_topology.record(WriteTopology::Transactional);
+        let answered = backend.unavailable_write_error(
+            "create",
+            internal_driver_error("Failed to check existence (session)", selection.clone()),
+        );
+        match answered {
+            StorageError::Backend(BackendError::Unavailable { message, .. }) => {
+                assert!(message.contains("create"), "{message}");
+                for text in ["127.0.0.1", "Server selection"] {
+                    assert!(!message.contains(text), "{text:?} in {message}");
+                }
+            }
+            other => panic!("expected Unavailable, got {other:?}"),
+        }
+        assert!(
+            !backend.write_topology.transactional_answer_kept(),
+            "a write with no usable server forgets the kept answer"
+        );
+
+        // Any other error is returned as it is, and keeps the answer.
+        backend.write_topology.record(WriteTopology::Transactional);
+        let other = backend.unavailable_write_error(
+            "create",
+            internal_driver_error("x", command_error(8, "UnknownError")),
+        );
+        assert!(
+            matches!(other, StorageError::Backend(BackendError::Internal { .. })),
+            "{other:?}"
+        );
+        assert!(backend.write_topology.transactional_answer_kept());
+
+        assert!(matches!(
+            entry_attempt_error(2, 5, &internal_driver_error("x", selection.clone())),
+            BundleAttemptError::NoUsableServer { entry: Some(2), .. }
+        ));
+        assert!(matches!(
+            ledger_attempt_error(5, &internal_driver_error("x", selection)),
+            BundleAttemptError::NoUsableServer { entry: None, .. }
+        ));
+    }
+}
+
+/// The settling read's identity filter and the Bundle SearchParameter
+/// detection, with no database (#2304).
+#[cfg(test)]
+mod unknown_commit_tests {
+    use super::*;
+
+    #[test]
+    fn the_history_filter_is_the_unique_version_key_with_this_writes_timestamp() {
+        let written = WrittenVersion {
+            operation: "delete",
+            tenant_id: "t1",
+            resource_type: "Patient",
+            id: "p1",
+            version_id: "3",
+            last_updated: BsonDateTime::from_millis(1_700_000_000_123),
+            is_deleted: true,
+            reloads_search_parameters: false,
+        };
+
+        assert_eq!(
+            written.history_filter(),
+            doc! {
+                "tenant_id": "t1",
+                "resource_type": "Patient",
+                "id": "p1",
+                "version_id": "3",
+                "last_updated": BsonDateTime::from_millis(1_700_000_000_123),
+                "is_deleted": true,
+            }
+        );
+        assert!(
+            !written.history_filter().contains_key("data"),
+            "the payload is never compared"
+        );
+    }
+
+    fn bundle_entry(method: BundleMethod, url: &str, resource: Option<Value>) -> BundleEntry {
+        BundleEntry {
+            method,
+            url: url.to_string(),
+            resource,
+            ..BundleEntry::default()
+        }
+    }
+
+    #[test]
+    fn a_bundle_entry_targets_a_search_parameter_by_its_resource_or_its_url() {
+        let search_parameter = serde_json::json!({
+            "resourceType": "SearchParameter",
+            "id": "sp-1",
+        });
+        let parameters = serde_json::json!({ "resourceType": "Parameters" });
+        let patient = serde_json::json!({ "resourceType": "Patient" });
+
+        for (what, entry) in [
+            (
+                "POST with a SearchParameter",
+                bundle_entry(
+                    BundleMethod::Post,
+                    "SearchParameter",
+                    Some(search_parameter.clone()),
+                ),
+            ),
+            (
+                "PUT by id",
+                bundle_entry(
+                    BundleMethod::Put,
+                    "SearchParameter/sp-1",
+                    Some(search_parameter.clone()),
+                ),
+            ),
+            (
+                "PUT by criteria",
+                bundle_entry(
+                    BundleMethod::Put,
+                    "SearchParameter?url=http://example.org/sp",
+                    Some(search_parameter),
+                ),
+            ),
+            (
+                "DELETE with no resource",
+                bundle_entry(BundleMethod::Delete, "SearchParameter/sp-1", None),
+            ),
+            (
+                "PATCH with a Parameters resource",
+                bundle_entry(
+                    BundleMethod::Patch,
+                    "SearchParameter/sp-1",
+                    Some(parameters),
+                ),
+            ),
+            (
+                "DELETE by an absolute URL",
+                bundle_entry(
+                    BundleMethod::Delete,
+                    "http://example.org/fhir/SearchParameter/sp-1",
+                    None,
+                ),
+            ),
+        ] {
+            assert!(entry_targets_search_parameter(&entry), "{what}");
+        }
+
+        for (what, entry) in [
+            (
+                "POST of a Patient",
+                bundle_entry(BundleMethod::Post, "Patient", Some(patient)),
+            ),
+            (
+                "DELETE of a Patient",
+                bundle_entry(BundleMethod::Delete, "Patient/p-1", None),
+            ),
+            (
+                "GET of a SearchParameter search",
+                bundle_entry(
+                    BundleMethod::Get,
+                    "SearchParameter?url=http://example.org/sp",
+                    None,
+                ),
+            ),
+        ] {
+            assert!(!entry_targets_search_parameter(&entry), "{what}");
         }
     }
 }
