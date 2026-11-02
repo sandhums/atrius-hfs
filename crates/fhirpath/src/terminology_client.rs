@@ -4,16 +4,15 @@
 //! It implements the standard FHIR terminology operations including expand, lookup,
 //! validate-code, subsumes, and translate.
 
-use helios_fhir::FhirVersion;
-use helios_terminology_client::{
-    ClientOptions, TerminologyClient as HtsClient, TerminologyError as HtsError,
-};
-use reqwest::Client;
+use reqwest::header::{HeaderMap, RETRY_AFTER};
+use reqwest::{Client, RequestBuilder, Response, StatusCode};
 use serde_json::{Value, json};
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use crate::error::{FhirPathError, FhirPathResult};
+use helios_fhir::FhirVersion;
+use helios_observability::redact::redact_url;
 
 /// Default request timeout for terminology server calls.
 ///
@@ -23,6 +22,13 @@ const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Environment variable overriding [`DEFAULT_REQUEST_TIMEOUT`], in whole seconds.
 const REQUEST_TIMEOUT_ENV: &str = "FHIRPATH_TERMINOLOGY_TIMEOUT";
+
+/// Three retries after the initial request, with 1s, 2s and 4s backoff.
+const GATEWAY_RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_secs(1),
+    Duration::from_secs(2),
+    Duration::from_secs(4),
+];
 
 /// Resolves the request timeout from [`REQUEST_TIMEOUT_ENV`].
 ///
@@ -46,19 +52,97 @@ fn parse_request_timeout(raw: Option<&str>) -> Option<Duration> {
     }
 }
 
-fn map_term(err: HtsError, op: &str) -> FhirPathError {
-    match err {
-        HtsError::Network(msg) => FhirPathError::NetworkError(msg),
-        HtsError::Parse(msg) => FhirPathError::ParseError(msg),
-        HtsError::ServerError { status, body } => {
-            let status_text = reqwest::StatusCode::from_u16(status)
-                .map(|s| s.to_string())
-                .unwrap_or_else(|_| status.to_string());
-            FhirPathError::TerminologyHttpError {
-                status,
-                message: format!("{op} failed with status {status_text}: {body}"),
-            }
+/// A failed terminology request: the public [`FhirPathError`] plus the delay the server
+/// asked for in `Retry-After`.
+///
+/// `FhirPathError` is public and its `TerminologyHttpError` variant has shipped, so the
+/// delay travels beside it in this crate-private type rather than on the variant.
+/// `TerminologyFunctions::cached` reads it through `rate_limit_cooldown`, to decide how
+/// long to keep a rate-limited failure instead of re-sending the request, and the
+/// `TerminologySession` stores the resulting `retry_at`.
+#[derive(Debug)]
+pub(crate) struct RequestError {
+    /// The error callers see.
+    pub(crate) error: FhirPathError,
+    /// How long the server asked the client to wait, from the `Retry-After` header of a 429
+    /// or 503. `None` when the header is absent, unparseable or the status is another one.
+    /// Not clamped here: the session bounds it.
+    pub(crate) retry_after: Option<Duration>,
+}
+
+impl From<FhirPathError> for RequestError {
+    fn from(error: FhirPathError) -> Self {
+        Self {
+            error,
+            retry_after: None,
         }
+    }
+}
+
+/// Result of a terminology request: the response JSON, or a [`RequestError`].
+pub(crate) type RequestResult<T> = Result<T, RequestError>;
+
+/// Parses a `Retry-After` value (RFC 9110 section 10.2.3): delta-seconds, or an HTTP-date in
+/// any of the three formats a recipient must accept (IMF-fixdate, RFC 850, asctime).
+///
+/// A date in the past, relative to `now`, is [`Duration::ZERO`]. An empty, signed,
+/// fractional or otherwise unparseable value is `None`. Delta-seconds too large for a `u64`
+/// saturate to `u64::MAX` seconds; nothing is clamped here, the session bounds the wait.
+fn parse_retry_after(value: &str, now: SystemTime) -> Option<Duration> {
+    let value = value.trim();
+    if !value.is_empty() && value.bytes().all(|b| b.is_ascii_digit()) {
+        return Some(Duration::from_secs(value.parse().unwrap_or(u64::MAX)));
+    }
+    let at = httpdate::parse_http_date(value).ok()?;
+    Some(at.duration_since(now).unwrap_or(Duration::ZERO))
+}
+
+/// The delay a 429 or 503 response asks for in `Retry-After`; `None` for any other status or
+/// when the header is missing or unparseable (see [`parse_retry_after`]).
+fn retry_after(status: StatusCode, headers: &HeaderMap, now: SystemTime) -> Option<Duration> {
+    if !matches!(status.as_u16(), 429 | 503) {
+        return None;
+    }
+    parse_retry_after(headers.get(RETRY_AFTER)?.to_str().ok()?, now)
+}
+
+/// Reads a terminology server response: a 2xx body is parsed as JSON, any other status
+/// becomes a [`FhirPathError::TerminologyHttpError`] carrying the status. A 429 or 503 also
+/// reports its `Retry-After` delay in [`RequestError::retry_after`].
+async fn read_response(response: Response, failure: &str) -> RequestResult<Value> {
+    if response.status().is_success() {
+        let body = response
+            .bytes()
+            .await
+            .map_err(|e| FhirPathError::NetworkError(transport_error_text(e)))?;
+        Ok(serde_json::from_slice(&body).map_err(|e| FhirPathError::ParseError(e.to_string()))?)
+    } else {
+        let status = response.status();
+        // Read the header before `text()` consumes the response.
+        let retry_after = retry_after(status, response.headers(), SystemTime::now());
+        let body = response.text().await.unwrap_or_default();
+        Err(RequestError {
+            error: FhirPathError::TerminologyHttpError {
+                status: status.as_u16(),
+                message: format!("{failure} with status {status}: {body}"),
+            },
+            retry_after,
+        })
+    }
+}
+
+/// Renders a reqwest error with its URL passed through [`redact_url`].
+///
+/// reqwest ends its message with `for url (...)`, query included, and the
+/// message reaches FHIRPath callers — including HTTP clients of
+/// fhirpath-server and HFS — so a credential in the configured terminology
+/// server URL must not ride along (#2149).
+fn transport_error_text(error: reqwest::Error) -> String {
+    let url = error.url().map(|url| redact_url(url.as_str()));
+    let error = error.without_url();
+    match url {
+        Some(url) => format!("{error} for url ({url})"),
+        None => error.to_string(),
     }
 }
 
@@ -69,7 +153,8 @@ fn is_transient_status(status: u16) -> bool {
 }
 
 /// Whether a failed terminology request may succeed if sent again later: a transport failure
-/// or a transient status. Other 4xx, 501, and a non-JSON body are deterministic.
+/// (timeout, refused or dropped connection, unreadable body) or a transient status. Other
+/// 4xx, 501, an invalid request URL and a non-JSON body are deterministic.
 pub(crate) fn is_transient(error: &FhirPathError) -> bool {
     match error {
         FhirPathError::NetworkError(_) => true,
@@ -81,12 +166,50 @@ pub(crate) fn is_transient(error: &FhirPathError) -> bool {
 /// Terminology client for making requests to a FHIR terminology server
 #[derive(Clone)]
 pub struct TerminologyClient {
-    inner: HtsClient,
+    client: Client,
+    base_url: String,
     #[allow(dead_code)]
     fhir_version: FhirVersion,
 }
 
 impl TerminologyClient {
+    /// These terminology operations only read data, including those sent as POST.
+    /// Retry transient gateway/service failures, but preserve transport, parsing and
+    /// other HTTP errors. Each attempt retains the configured HTTP client timeout.
+    async fn send_with_retry(
+        &self,
+        request: impl Fn() -> RequestBuilder,
+    ) -> FhirPathResult<Response> {
+        let mut delays = GATEWAY_RETRY_DELAYS.into_iter();
+        loop {
+            let response = request().send().await.map_err(|e| {
+                if e.is_builder() {
+                    FhirPathError::ConfigError(format!(
+                        "Invalid terminology request: {}",
+                        transport_error_text(e)
+                    ))
+                } else {
+                    FhirPathError::NetworkError(transport_error_text(e))
+                }
+            })?;
+            // Cloudflare uses HTTP 530 for tunnel failures, including error 1033
+            // when no healthy cloudflared instance can receive the request.
+            if !matches!(response.status().as_u16(), 502 | 503 | 504 | 530) {
+                return Ok(response);
+            }
+            let Some(delay) = delays.next() else {
+                return Ok(response);
+            };
+            tracing::warn!(
+                status = %response.status(),
+                delay_ms = delay.as_millis(),
+                "Retrying terminology request after a transient HTTP failure"
+            );
+            drop(response);
+            tokio::time::sleep(delay).await;
+        }
+    }
+
     /// Creates a new terminology client
     ///
     /// # Arguments
@@ -97,11 +220,20 @@ impl TerminologyClient {
     /// The request timeout defaults to 30s and can be overridden with
     /// `FHIRPATH_TERMINOLOGY_TIMEOUT` (whole seconds; `0` disables it).
     /// HTTP 502, 503, 504 and 530 responses are retried up to three times with backoff.
+    /// The `Retry-After` of a 429, or of a 503 that outlasts those retries, is returned
+    /// with the error for the session to honour; the client does not wait for it.
     pub fn new(base_url: String, fhir_version: FhirVersion) -> Self {
-        let mut options = ClientOptions::fhirpath();
-        options.timeout = request_timeout();
+        let mut builder = Client::builder();
+        if let Some(timeout) = request_timeout() {
+            builder = builder.timeout(timeout);
+        }
+        let client = builder
+            .build()
+            .expect("failed to build terminology HTTP client");
+
         Self {
-            inner: HtsClient::new(base_url, options),
+            client,
+            base_url: base_url.trim_end_matches('/').to_string(),
             fhir_version,
         }
     }
@@ -116,7 +248,8 @@ impl TerminologyClient {
     #[allow(dead_code)]
     pub fn with_client(client: Client, base_url: String, fhir_version: FhirVersion) -> Self {
         Self {
-            inner: HtsClient::with_http(client, base_url, None),
+            client,
+            base_url: base_url.trim_end_matches('/').to_string(),
             fhir_version,
         }
     }
@@ -131,16 +264,33 @@ impl TerminologyClient {
         &self,
         value_set_url: &str,
         params: Option<HashMap<String, String>>,
-    ) -> FhirPathResult<Value> {
-        let extra: Vec<(String, String)> = params.unwrap_or_default().into_iter().collect();
-        let extra_ref: Vec<(&str, &str)> = extra
-            .iter()
-            .map(|(k, v)| (k.as_str(), v.as_str()))
-            .collect();
-        self.inner
-            .expand_get(value_set_url, &extra_ref)
-            .await
-            .map_err(|e| map_term(e, "ValueSet expansion"))
+    ) -> RequestResult<Value> {
+        let url = format!("{}/ValueSet/$expand", self.base_url);
+
+        // Build query parameters
+        let mut query_params = vec![("url".to_string(), value_set_url.to_string())];
+
+        if let Some(params) = params {
+            for (key, value) in params {
+                query_params.push((key.clone(), value));
+            }
+        }
+
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .get(&url)
+                    .query(
+                        &query_params
+                            .iter()
+                            .map(|(k, v)| (k.as_str(), v.as_str()))
+                            .collect::<Vec<_>>(),
+                    )
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "ValueSet expansion failed").await
     }
 
     /// Looks up details for a code
@@ -155,7 +305,9 @@ impl TerminologyClient {
         system: &str,
         code: &str,
         params: Option<HashMap<String, String>>,
-    ) -> FhirPathResult<Value> {
+    ) -> RequestResult<Value> {
+        let url = format!("{}/CodeSystem/$lookup", self.base_url);
+
         let mut body = json!({
             "resourceType": "Parameters",
             "parameter": [
@@ -170,21 +322,29 @@ impl TerminologyClient {
             ]
         });
 
-        if let Some(params) = params
-            && let Some(parameters) = body.get_mut("parameter").and_then(|p| p.as_array_mut())
-        {
-            for (key, value) in params {
-                parameters.push(json!({
-                    "name": key,
-                    "valueString": value
-                }));
+        // Add additional parameters if provided
+        if let Some(params) = params {
+            if let Some(parameters) = body.get_mut("parameter").and_then(|p| p.as_array_mut()) {
+                for (key, value) in params {
+                    parameters.push(json!({
+                        "name": key,
+                        "valueString": value
+                    }));
+                }
             }
         }
 
-        self.inner
-            .post_json("/CodeSystem/$lookup", &body)
-            .await
-            .map_err(|e| map_term(e, "Code lookup"))
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .post(&url)
+                    .json(&body)
+                    .header("Content-Type", "application/fhir+json")
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "Code lookup failed").await
     }
 
     /// Validates a code against a ValueSet
@@ -203,31 +363,13 @@ impl TerminologyClient {
         code: &str,
         display: Option<&str>,
         params: Option<HashMap<String, String>>,
-    ) -> FhirPathResult<Value> {
-        let local_valueset_id = Self::local_valueset_id_from_canonical(value_set_url);
-        let (base_valueset_url, valueset_version) = Self::split_valueset_canonical(value_set_url);
+    ) -> RequestResult<Value> {
+        let url = format!("{}/ValueSet/$validate-code", self.base_url);
 
-        let path = if let Some(valueset_id) = local_valueset_id {
-            format!("/ValueSet/{valueset_id}/$validate-code")
-        } else {
-            "/ValueSet/$validate-code".to_string()
-        };
-
-        let mut parameters = Vec::new();
-
-        if local_valueset_id.is_none() {
-            parameters.push(json!({
-                "name": "url",
-                "valueUri": base_valueset_url
-            }));
-
-            if let Some(version) = valueset_version {
-                parameters.push(json!({
-                    "name": "valueSetVersion",
-                    "valueString": version
-                }));
-            }
-        }
+        let mut parameters = vec![json!({
+            "name": "url",
+            "valueUri": value_set_url
+        })];
 
         // If we have a system, use coding parameter, otherwise use code parameter
         if let Some(system) = system {
@@ -276,30 +418,32 @@ impl TerminologyClient {
             "parameter": parameters
         });
 
-        self.inner
-            .post_json(&path, &body)
-            .await
-            .map_err(|e| map_term(e, "ValueSet validation"))
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .post(&url)
+                    .json(&body)
+                    .header("Content-Type", "application/fhir+json")
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "ValueSet validation failed").await
     }
 
     /// Validates a code against a ValueSet using a full FHIR `Parameters` resource body.
     ///
-    /// This is the preferred path when the caller already has a complete `$validate-code`
-    /// parameter set (for example a full `Parameters` JSON value produced by the validation
-    /// crate’s request serializer). It uses the same URL routing as [`Self::validate_vs`]:
-    ///
-    /// - Canonicals under `http://hl7.org/fhir/ValueSet/{id}` are sent to
-    ///   `[base]/ValueSet/{id}/$validate-code`, and the `url` input parameter is removed from
-    ///   the body so the instance target matches the legacy narrow client behavior.
-    /// - All other value set references use `[base]/ValueSet/$validate-code` with parameters
-    ///   unchanged.
+    /// Preferred when the caller already has a complete `$validate-code` parameter set
+    /// (for example from the validation crate’s request serializer). Uses the same URL
+    /// routing as [`Self::validate_vs`]: HL7 core canonicals may target
+    /// `[base]/ValueSet/{id}/$validate-code` with the `url` parameter stripped from the body.
     pub async fn validate_code_with_parameters(
         &self,
         valueset_canonical: &str,
         mut parameters: Value,
-    ) -> FhirPathResult<Value> {
+    ) -> RequestResult<Value> {
         let local_valueset_id = Self::local_valueset_id_from_canonical(valueset_canonical);
-        let path = if let Some(valueset_id) = local_valueset_id {
+        let url = if let Some(valueset_id) = local_valueset_id {
             if let Some(param_array) = parameters
                 .get_mut("parameter")
                 .and_then(|p| p.as_array_mut())
@@ -311,15 +455,22 @@ impl TerminologyClient {
                         .unwrap_or(true)
                 });
             }
-            format!("/ValueSet/{valueset_id}/$validate-code")
+            format!("{}/ValueSet/{valueset_id}/$validate-code", self.base_url)
         } else {
-            "/ValueSet/$validate-code".to_string()
+            format!("{}/ValueSet/$validate-code", self.base_url)
         };
 
-        self.inner
-            .post_json(&path, &parameters)
-            .await
-            .map_err(|e| map_term(e, "ValueSet validation"))
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .post(&url)
+                    .json(&parameters)
+                    .header("Content-Type", "application/fhir+json")
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "ValueSet validation failed").await
     }
 
     /// Validates a code against a CodeSystem
@@ -336,7 +487,9 @@ impl TerminologyClient {
         code: &str,
         display: Option<&str>,
         params: Option<HashMap<String, String>>,
-    ) -> FhirPathResult<Value> {
+    ) -> RequestResult<Value> {
+        let url = format!("{}/CodeSystem/$validate-code", self.base_url);
+
         let mut parameters = vec![
             json!({
                 "name": "url",
@@ -370,10 +523,17 @@ impl TerminologyClient {
             "parameter": parameters
         });
 
-        self.inner
-            .post_json("/CodeSystem/$validate-code", &body)
-            .await
-            .map_err(|e| map_term(e, "CodeSystem validation"))
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .post(&url)
+                    .json(&body)
+                    .header("Content-Type", "application/fhir+json")
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "CodeSystem validation failed").await
     }
 
     /// Checks if one code subsumes another
@@ -390,7 +550,9 @@ impl TerminologyClient {
         code_a: &str,
         code_b: &str,
         params: Option<HashMap<String, String>>,
-    ) -> FhirPathResult<Value> {
+    ) -> RequestResult<Value> {
+        let url = format!("{}/CodeSystem/$subsumes", self.base_url);
+
         let mut parameters = vec![
             json!({
                 "name": "system",
@@ -421,10 +583,17 @@ impl TerminologyClient {
             "parameter": parameters
         });
 
-        self.inner
-            .post_json("/CodeSystem/$subsumes", &body)
-            .await
-            .map_err(|e| map_term(e, "Subsumes check"))
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .post(&url)
+                    .json(&body)
+                    .header("Content-Type", "application/fhir+json")
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "Subsumes check failed").await
     }
 
     /// Translates a code using a ConceptMap
@@ -443,29 +612,27 @@ impl TerminologyClient {
         code: &str,
         target_system: Option<&str>,
         params: Option<HashMap<String, String>>,
-    ) -> FhirPathResult<Value> {
+    ) -> RequestResult<Value> {
+        let url = format!("{}/ConceptMap/$translate", self.base_url);
+
         let body = build_translate_body(concept_map_url, system, code, target_system, params);
 
-        self.inner
-            .post_json("/ConceptMap/$translate", &body)
-            .await
-            .map_err(|e| map_term(e, "Translation"))
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .post(&url)
+                    .json(&body)
+                    .header("Content-Type", "application/fhir+json")
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "Translation failed").await
     }
 
-    fn split_valueset_canonical(valueset_url: &str) -> (&str, Option<&str>) {
-        if let Some((base, version)) = valueset_url.split_once('|') {
-            (base, Some(version))
-        } else {
-            (valueset_url, None)
-        }
-    }
-
-    /// Returns a server-local ValueSet id only when the canonical is clearly intended
-    /// for instance-level `$validate-code` on the terminology server.
-    ///
-    /// HL7 core canonicals (`http://hl7.org/fhir/ValueSet/{name}`) use `{name}` as the
-    /// definition name, not necessarily a stored resource id. Those are validated via
-    /// type-level `POST [base]/ValueSet/$validate-code` with a `url` input parameter.
+    /// HL7 core ValueSet canonicals may be routed to an instance `$validate-code` target.
+    /// Atrius leaves this disabled until local ValueSet ids are wired; routing stays on
+    /// `[base]/ValueSet/$validate-code`.
     fn local_valueset_id_from_canonical(_valueset_url: &str) -> Option<&str> {
         None
     }
@@ -541,44 +708,22 @@ fn build_translate_body(
 mod tests {
     use super::*;
 
-    #[test]
-    fn is_transient_classifies_failures() {
-        assert!(is_transient(&FhirPathError::NetworkError("x".into())));
-        for status in [408u16, 429, 500, 502, 503, 504, 530] {
-            let error = FhirPathError::TerminologyHttpError {
-                status,
-                message: String::new(),
-            };
-            assert!(is_transient(&error), "HTTP {status}");
-        }
-        for status in [400u16, 401, 403, 404, 422, 501] {
-            let error = FhirPathError::TerminologyHttpError {
-                status,
-                message: String::new(),
-            };
-            assert!(!is_transient(&error), "HTTP {status}");
-        }
-        assert!(!is_transient(&FhirPathError::ParseError("x".into())));
-        assert!(!is_transient(&FhirPathError::ConfigError("x".into())));
-        assert!(!is_transient(&FhirPathError::TerminologyError("x".into())));
-    }
-
     #[tokio::test]
-    async fn expand_network_error_omits_the_url_query() {
-        let client = TerminologyClient::new(
-            "http://127.0.0.1:1?api_key=QUERYSECRET".to_string(),
-            FhirVersion::R4,
-        );
-        let err = client
-            .expand("http://hl7.org/fhir/ValueSet/administrative-gender", None)
+    async fn transport_error_text_redacts_the_url_query() {
+        let error = Client::new()
+            .get("http://127.0.0.1:1/r4/ValueSet/$expand?api_key=QUERYSECRET")
+            .send()
             .await
-            .expect_err("nothing listens on port 1");
-        let text = err.to_string();
+            .unwrap_err();
+        let text = transport_error_text(error);
         assert!(!text.contains("QUERYSECRET"), "{text}");
-        assert!(text.contains("127.0.0.1:1"), "{text}");
+        assert!(
+            text.contains("127.0.0.1:1/r4/ValueSet/$expand?[redacted]"),
+            "{text}"
+        );
     }
 
-    async fn call_operation(client: &TerminologyClient, operation: &str) -> FhirPathResult<Value> {
+    async fn call_operation(client: &TerminologyClient, operation: &str) -> RequestResult<Value> {
         match operation {
             "expand" => client.expand("http://example.org/vs", None).await,
             "lookup" => client.lookup("http://example.org/cs", "x", None).await,
@@ -695,7 +840,8 @@ mod tests {
         let error = client
             .expand("http://example.org/vs", None)
             .await
-            .unwrap_err();
+            .unwrap_err()
+            .error;
         assert!(
             matches!(&error, FhirPathError::TerminologyHttpError { status: 530, message }
             if message.contains("530") && message.contains(body))
@@ -710,7 +856,8 @@ mod tests {
         let error = client
             .expand("http://example.org/vs", None)
             .await
-            .unwrap_err();
+            .unwrap_err()
+            .error;
         assert!(
             matches!(&error, FhirPathError::TerminologyHttpError { status: 504, message }
             if message.contains("504 Gateway Timeout") && message.contains("gateway unavailable"))
@@ -724,8 +871,11 @@ mod tests {
             let server = stub_responses(vec![status, 200], "operation failed").await;
             let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
             assert!(matches!(
-                client.expand("http://example.org/vs", None).await,
-                Err(FhirPathError::TerminologyHttpError { status: got, .. }) if got == status
+                client
+                    .expand("http://example.org/vs", None)
+                    .await
+                    .map_err(|e| e.error),
+                Err(FhirPathError::TerminologyHttpError { status: s, .. }) if s == status
             ));
             assert_eq!(
                 server.received_requests().await.unwrap().len(),
@@ -740,10 +890,214 @@ mod tests {
         let server = stub_responses(vec![200], "invalid JSON").await;
         let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
         assert!(matches!(
-            client.expand("http://example.org/vs", None).await,
+            client
+                .expand("http://example.org/vs", None)
+                .await
+                .map_err(|e| e.error),
             Err(FhirPathError::ParseError(_))
         ));
         assert_eq!(server.received_requests().await.unwrap().len(), 1);
+    }
+
+    #[test]
+    fn retry_after_parses_delta_seconds_and_http_dates() {
+        use std::time::UNIX_EPOCH;
+
+        // Wed, 21 Oct 2015 07:28:00 GMT
+        let now = UNIX_EPOCH + Duration::from_secs(1_445_412_480);
+        assert_eq!(
+            httpdate::fmt_http_date(now),
+            "Wed, 21 Oct 2015 07:28:00 GMT"
+        );
+
+        let at = |value: &str| parse_retry_after(value, now);
+
+        assert_eq!(at("120"), Some(Duration::from_secs(120)));
+        assert_eq!(at(" 5 "), Some(Duration::from_secs(5)));
+        assert_eq!(at("0"), Some(Duration::ZERO));
+
+        // all three HTTP-date formats RFC 9110 requires a recipient to accept
+        for date in [
+            "Wed, 21 Oct 2015 07:29:30 GMT",
+            "Wednesday, 21-Oct-15 07:29:30 GMT",
+            "Wed Oct 21 07:29:30 2015",
+        ] {
+            assert_eq!(at(date), Some(Duration::from_secs(90)), "{date}");
+        }
+
+        // a date in the past is "retry now"
+        assert_eq!(at("Wed, 21 Oct 2015 07:27:00 GMT"), Some(Duration::ZERO));
+
+        // too big for a u64 saturates; the session clamps it
+        assert_eq!(
+            at("99999999999999999999999"),
+            Some(Duration::from_secs(u64::MAX))
+        );
+
+        for junk in ["", "soon", "-1", "+5", "1.5", "5s"] {
+            assert_eq!(at(junk), None, "{junk:?}");
+        }
+    }
+
+    #[test]
+    fn retry_after_is_read_only_for_429_and_503() {
+        use reqwest::header::HeaderValue;
+
+        let now = SystemTime::now();
+        let mut headers = HeaderMap::new();
+        headers.insert(RETRY_AFTER, HeaderValue::from_static("7"));
+        for status in [429u16, 503] {
+            assert_eq!(
+                retry_after(StatusCode::from_u16(status).unwrap(), &headers, now),
+                Some(Duration::from_secs(7)),
+                "HTTP {status}"
+            );
+        }
+        for status in [408u16, 500, 502, 504, 400, 200] {
+            assert_eq!(
+                retry_after(StatusCode::from_u16(status).unwrap(), &headers, now),
+                None,
+                "HTTP {status}"
+            );
+        }
+        assert_eq!(
+            retry_after(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new(), now),
+            None
+        );
+    }
+
+    #[tokio::test]
+    async fn rate_limited_answers_report_retry_after() {
+        use wiremock::{Mock, MockServer, Request, ResponseTemplate};
+
+        /// Sends one `expand` to a stub answering `status` with `retry_after` (if any), and
+        /// returns the error together with the number of requests the stub saw.
+        async fn expand_error(status: u16, retry_after: Option<String>) -> (RequestError, usize) {
+            let server = MockServer::start().await;
+            let mut response = ResponseTemplate::new(status).set_body_string("slow down");
+            if let Some(value) = retry_after {
+                response = response.insert_header("Retry-After", value.as_str());
+            }
+            Mock::given(|_: &Request| true)
+                .respond_with(response)
+                .mount(&server)
+                .await;
+            let client = TerminologyClient::new(server.uri(), FhirVersion::R4);
+            let error = client
+                .expand("http://example.org/vs", None)
+                .await
+                .unwrap_err();
+            (error, server.received_requests().await.unwrap().len())
+        }
+
+        let (error, requests) = expand_error(429, Some("7".into())).await;
+        assert!(
+            matches!(
+                error,
+                RequestError {
+                    error: FhirPathError::TerminologyHttpError { status: 429, .. },
+                    retry_after: Some(d),
+                } if d == Duration::from_secs(7)
+            ),
+            "{error:?}"
+        );
+        assert_eq!(requests, 1);
+
+        let (error, requests) = expand_error(429, None).await;
+        assert!(
+            matches!(
+                error,
+                RequestError {
+                    error: FhirPathError::TerminologyHttpError { status: 429, .. },
+                    retry_after: None,
+                }
+            ),
+            "{error:?}"
+        );
+        assert_eq!(requests, 1);
+
+        let date = httpdate::fmt_http_date(SystemTime::now() + Duration::from_secs(30));
+        let (error, requests) = expand_error(429, Some(date)).await;
+        match error.retry_after {
+            Some(d) => assert!(
+                (Duration::from_secs(28)..=Duration::from_secs(30)).contains(&d),
+                "{d:?}"
+            ),
+            None => panic!("an HTTP-date Retry-After should be read: {error:?}"),
+        }
+        assert_eq!(requests, 1);
+
+        // only 429 and 503 report a delay
+        let (error, requests) = expand_error(500, Some("7".into())).await;
+        assert!(
+            matches!(
+                error,
+                RequestError {
+                    error: FhirPathError::TerminologyHttpError { status: 500, .. },
+                    retry_after: None,
+                }
+            ),
+            "{error:?}"
+        );
+        assert_eq!(requests, 1);
+    }
+
+    #[test]
+    fn is_transient_classifies_failures() {
+        assert!(is_transient(&FhirPathError::NetworkError("x".into())));
+        for status in [408u16, 429, 500, 502, 503, 504, 530] {
+            let error = FhirPathError::TerminologyHttpError {
+                status,
+                message: String::new(),
+            };
+            assert!(is_transient(&error), "HTTP {status}");
+        }
+        for status in [400u16, 401, 403, 404, 422, 501] {
+            let error = FhirPathError::TerminologyHttpError {
+                status,
+                message: String::new(),
+            };
+            assert!(!is_transient(&error), "HTTP {status}");
+        }
+        assert!(!is_transient(&FhirPathError::ParseError("x".into())));
+        assert!(!is_transient(&FhirPathError::ConfigError("x".into())));
+        assert!(!is_transient(&FhirPathError::TerminologyError("x".into())));
+    }
+
+    #[tokio::test]
+    async fn invalid_server_url_is_a_config_error() {
+        let client = TerminologyClient::new("not a url".into(), FhirVersion::R4);
+        let error = client
+            .expand("http://example.org/vs", None)
+            .await
+            .unwrap_err()
+            .error;
+        assert!(matches!(error, FhirPathError::ConfigError(_)), "{error:?}");
+        assert!(!is_transient(&error));
+    }
+
+    #[tokio::test]
+    async fn timeouts_are_transient_network_errors() {
+        use wiremock::matchers::method;
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_secs(2)))
+            .mount(&server)
+            .await;
+        let http = Client::builder()
+            .timeout(Duration::from_millis(200))
+            .build()
+            .unwrap();
+        let client = TerminologyClient::with_client(http, server.uri(), FhirVersion::R4);
+        let error = client
+            .expand("http://example.org/vs", None)
+            .await
+            .unwrap_err()
+            .error;
+        assert!(matches!(error, FhirPathError::NetworkError(_)), "{error:?}");
+        assert!(is_transient(&error));
     }
 
     /// Names of the `Parameters.parameter` entries, in order.
@@ -880,16 +1234,16 @@ mod tests {
     #[test]
     fn test_terminology_client_creation() {
         let client = TerminologyClient::new("https://tx.fhir.org/r4/".to_string(), FhirVersion::R4);
-        assert_eq!(client.inner.base_url(), "https://tx.fhir.org/r4");
+        assert_eq!(client.base_url, "https://tx.fhir.org/r4");
     }
 
     #[test]
     fn test_base_url_normalization() {
         let client = TerminologyClient::new("https://tx.fhir.org/r4/".to_string(), FhirVersion::R4);
-        assert_eq!(client.inner.base_url(), "https://tx.fhir.org/r4");
+        assert_eq!(client.base_url, "https://tx.fhir.org/r4");
 
         let client2 = TerminologyClient::new("https://tx.fhir.org/r4".to_string(), FhirVersion::R4);
-        assert_eq!(client2.inner.base_url(), "https://tx.fhir.org/r4");
+        assert_eq!(client2.base_url, "https://tx.fhir.org/r4");
     }
 
     /// Captures the `$translate` request body and returns the parameter names it carries.

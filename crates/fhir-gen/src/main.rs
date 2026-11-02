@@ -25,9 +25,8 @@
 //!
 //! ## Output
 //!
-//! Generated Rust modules are written to `crates/fhir/src/` as version-specific
-//! module directories (e.g., `r4/`, `r5/`), each containing `mod.rs` plus
-//! `primitives/`, `complex_types/`, and `resources/` with one file per type.
+//! Generated Rust files are written to `crates/fhir/src/` with version-specific
+//! names (e.g., `r4.rs`, `r5.rs`).
 
 use clap::Parser;
 use helios_fhir::FhirVersion;
@@ -50,11 +49,12 @@ struct Args {
     all: bool,
 
     /// Regenerate ONLY the compartment-expression tables (under
-    /// `crates/fhir/src/compartment_expressions/`). Skips the giant
-    /// per-version code generation that produces the `r4/` / `r4b/` /
-    /// `r5/` / `r6/` module directories. Useful for refreshing the
-    /// spec-data join when upstream FHIR resources change without
-    /// churning the generated type files.
+    /// `crates/fhir/src/compartment_expressions/`) and the implied
+    /// code-system tables (under `crates/fhir/src/implied_code_systems/`).
+    /// Skips the giant
+    /// per-version code generation that produces `r4.rs` / `r4b.rs` /
+    /// `r5.rs` / `r6.rs`. Useful for refreshing the spec-data join when
+    /// upstream FHIR resources change without churning the big files.
     #[arg(long)]
     compartments_only: bool,
 }
