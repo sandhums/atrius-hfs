@@ -61,7 +61,7 @@ fn parse_request_timeout(raw: Option<&str>) -> Option<Duration> {
 /// long to keep a rate-limited failure instead of re-sending the request, and the
 /// `TerminologySession` stores the resulting `retry_at`.
 #[derive(Debug)]
-pub(crate) struct RequestError {
+pub struct RequestError {
     /// The error callers see.
     pub(crate) error: FhirPathError,
     /// How long the server asked the client to wait, from the `Retry-After` header of a 429

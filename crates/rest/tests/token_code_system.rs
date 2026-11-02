@@ -303,5 +303,8 @@ async fn in_modifier_ignores_another_systems_codes() {
             "{resource_type}?{key}"
         );
     }
-    assert_eq!(requests.lock().unwrap().len(), 2);
+    // `$expand` is cached process-wide per terminology server and ValueSet URL,
+    // so the chained search reuses the direct search's expansion (Helios, with
+    // no cache, makes 2 calls).
+    assert_eq!(requests.lock().unwrap().len(), 1);
 }
