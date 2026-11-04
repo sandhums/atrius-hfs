@@ -118,7 +118,7 @@ Chief-complaint search uses a **stored URL**:
 
 ```http
 POST /ValueSet/$expand
-  url = https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-reason-for-encounter
+  url = https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-reason-for-encounter
   filter = headache
 ```
 
@@ -235,7 +235,7 @@ paginate or build tree
   curl -s -X POST 'http://127.0.0.1:9091/ValueSet/$expand' \
     -H 'Content-Type: application/fhir+json' \
     -d '{"resourceType":"Parameters","parameter":[
-      {"name":"url","valueUri":"https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-reason-for-encounter"},
+      {"name":"url","valueUri":"https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-reason-for-encounter"},
       {"name":"filter","valueString":"headache"},
       {"name":"count","valueInteger":8}
     ]}'

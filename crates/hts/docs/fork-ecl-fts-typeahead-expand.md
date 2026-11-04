@@ -18,7 +18,7 @@ constraint; this patch approximates that behaviour within HTS SQLite.
 
 **Consumer:** `atrius-bff` → `GET /bff/terminology/snomed/search` → HTS
 `POST /ValueSet/$expand` with IG ValueSet
-`https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-reason-for-encounter`.
+`https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-reason-for-encounter`.
 
 ---
 
@@ -30,7 +30,7 @@ For `$expand` requests with **both**:
 - a text `filter` parameter (≥ 3 characters),
 
 HTS uses an **FTS-first** path on **both** inline compose bodies and **stored**
-ValueSet URLs (e.g. `url=https://atrius.in/.../atrius-reason-for-encounter`):
+ValueSet URLs (e.g. `url=https://atrius.in/.../atrius-in-reason-for-encounter`):
 
 ```text
 concepts_search_fts MATCH filter
