@@ -157,6 +157,9 @@ const MAX_CONNECTION_IDLE_TIME: Duration = Duration::from_secs(60);
 pub struct MongoBackend {
     /// Bounded index-row observations used only to choose query execution order.
     pub(super) probe_cache: super::probe_cache::ProbeCache,
+    /// The Bulk Data Submit writes of each manifest that are running on this
+    /// instance (see [`super::bulk_submit::ManifestWritesInFlight`], #2310).
+    pub(super) manifest_writes: super::bulk_submit::ManifestWritesInFlight,
     config: MongoBackendConfig,
     /// Lazily initialized MongoDB client. MongoDB clients own their connection
     /// pools, so each backend instance must reuse one client. Wrapped in an
@@ -479,17 +482,20 @@ pub struct MongoBackendConfig {
     /// `restore_deleted` is entered (#2320). A `PUT` through `create_or_update`
     /// starts it at that nested call, after the read that chose the path.
     ///
-    /// It bounds only the commit re-sends of a commit whose outcome is unknown.
-    /// A re-send starts only if a commit as slow as the slowest one so far,
-    /// plus the settling read's bound (`settle_read_max_time_ms`), still ends
-    /// before it; otherwise the write goes to the settling read, which answers
-    /// committed if it finds the version and `CommitOutcomeUnknown` otherwise.
-    /// It does not cut the write's operations, its replays, the first commit or
-    /// the settling read. Time spent before the backend (middleware, auth, body
+    /// It bounds the commit re-sends of a commit whose outcome is unknown and,
+    /// since #2267, the replays past a write's fourth attempt after a
+    /// catalog-change or lock-timeout abort. A re-send starts only if a commit
+    /// as slow as the slowest one so far, plus the settling read's bound
+    /// (`settle_read_max_time_ms`), still ends before it; otherwise the write
+    /// goes to the settling read, which answers committed if it finds the
+    /// version and `CommitOutcomeUnknown` otherwise. Such a replay starts only
+    /// if a run as long as the last one still ends before it. It does not cut
+    /// the write's operations, its first four attempts, the first commit or the
+    /// settling read. Time spent before the backend (middleware, auth, body
     /// parsing) is covered only by the embedder's margin, which is 2 s in `hfs`.
     ///
     /// `None` (default) sets no bound, as before. `Some(Duration::ZERO)`
-    /// disables the re-sends. The `hfs` binary sets it to
+    /// disables the re-sends and those replays. The `hfs` binary sets it to
     /// `HFS_REQUEST_TIMEOUT` less 2 s, like `bundle_transaction_deadline`. Not
     /// read from the environment.
     #[serde(default)]
@@ -1308,6 +1314,7 @@ impl MongoBackend {
 
         Ok(Self {
             probe_cache: super::probe_cache::ProbeCache::default(),
+            manifest_writes: super::bulk_submit::ManifestWritesInFlight::default(),
             config,
             client: Arc::new(OnceCell::new()),
             pool_stats,
@@ -1568,6 +1575,10 @@ impl MongoBackend {
     /// so the #1391 reindex reminder only counts rows that were there before
     /// this boot could write (#2268).
     ///
+    /// With `search_offloaded` (mongo-es) none of that is built: the
+    /// `search_index` indexes, `SearchIndexBuilder` and `MissingIndexBuilder`
+    /// are all skipped, and readiness does not require them (#2289).
+    ///
     /// The first command is a `ping`, so a server that cannot be reached
     /// fails with the driver error still in hand, and that error is logged at
     /// `error` before the driver-free `Unavailable` is returned (#2325).
@@ -1588,14 +1599,15 @@ impl MongoBackend {
                 err,
             )));
         }
-        schema::initialize_schema_async(&db).await?;
+        schema::initialize_schema_async(&db, self.config.search_offloaded).await?;
 
         let mut missing_tx = self.missing_index_tx.lock().await.take();
-        if !self.config.missing_metadata
+        if (!self.config.missing_metadata || self.config.search_offloaded)
             && let Some(tx) = missing_tx.take()
         {
-            // Disabled (#2006): nothing reads or maintains the index, so it is
-            // neither built nor required. An existing one is left in place.
+            // Disabled (#2006) or search offloaded (#2289): nothing reads or
+            // maintains the index, so it is neither built nor required. An
+            // existing one is left in place.
             let _ = tx.send(Some(BuildOutcome::Skipped {
                 missing: Vec::new(),
             }));
@@ -1611,7 +1623,16 @@ impl MongoBackend {
         // Taken once: `init_schema` runs once per backend instance (boot). A
         // second call finds `None` here and skips spawning another build —
         // `search_index_rx` still carries the first build's outcome.
-        let tx = self.search_index_tx.lock().await.take();
+        let mut tx = self.search_index_tx.lock().await.take();
+        if self.config.search_offloaded
+            && let Some(tx) = tx.take()
+        {
+            // Search runs in Elasticsearch (#2289): `search_index` stays empty
+            // and unread, so its value indexes are neither built nor hinted.
+            let _ = tx.send(Some(BuildOutcome::Skipped {
+                missing: Vec::new(),
+            }));
+        }
         if let Some(tx) = tx {
             // Read before the builder is spawned, so before any write of this
             // boot: in `background` mode the server takes writes while the build
@@ -2092,7 +2113,7 @@ impl Backend for MongoBackend {
                 source: None,
             })?;
 
-        schema::migrate_schema_async(&db)
+        schema::migrate_schema_async(&db, self.config.search_offloaded)
             .await
             .map_err(|e| BackendError::Internal {
                 backend_name: "mongodb".to_string(),
