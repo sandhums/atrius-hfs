@@ -106,6 +106,7 @@ All configuration is via environment variables. Auth is a runtime toggle — no 
 | `HFS_AUTH_ISSUER` | *(none)* | Expected JWT `iss` claim |
 | `HFS_AUTH_AUDIENCE` | *(none)* | Expected JWT `aud` claim (**recommended for production** — prevents accepting tokens intended for other services) |
 | `HFS_AUTH_TENANT_CLAIM` | `tenant_id` | JWT claim name for tenant ID |
+| `HFS_AUTH_REQUIRE_TENANT_CLAIM` | `false` | When `true`/`1`, authenticated tokens without a usable tenant claim get `403` instead of falling back to `HFS_DEFAULT_TENANT` |
 | `HFS_AUTH_PATIENT_CLAIM` | `patient` | JWT claim carrying the SMART `patient` launch context |
 | `HFS_AUTH_ENCOUNTER_CLAIM` | `encounter` | JWT claim carrying the SMART `encounter` launch context |
 | `HFS_AUTH_FHIR_USER_CLAIM` | `fhirUser` | JWT claim carrying the SMART `fhirUser` |
@@ -583,7 +584,10 @@ HFS does not map names, so a granted value must be the SMART scope itself:
 
 When authentication is enabled, the tenant ID is derived **exclusively** from the JWT claim configured by `HFS_AUTH_TENANT_CLAIM` (default: `tenant_id`). The `X-Tenant-ID` header and URL-based tenant routing are ignored for authenticated requests — this prevents tenant impersonation.
 
-If the token does not contain the tenant claim, the server falls back to the standard tenant resolution (header, URL path, or default).
+If the token does not contain the tenant claim, behavior depends on `HFS_AUTH_REQUIRE_TENANT_CLAIM`:
+
+- **`false` (default):** a non-default tenant requested via header or URL path is refused (`403`). Otherwise the server uses `HFS_DEFAULT_TENANT` so single-tenant deployments keep working.
+- **`true`:** any authenticated token without a usable tenant claim is refused (`403`); there is no default-tenant fallback.
 
 ## SMART Launch Context
 
