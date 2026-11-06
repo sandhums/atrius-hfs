@@ -360,6 +360,16 @@ pub fn builtin_functions() -> &'static [FunctionInfo] {
             category: Utility,
         },
         FunctionInfo {
+            name: "htmlChecks",
+            signature: "htmlChecks()",
+            category: Other,
+        },
+        FunctionInfo {
+            name: "htmlChecks2",
+            signature: "htmlChecks2()",
+            category: Other,
+        },
+        FunctionInfo {
             name: "iif",
             signature: "iif(criterion, trueResult, [otherwiseResult])",
             category: Conversion,

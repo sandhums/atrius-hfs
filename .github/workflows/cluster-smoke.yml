@@ -32,6 +32,7 @@ env:
 jobs:
   build:
     name: Build HFS for cluster smoke
+    if: github.repository_owner == 'HeliosSoftware'
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -64,6 +65,7 @@ jobs:
 
   cluster-smoke:
     name: Cluster smoke (R4 / postgres)
+    if: github.repository_owner == 'HeliosSoftware'
     needs: build
     runs-on: [self-hosted, Linux]
     env:

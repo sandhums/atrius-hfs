@@ -90,16 +90,16 @@ where
                 "read",
             )?;
             // If client requested specific version, verify match
-            if let Some(requested) = version.accept_version() {
-                if stored.fhir_version() != requested {
-                    return Err(RestError::NotAcceptable {
-                        message: format!(
-                            "Resource is FHIR {} but {} was requested",
-                            stored.fhir_version().as_mime_param(),
-                            requested.as_mime_param()
-                        ),
-                    });
-                }
+            if let Some(requested) = version.accept_version()
+                && stored.fhir_version() != requested
+            {
+                return Err(RestError::NotAcceptable {
+                    message: format!(
+                        "Resource is FHIR {} but {} was requested",
+                        stored.fhir_version().as_mime_param(),
+                        requested.as_mime_param()
+                    ),
+                });
             }
 
             // Check conditional headers (If-None-Match), then If-Modified-Since.
@@ -163,11 +163,11 @@ where
                     subsetted = true;
                 }
             }
-            if let Some(ref elem_list) = elements {
-                if !elem_list.is_empty() {
-                    content = apply_elements(&content, elem_list);
-                    subsetted = true;
-                }
+            if let Some(ref elem_list) = elements
+                && !elem_list.is_empty()
+            {
+                content = apply_elements(&content, elem_list);
+                subsetted = true;
             }
 
             // Flag incomplete representations with the SUBSETTED tag (FHIR spec).
@@ -251,16 +251,16 @@ where
                 "read",
             )?;
             // If client requested specific version, verify match
-            if let Some(requested) = version.accept_version() {
-                if stored.fhir_version() != requested {
-                    return Err(RestError::NotAcceptable {
-                        message: format!(
-                            "Resource is FHIR {} but {} was requested",
-                            stored.fhir_version().as_mime_param(),
-                            requested.as_mime_param()
-                        ),
-                    });
-                }
+            if let Some(requested) = version.accept_version()
+                && stored.fhir_version() != requested
+            {
+                return Err(RestError::NotAcceptable {
+                    message: format!(
+                        "Resource is FHIR {} but {} was requested",
+                        stored.fhir_version().as_mime_param(),
+                        requested.as_mime_param()
+                    ),
+                });
             }
 
             // Check conditional headers (If-None-Match), then If-Modified-Since.

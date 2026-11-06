@@ -49,7 +49,7 @@ pub enum BackendRole {
     /// Handles full-text search (_text, _content) and advanced text matching.
     Search,
 
-    /// Graph query backend (e.g., Neo4j).
+    /// Graph query backend.
     /// Handles chained parameters and reverse chaining (_has).
     Graph,
 
@@ -440,7 +440,6 @@ impl Default for CostConfig {
         base_costs.insert(BackendKind::Sqlite, 1.0);
         base_costs.insert(BackendKind::Postgres, 1.2);
         base_costs.insert(BackendKind::Elasticsearch, 0.8);
-        base_costs.insert(BackendKind::Neo4j, 1.5);
         base_costs.insert(BackendKind::S3, 2.0);
 
         let mut feature_multipliers = HashMap::new();
@@ -916,7 +915,7 @@ mod tests {
         let config = CompositeConfigBuilder::new()
             .primary("pg", BackendKind::Postgres)
             .search_backend("es", BackendKind::Elasticsearch)
-            .graph_backend("neo4j", BackendKind::Neo4j)
+            .graph_backend("graph", BackendKind::Postgres)
             .build()
             .unwrap();
 

@@ -37,6 +37,10 @@ use helios_persistence::core::BackendKind;
 #[path = "transactions/if_match_suite.rs"]
 mod if_match_suite;
 
+/// Backend-agnostic `ifNoneMatch` on transaction PUT, shared with SQLite.
+#[path = "transactions/if_none_match_suite.rs"]
+mod if_none_match_suite;
+
 /// Backend-agnostic `PUT/DELETE [type]?[criteria]` transaction scenarios
 /// (#859), shared with the SQLite and MongoDB suites.
 #[path = "transactions/conditional_url_suite.rs"]
@@ -976,12 +980,12 @@ mod postgres_integration {
     use helios_fhir::FhirVersion;
     use serde_json::json;
 
-    use helios_persistence::backends::postgres::{PostgresBackend, PostgresConfig};
+    use helios_persistence::backends::postgres::{PostgresBackend, PostgresConfig, SCHEMA_VERSION};
     use helios_persistence::core::SettingsStore;
     use helios_persistence::core::history::{HistoryParams, InstanceHistoryProvider};
     use helios_persistence::core::{
-        Backend, BackendCapability, BackendKind, ResourceStorage, Transaction, TransactionOptions,
-        TransactionProvider,
+        BASE_STEP, Backend, BackendCapability, BackendKind, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP,
+        ResourceStorage, SCHEMA_FLAVOUR, Transaction, TransactionOptions, TransactionProvider,
     };
     use helios_persistence::error::{
         BackendError, BulkExportError, ConcurrencyError, ResourceError, StorageError,
@@ -3237,6 +3241,133 @@ mod postgres_integration {
         TenantContext::new(TenantId::new(&unique_id), TenantPermissions::full_access())
     }
 
+    /// Serializes tests that toggle `HFS_SUBSCRIPTIONS_ENABLED` so they restore
+    /// the process env before another such test runs.
+    static SUBSCRIPTIONS_ENV: Mutex<()> = Mutex::const_new(());
+
+    struct SubscriptionsEnabledGuard {
+        prev: Option<String>,
+    }
+
+    impl SubscriptionsEnabledGuard {
+        fn enable() -> Self {
+            let prev = std::env::var("HFS_SUBSCRIPTIONS_ENABLED").ok();
+            // SAFETY: caller holds `SUBSCRIPTIONS_ENV` for the test duration and
+            // Drop restores the previous value before the lock is released.
+            unsafe {
+                std::env::set_var("HFS_SUBSCRIPTIONS_ENABLED", "true");
+            }
+            Self { prev }
+        }
+    }
+
+    impl Drop for SubscriptionsEnabledGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match &self.prev {
+                    Some(v) => std::env::set_var("HFS_SUBSCRIPTIONS_ENABLED", v),
+                    None => std::env::remove_var("HFS_SUBSCRIPTIONS_ENABLED"),
+                }
+            }
+        }
+    }
+
+    async fn outbox_event_types(
+        backend: &PostgresBackend,
+        tenant_id: &str,
+        resource_id: &str,
+    ) -> Vec<String> {
+        let client = backend.get_client().await.expect("client");
+        let rows = client
+            .query(
+                "SELECT event_type FROM subscription_outbox
+                 WHERE tenant_id = $1 AND resource_id = $2
+                 ORDER BY id",
+                &[&tenant_id, &resource_id],
+            )
+            .await
+            .expect("outbox query");
+        rows.iter().map(|r| r.get::<_, String>(0)).collect()
+    }
+
+    async fn patient_row_exists(
+        backend: &PostgresBackend,
+        tenant_id: &str,
+        resource_id: &str,
+    ) -> bool {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt(
+                "SELECT 1 FROM resources
+                 WHERE tenant_id = $1 AND resource_type = 'Patient' AND id = $2",
+                &[&tenant_id, &resource_id],
+            )
+            .await
+            .expect("resources query")
+            .is_some()
+    }
+
+    async fn search_index_row_count(
+        backend: &PostgresBackend,
+        tenant_id: &str,
+        resource_id: &str,
+    ) -> i64 {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_one(
+                "SELECT COUNT(*)::bigint FROM search_index
+                 WHERE tenant_id = $1 AND resource_id = $2",
+                &[&tenant_id, &resource_id],
+            )
+            .await
+            .expect("search_index count")
+            .get(0)
+    }
+
+    async fn install_outbox_fail_trigger(
+        backend: &PostgresBackend,
+        trigger: &str,
+        tenant_id: &str,
+    ) {
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "CREATE OR REPLACE FUNCTION hfs_test_fail_outbox_insert() RETURNS trigger AS $$
+                 BEGIN
+                   RAISE EXCEPTION 'injected outbox failure';
+                 END;
+                 $$ LANGUAGE plpgsql;",
+            )
+            .await
+            .expect("fail function");
+        let quoted: String = client
+            .query_one("SELECT quote_literal($1::text)", &[&tenant_id])
+            .await
+            .expect("quote_literal")
+            .get(0);
+        client
+            .batch_execute(&format!(
+                "DROP TRIGGER IF EXISTS {trigger} ON subscription_outbox;
+                 CREATE TRIGGER {trigger}
+                 BEFORE INSERT ON subscription_outbox
+                 FOR EACH ROW
+                 WHEN (NEW.tenant_id = {quoted})
+                 EXECUTE FUNCTION hfs_test_fail_outbox_insert();"
+            ))
+            .await
+            .unwrap_or_else(|e| panic!("create outbox-fail trigger: {e}"));
+    }
+
+    async fn drop_outbox_fail_trigger(backend: &PostgresBackend, trigger: &str) {
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(&format!(
+                "DROP TRIGGER IF EXISTS {trigger} ON subscription_outbox"
+            ))
+            .await
+            .expect("drop trigger");
+    }
+
     /// A quote in a search parameter name — a `_revinclude` directive's, or a
     /// criterion's — is part of the name, never SQL: the query runs and
     /// matches nothing.
@@ -3922,6 +4053,531 @@ mod postgres_integration {
             .await
             .expect("the bundle succeeds once the gate is free");
         assert_eq!(result.entries[0].status, 201);
+    }
+
+    /// Dedicated database so DROP COLUMN cannot race the shared container.
+    async fn isolated_backend() -> PostgresBackend {
+        let dbname = format!("hfs_slot2_{}", uuid::Uuid::new_v4().simple());
+        let admin = create_backend().await;
+        let client = admin.get_client().await.expect("admin client");
+        client
+            .execute(&format!("CREATE DATABASE {dbname}"), &[])
+            .await
+            .unwrap_or_else(|e| panic!("CREATE DATABASE {dbname}: {e}"));
+        drop(client);
+
+        let pg = shared_pg().await;
+        let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("data"))
+            .unwrap_or_else(|| PathBuf::from("data"));
+        let config = PostgresConfig {
+            host: pg.host.clone(),
+            port: pg.port,
+            dbname,
+            user: "postgres".to_string(),
+            password: Some("postgres".to_string()),
+            max_connections: 5,
+            data_dir: Some(data_dir),
+            ..Default::default()
+        };
+        let backend = PostgresBackend::new(config)
+            .await
+            .expect("isolated PostgresBackend");
+        backend.init_schema().await.expect("init isolated schema");
+        backend
+    }
+
+    async fn subscription_outbox_exists(backend: &PostgresBackend) -> bool {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt(
+                "SELECT 1 FROM information_schema.tables
+                 WHERE table_schema = 'public' AND table_name = 'subscription_outbox'",
+                &[],
+            )
+            .await
+            .expect("information_schema")
+            .is_some()
+    }
+
+    async fn subscription_outbox_has_dead_at(backend: &PostgresBackend) -> bool {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt(
+                "SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                   AND table_name = 'subscription_outbox'
+                   AND column_name = 'dead_at'",
+                &[],
+            )
+            .await
+            .expect("information_schema")
+            .is_some()
+    }
+
+    async fn recorded_schema_version(backend: &PostgresBackend) -> i32 {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_one("SELECT version FROM schema_version LIMIT 1", &[])
+            .await
+            .expect("schema version")
+            .get(0)
+    }
+
+    async fn recorded_schema_flavour(backend: &PostgresBackend) -> Option<String> {
+        let client = backend.get_client().await.expect("client");
+        client
+            .query_opt("SELECT flavour FROM schema_version LIMIT 1", &[])
+            .await
+            .expect("schema flavour")
+            .and_then(|row| row.get::<_, Option<String>>(0))
+    }
+
+    async fn applied_schema_steps(backend: &PostgresBackend) -> Vec<String> {
+        let client = backend.get_client().await.expect("client");
+        let rows = client
+            .query("SELECT name FROM schema_migrations ORDER BY name", &[])
+            .await
+            .expect("schema_migrations");
+        rows.iter().map(|r| r.get::<_, String>(0)).collect()
+    }
+
+    async fn search_index_slot2_columns(backend: &PostgresBackend) -> Vec<String> {
+        let client = backend.get_client().await.expect("client");
+        let rows = client
+            .query(
+                "SELECT column_name FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                   AND table_name = 'search_index'
+                   AND column_name IN (
+                       'value_token_system_2',
+                       'value_token_code_2',
+                       'value_number_2'
+                   )
+                 ORDER BY column_name",
+                &[],
+            )
+            .await
+            .expect("information_schema");
+        rows.iter().map(|r| r.get::<_, String>(0)).collect()
+    }
+
+    fn audit_event_resource() -> serde_json::Value {
+        json!({
+            "resourceType": "AuditEvent",
+            "type": {
+                "system": "http://dicom.nema.org/resources/ontology/DCM",
+                "code": "110110"
+            },
+            "recorded": "2026-09-04T12:00:00Z",
+            "agent": [{ "requestor": true }],
+            "source": {
+                "observer": { "display": "hfs-test" }
+            }
+        })
+    }
+
+    /// Fresh schema includes the composite slot-2 columns the writer always binds.
+    #[tokio::test]
+    async fn search_index_slot2_columns_exist_after_init() {
+        let backend = create_backend().await;
+        assert_eq!(
+            search_index_slot2_columns(&backend).await,
+            [
+                "value_number_2",
+                "value_token_code_2",
+                "value_token_system_2",
+            ]
+        );
+    }
+
+    /// A database whose `search_index` never received the #279 slot-2 columns
+    /// (typical of a dedicated `HFS_AUDIT_DATABASE_URL` created before those
+    /// columns existed in `CREATE TABLE` and then migrated in place as
+    /// `search_index_layout = legacy`) must (1) surface the missing column in
+    /// the insert error instead of a bare `db error`, and (2) grow the columns
+    /// on `init_schema` from v37 so an AuditEvent write succeeds.
+    #[tokio::test]
+    async fn schema_v38_adds_slot2_columns_and_audit_event_indexes() {
+        let backend = isolated_backend().await;
+        let tenant = TenantContext::system();
+
+        let client = backend.get_client().await.expect("client");
+        for col in [
+            "value_token_system_2",
+            "value_token_code_2",
+            "value_number_2",
+        ] {
+            client
+                .execute(
+                    &format!("ALTER TABLE search_index DROP COLUMN IF EXISTS {col} CASCADE"),
+                    &[],
+                )
+                .await
+                .unwrap_or_else(|e| panic!("DROP COLUMN {col}: {e}"));
+        }
+        drop(client);
+
+        assert!(
+            search_index_slot2_columns(&backend).await.is_empty(),
+            "slot-2 columns must be gone before the write"
+        );
+
+        let err = backend
+            .create(
+                &tenant,
+                "AuditEvent",
+                audit_event_resource(),
+                FhirVersion::default(),
+            )
+            .await
+            .expect_err("insert must fail while slot-2 columns are missing");
+        let message = err.to_string();
+        assert!(
+            message.contains("Failed to insert search index rows"),
+            "writer context must survive, got {message}"
+        );
+        assert!(
+            message.contains("value_token_system_2"),
+            "driver source() chain must name the missing column, got {message}"
+        );
+
+        let client = backend.get_client().await.expect("client");
+        client
+            .execute("DELETE FROM schema_version", &[])
+            .await
+            .expect("clear schema_version");
+        client
+            .execute("INSERT INTO schema_version (version) VALUES (37)", &[])
+            .await
+            .expect("stamp v37");
+        drop(client);
+
+        backend
+            .init_schema()
+            .await
+            .expect("v37 → v38 must add slot-2 columns");
+        assert_eq!(
+            search_index_slot2_columns(&backend).await.len(),
+            3,
+            "v38 must restore all three slot-2 columns"
+        );
+
+        let created = backend
+            .create(
+                &tenant,
+                "AuditEvent",
+                audit_event_resource(),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap_or_else(|e| panic!("AuditEvent create after v38: {e}"));
+        assert_eq!(created.resource_type(), "AuditEvent");
+        assert!(!created.id().is_empty());
+    }
+
+    /// A database whose outbox table predates `dead_at` must grow the column
+    /// when the named dead-letter step runs.
+    #[tokio::test]
+    async fn schema_v39_adds_outbox_dead_at() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "DROP INDEX IF EXISTS idx_subscription_outbox_claim;
+                 ALTER TABLE subscription_outbox DROP COLUMN IF EXISTS dead_at;
+                 DELETE FROM schema_migrations WHERE name = 'subscription_outbox_dead_letter';
+                 UPDATE schema_version SET version = 38;",
+            )
+            .await
+            .expect("stamp v38 without dead_at");
+        drop(client);
+
+        assert!(
+            !subscription_outbox_has_dead_at(&backend).await,
+            "precondition: dead_at dropped"
+        );
+
+        backend
+            .init_schema()
+            .await
+            .expect("v38 → v39 must add dead_at");
+
+        assert!(
+            subscription_outbox_has_dead_at(&backend).await,
+            "v39 must add subscription_outbox.dead_at"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
+        assert!(
+            applied_schema_steps(&backend)
+                .await
+                .iter()
+                .any(|n| n == OUTBOX_DEAD_LETTER_STEP)
+        );
+    }
+
+    /// Direct REST CRUD enqueues the outbox row in the same commit as the
+    /// resource (the durability contract SQLite already had).
+    #[tokio::test]
+    async fn postgres_integration_direct_crud_commits_outbox_with_resource() {
+        let _env = SUBSCRIPTIONS_ENV.lock().await;
+        let _enabled = SubscriptionsEnabledGuard::enable();
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("outbox-commit");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        let id = format!("p-{}", uuid::Uuid::new_v4().simple());
+
+        let created = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Commit"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("create");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create"]
+        );
+
+        backend
+            .update(
+                &tenant,
+                &created,
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Updated"}]
+                }),
+            )
+            .await
+            .expect("update");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create", "update"]
+        );
+
+        backend
+            .delete(&tenant, "Patient", &id)
+            .await
+            .expect("delete");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create", "update", "delete"]
+        );
+    }
+
+    /// A failure at the outbox insert must not leave a committed resource
+    /// (or its search_index rows). Injected via a tenant-scoped trigger so
+    /// parallel tests are unaffected.
+    #[tokio::test]
+    async fn postgres_integration_direct_crud_rolls_back_when_outbox_insert_fails() {
+        let _env = SUBSCRIPTIONS_ENV.lock().await;
+        let _enabled = SubscriptionsEnabledGuard::enable();
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("outbox-rollback");
+        let tenant_id = tenant.tenant_id().as_str().to_string();
+        let id = format!("p-{}", uuid::Uuid::new_v4().simple());
+        let trigger = format!("hfs_fail_outbox_{}", uuid::Uuid::new_v4().simple());
+
+        install_outbox_fail_trigger(&backend, &trigger, &tenant_id).await;
+
+        let err = backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Rollback"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect_err("create must fail when the outbox insert is rejected");
+        let message = err.to_string();
+        assert!(
+            message.contains("injected outbox failure") || message.contains("outbox insert"),
+            "error should mention the injected failure, got: {message}"
+        );
+
+        assert!(
+            !patient_row_exists(&backend, &tenant_id, &id).await,
+            "resource must roll back with the failed outbox insert"
+        );
+        assert_eq!(
+            search_index_row_count(&backend, &tenant_id, &id).await,
+            0,
+            "search_index must roll back with the failed outbox insert"
+        );
+        assert!(
+            outbox_event_types(&backend, &tenant_id, &id)
+                .await
+                .is_empty()
+        );
+
+        drop_outbox_fail_trigger(&backend, &trigger).await;
+
+        backend
+            .create(
+                &tenant,
+                "Patient",
+                json!({
+                    "resourceType": "Patient",
+                    "id": id,
+                    "name": [{"family": "Rollback"}]
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("create must succeed after the fail trigger is dropped");
+        assert_eq!(
+            outbox_event_types(&backend, &tenant_id, &id).await,
+            ["create"]
+        );
+    }
+
+    /// Fresh init stamps fork provenance and has the outbox table.
+    #[tokio::test]
+    async fn postgres_integration_schema_flavour_and_outbox_after_init() {
+        let backend = isolated_backend().await;
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "fresh schema must include subscription_outbox"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
+        assert_eq!(
+            recorded_schema_flavour(&backend).await.as_deref(),
+            Some(SCHEMA_FLAVOUR)
+        );
+        let applied = applied_schema_steps(&backend).await;
+        assert!(applied.iter().any(|n| n == BASE_STEP));
+        assert!(applied.iter().any(|n| n == OUTBOX_STEP));
+        assert!(applied.iter().any(|n| n == "search_index_slot2_columns"));
+        assert!(applied.iter().any(|n| n == OUTBOX_DEAD_LETTER_STEP));
+        assert!(
+            subscription_outbox_has_dead_at(&backend).await,
+            "fresh schema must include subscription_outbox.dead_at"
+        );
+    }
+
+    /// Upstream numbering at v36 never ran this fork's v16→v17 outbox step.
+    /// Empty ledger + no flavour + no table is the real upgrade path;
+    /// `init_schema` must create the table rather than boot with a silent
+    /// missing outbox. Slot-2 (`v37→v38`) is also absent on Helios v36 and
+    /// must run; the rest of the ladder must not be replayed from scratch.
+    #[tokio::test]
+    async fn postgres_integration_heals_outbox_on_upstream_numbered_database() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "DROP TABLE IF EXISTS subscription_outbox;
+                 DELETE FROM schema_migrations;
+                 UPDATE schema_version SET version = 36, flavour = NULL;",
+            )
+            .await
+            .expect("stamp upstream v36 without outbox");
+        drop(client);
+
+        assert!(
+            !subscription_outbox_exists(&backend).await,
+            "precondition: outbox dropped"
+        );
+
+        backend
+            .init_schema()
+            .await
+            .expect("init_schema must heal the outbox");
+
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "heal must create subscription_outbox"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
+        assert_eq!(
+            recorded_schema_flavour(&backend).await.as_deref(),
+            Some(SCHEMA_FLAVOUR)
+        );
+        let applied = applied_schema_steps(&backend).await;
+        assert!(applied.iter().any(|n| n == OUTBOX_STEP));
+        assert!(applied.iter().any(|n| n == "search_index_slot2_columns"));
+        assert!(applied.iter().any(|n| n == OUTBOX_DEAD_LETTER_STEP));
+        assert!(subscription_outbox_has_dead_at(&backend).await);
+    }
+
+    /// Integer already at the tip, but the named outbox step is missing from
+    /// the ledger (and the table is gone). Dispatch must consult names, not
+    /// skip because `version >= SCHEMA_VERSION`.
+    #[tokio::test]
+    async fn postgres_integration_named_ledger_dispatch_runs_unrecorded_outbox_at_tip() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute(
+                "DROP TABLE IF EXISTS subscription_outbox;
+                 DELETE FROM schema_migrations WHERE name = 'subscription_outbox';",
+            )
+            .await
+            .expect("un-record outbox at tip");
+        drop(client);
+
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
+
+        backend
+            .init_schema()
+            .await
+            .expect("named dispatch must run the unrecorded outbox step");
+
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "named dispatch must create subscription_outbox"
+        );
+        assert!(
+            applied_schema_steps(&backend)
+                .await
+                .iter()
+                .any(|n| n == OUTBOX_STEP)
+        );
+    }
+
+    /// Already at the fork tip, but missing the table. Heal must not depend
+    /// on `version < SCHEMA_VERSION`.
+    #[tokio::test]
+    async fn postgres_integration_heals_outbox_when_already_at_tip() {
+        let backend = isolated_backend().await;
+        let client = backend.get_client().await.expect("client");
+        client
+            .batch_execute("DROP TABLE IF EXISTS subscription_outbox")
+            .await
+            .expect("drop outbox");
+        drop(client);
+
+        backend
+            .init_schema()
+            .await
+            .expect("init_schema must heal at tip");
+
+        assert!(
+            subscription_outbox_exists(&backend).await,
+            "heal must create subscription_outbox at tip"
+        );
+        assert_eq!(recorded_schema_version(&backend).await, SCHEMA_VERSION);
+        assert!(
+            applied_schema_steps(&backend)
+                .await
+                .iter()
+                .any(|n| n == OUTBOX_STEP)
+        );
     }
 
     // ========================================================================
@@ -12421,6 +13077,95 @@ mod postgres_integration {
             .unwrap()
     }
 
+    /// #2494: `:not` on a reference parameter negates the whole membership,
+    /// so resources without the parameter match too, and a comma list means
+    /// "not A and not B" (same as SQLite).
+    ///
+    /// NOTE for #2394: once `feat/2394-perf-mongodb-normalize-reference` lands,
+    /// its three `Observation?subject:not=...` PostgreSQL `Divergence` entries
+    /// in the shared modifier parity suite must be deleted (the suite fails on
+    /// a stale divergence).
+    #[tokio::test]
+    async fn postgres_integration_search_reference_not_modifier_negates_membership() {
+        use helios_persistence::types::{
+            SearchModifier, SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant("reference-not-2494");
+
+        create_subject_observation(&backend, &tenant, "ob-pat", "Patient/p1").await;
+        create_subject_observation(&backend, &tenant, "ob-other", "Patient/p2").await;
+        create_subject_observation(&backend, &tenant, "ob-grp", "Group/p1").await;
+        // Absolute-URL reference to Patient/p1: a bare id `p1` matches it
+        // positively, so `:not=p1` must exclude it too (and `Type/id` stays
+        // exact, so `:not=Patient/p1` keeps it).
+        create_subject_observation(
+            &backend,
+            &tenant,
+            "ob-abs",
+            "https://records.example.test/fhir/Patient/p1",
+        )
+        .await;
+        // Versioned stored reference: `Patient/p1` matches it positively, so
+        // `:not=Patient/p1` must exclude it.
+        create_subject_observation(&backend, &tenant, "ob-ver", "Patient/p1/_history/3").await;
+        backend
+            .create(
+                &tenant,
+                "Observation",
+                json!({
+                    "resourceType": "Observation",
+                    "id": "ob-none",
+                    "code": {"coding": [{"code": "8867-4"}]},
+                    "status": "final"
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .unwrap();
+
+        let not_query = |values: &[&str]| {
+            SearchQuery::new("Observation").with_parameter(SearchParameter {
+                name: "subject".to_string(),
+                param_type: SearchParamType::Reference,
+                modifier: Some(SearchModifier::Not),
+                values: values.iter().map(|v| SearchValue::eq(*v)).collect(),
+                chain: vec![],
+                components: vec![],
+            })
+        };
+
+        assert_eq!(
+            reference_search_ids(
+                &backend,
+                &tenant,
+                &observation_reference_query("subject", &["Patient/p1"])
+            )
+            .await,
+            vec!["ob-abs", "ob-pat", "ob-ver"],
+        );
+        assert_eq!(
+            reference_search_ids(&backend, &tenant, &not_query(&["Patient/p1"])).await,
+            vec!["ob-grp", "ob-none", "ob-other"],
+        );
+        assert_eq!(
+            reference_search_ids(&backend, &tenant, &not_query(&["p1"])).await,
+            vec!["ob-none", "ob-other"],
+            "bare-id :not excludes prefixed, absolute and other-type matches"
+        );
+        assert_eq!(
+            reference_search_ids(&backend, &tenant, &not_query(&["Patient/p1", "Group/p1"])).await,
+            vec!["ob-none", "ob-other"],
+        );
+        assert_eq!(
+            reference_search_ids(&backend, &tenant, &not_query(&["Patient/nobody"])).await,
+            vec![
+                "ob-abs", "ob-grp", "ob-none", "ob-other", "ob-pat", "ob-ver"
+            ],
+        );
+    }
+
     /// Bare ids match the last path segment without losing exact-reference
     /// semantics for `Type/id` searches.
     #[tokio::test]
@@ -12475,8 +13220,8 @@ mod postgres_integration {
                 &observation_reference_query("subject", &["Patient/shared-id"]),
             )
             .await,
-            vec!["ref-prefixed", "ref-versioned"],
-            "Type/id remains exact and version-normalized"
+            vec!["ref-absolute", "ref-prefixed", "ref-versioned"],
+            "Type/id is exact, version-normalized and matches the absolute URL form"
         );
         assert_eq!(
             reference_search_ids(
@@ -33723,6 +34468,26 @@ mod postgres_integration {
         transaction_delete_accepts_matching_if_match
     );
 
+    macro_rules! pg_if_none_match_test {
+        ($test_name:ident, $scenario:ident) => {
+            #[tokio::test]
+            async fn $test_name() {
+                let backend = create_backend().await;
+                let tenant = create_tenant(concat!("if_none_match_", stringify!($scenario)));
+                super::if_none_match_suite::$scenario(&backend, &tenant).await;
+            }
+        };
+    }
+
+    pg_if_none_match_test!(
+        postgres_integration_star_if_none_match_creates_when_absent,
+        star_if_none_match_creates_when_absent
+    );
+    pg_if_none_match_test!(
+        postgres_integration_star_if_none_match_on_existing_rolls_the_transaction_back,
+        star_if_none_match_on_existing_rolls_the_transaction_back
+    );
+
     // ========================================================================
     // Full-text purge completeness (issue #386)
     // ========================================================================
@@ -34808,32 +35573,16 @@ mod postgres_integration {
         .await;
     }
 
-    /// #2296: `_revinclude` includes relative and versioned references
-    /// (PostgreSQL stores them version-stripped). PostgreSQL resolves includes
-    /// through the generic per-resource reference search, which does not match
-    /// absolute URLs; reported, not fixed, in this change.
+    /// #2296: `_revinclude` includes relative, versioned and absolute
+    /// references (PostgreSQL stores them version-stripped, with the `Type/id`
+    /// of an absolute URL in `value_reference_target`, #2394).
     #[tokio::test]
     async fn postgres_integration_revinclude_matches_every_reference_form() {
-        use super::revinclude_reference_forms_suite::Divergence;
-
         let backend = create_backend().await;
         super::revinclude_reference_forms_suite::revinclude_matches_every_reference_form(
             &backend,
             &unique_base("revinclude_forms"),
-            &[
-                Divergence {
-                    id: "prov-abs",
-                    included: false,
-                },
-                Divergence {
-                    id: "prov-abs-ver",
-                    included: false,
-                },
-                Divergence {
-                    id: "prov-dot-abs",
-                    included: false,
-                },
-            ],
+            &[],
         )
         .await;
     }
@@ -34881,6 +35630,13 @@ mod postgres_integration {
                 Divergence {
                     label: "Observation?subject:Patient=Group/p1",
                     expect: Expect::Ids(&["ob-grp"]),
+                },
+                // `:above` a `_history/1` URL also finds the `_history/2` form
+                // (the version segment is not compared); SQLite and ES return
+                // only the unversioned `ob-abs`.
+                Divergence {
+                    label: "Observation?subject:above=http://example.org/fhir/Patient/p1/_history/1",
+                    expect: Expect::Ids(&["ob-abs", "ob-abs-ver"]),
                 },
             ],
         )

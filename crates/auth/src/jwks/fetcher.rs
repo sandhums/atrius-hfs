@@ -48,10 +48,21 @@ pub struct JwksFetcher {
 impl JwksFetcher {
     /// Create a new JWKS fetcher with a shared HTTP client.
     pub fn new() -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
-            .build()
-            .expect("Failed to build HTTP client");
+        Self::with_insecure_tls(false)
+    }
+
+    /// Create a JWKS fetcher. When `insecure_tls` is true, accept self-signed or
+    /// otherwise untrusted server certificates (local dev only).
+    ///
+    /// Note: reqwest uses **rustls** with the Mozilla CA bundle, not the OS
+    /// trust store. A JWKS URL may work with `curl` but fail here until the cert
+    /// is in that bundle or `HFS_AUTH_INSECURE_TLS=true` is set.
+    pub fn with_insecure_tls(insecure_tls: bool) -> Self {
+        let mut builder = reqwest::Client::builder().timeout(Duration::from_secs(10));
+        if insecure_tls {
+            builder = builder.danger_accept_invalid_certs(true);
+        }
+        let client = builder.build().expect("Failed to build HTTP client");
         Self { client }
     }
 
@@ -90,10 +101,10 @@ impl JwksFetcher {
         let mut keys = HashMap::new();
         for jwk in doc.keys {
             // Only include signing keys (use=sig or unspecified)
-            if let Some(ref key_use) = jwk.key_use {
-                if key_use != "sig" {
-                    continue;
-                }
+            if let Some(ref key_use) = jwk.key_use
+                && key_use != "sig"
+            {
+                continue;
             }
 
             let kid = match jwk.kid {
@@ -165,10 +176,10 @@ fn build_decoding_key(jwk: &Jwk) -> Result<DecodingKey, AuthError> {
 fn parse_max_age(cache_control: &str) -> Option<Duration> {
     for directive in cache_control.split(',') {
         let directive = directive.trim();
-        if let Some(val) = directive.strip_prefix("max-age=") {
-            if let Ok(secs) = val.trim().parse::<u64>() {
-                return Some(Duration::from_secs(secs));
-            }
+        if let Some(val) = directive.strip_prefix("max-age=")
+            && let Ok(secs) = val.trim().parse::<u64>()
+        {
+            return Some(Duration::from_secs(secs));
         }
     }
     None

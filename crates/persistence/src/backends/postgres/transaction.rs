@@ -408,6 +408,20 @@ impl PostgresTransaction {
         }
         self.poisoned = false;
 
+        let client = self.client()?;
+        super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+            client,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Update,
+            Some(data.clone()),
+            Some(current.content().clone()),
+        )
+        .await?;
+
         Ok(StoredResource::from_storage(
             resource_type,
             id,
@@ -1316,6 +1330,20 @@ impl Transaction for PostgresTransaction {
             self.flush().await?;
         }
 
+        let client = self.client()?;
+        super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+            client,
+            self.tenant.tenant_id(),
+            self.fhir_version,
+            resource_type,
+            &id,
+            version_id,
+            crate::core::OutboxEventType::Create,
+            Some(data.clone()),
+            None,
+        )
+        .await?;
+
         Ok(StoredResource::from_storage(
             resource_type,
             &id,
@@ -1433,6 +1461,22 @@ impl Transaction for PostgresTransaction {
             self.search_snapshot_dirty = true;
         }
         self.poisoned = false;
+
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+        let client = self.client()?;
+        super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+            client,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Delete,
+            None,
+            Some(data),
+        )
+        .await?;
 
         Ok(())
     }

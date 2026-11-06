@@ -305,7 +305,7 @@ Object creation syntax (`typename { element: value, ... }`): ✅
 | `memberOf()` | ✅ | Via `%terminologies` integration |
 | `subsumes()` (function form) | ❌ | Use `%terminologies.subsumes()` instead |
 | `subsumedBy()` | ❌ | Not implemented |
-| `htmlChecks()` | ❌ | XHTML narrative validation; not implemented |
+| `htmlChecks()` | ✅ | Narrative XHTML subset (allowed tags/attributes and non-whitespace content) |
 | `comparable()` | ✅ | UCUM unit comparison |
 | `weight()` | ❌ | Not implemented |
 

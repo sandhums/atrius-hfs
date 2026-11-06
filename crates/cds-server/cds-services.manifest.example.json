@@ -1,0 +1,50 @@
+{
+  "services": [
+    {
+      "id": "hello-world-name",
+      "hook": "patient-view",
+      "title": "Patient name",
+      "description": "Example KR-driven CDS service",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "procedures": "Procedure?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}",
+        "immunizations": "Immunization?patient={{context.patientId}}",
+        "diagnosticReports": "DiagnosticReport?patient={{context.patientId}}",
+        "serviceRequests": "ServiceRequest?patient={{context.patientId}}",
+        "allergies": "AllergyIntolerance?patient={{context.patientId}}",
+        "coverage": "Coverage?beneficiary=Patient/{{context.patientId}}"
+      },
+      "libraryId": "HelloWorld",
+      "expression": "PatientName",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0"
+    },
+    {
+      "id": "second-rule-placeholder",
+      "hook": "patient-view",
+      "title": "Second rule",
+      "description": "Another Library/expression pair",
+      "prefetch": {
+        "patient": "Patient/{{context.patientId}}",
+        "conditions": "Condition?patient={{context.patientId}}",
+        "encounters": "Encounter?patient={{context.patientId}}",
+        "observations": "Observation?patient={{context.patientId}}",
+        "procedures": "Procedure?patient={{context.patientId}}",
+        "medicationRequests": "MedicationRequest?patient={{context.patientId}}",
+        "immunizations": "Immunization?patient={{context.patientId}}",
+        "diagnosticReports": "DiagnosticReport?patient={{context.patientId}}",
+        "serviceRequests": "ServiceRequest?patient={{context.patientId}}",
+        "allergies": "AllergyIntolerance?patient={{context.patientId}}",
+        "coverage": "Coverage?beneficiary=Patient/{{context.patientId}}"
+      },
+      "libraryId": "AnotherLibrary",
+      "expression": "SomeDefine",
+      "resolveFromFhir": true,
+      "cdsHooksVersion": "1.0"
+    }
+  ]
+}

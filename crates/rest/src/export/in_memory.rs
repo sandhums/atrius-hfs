@@ -893,10 +893,10 @@ fn ext_for(format: &str) -> &'static str {
 /// status polls after a DELETE to return 404, so a background task that
 /// finishes anyway must not resurrect the job to Completed/Failed.
 fn set_status_if_running(jobs: &DashMap<String, JobStatus>, jid: &str, status: JobStatus) {
-    if let Some(mut entry) = jobs.get_mut(jid) {
-        if matches!(&*entry, JobStatus::Running { .. }) {
-            *entry = status;
-        }
+    if let Some(mut entry) = jobs.get_mut(jid)
+        && matches!(&*entry, JobStatus::Running { .. })
+    {
+        *entry = status;
     }
 }
 

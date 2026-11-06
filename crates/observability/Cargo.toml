@@ -35,7 +35,7 @@ metrics-exporter-prometheus = { version = "0.16", default-features = false }
 
 # Logging / tracing
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Date/time for started_at
 chrono.workspace = true

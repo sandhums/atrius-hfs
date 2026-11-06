@@ -3,6 +3,9 @@ use std::sync::Arc;
 
 use crate::outbound::{OutboundAuthProvider, provider_from_token};
 
+/// Default per-request budget for the Redis JTI deny-list `EXISTS` check.
+pub const DEFAULT_JTI_REVOCATION_TIMEOUT_MS: u64 = 500;
+
 /// Configuration for the authentication and authorization subsystem.
 ///
 /// `Debug` is hand-written (#2149): the web client secret and the outbound
@@ -39,8 +42,17 @@ pub struct AuthConfig {
     pub fhir_user_claim: String,
     /// Comma-separated list of allowed JWT signing algorithms.
     pub allowed_algorithms: Vec<String>,
+    /// When true, reject tokens whose `jti` appears in the Redis revocation blocklist.
+    pub jti_revocation_enabled: bool,
+    /// Redis connection URL (required when `jti_revocation_enabled` is true).
+    pub redis_url: Option<String>,
+    /// Per-request budget for the Redis `EXISTS` check, in milliseconds.
+    /// Timeouts and Redis errors fail closed (`AuthError::RevocationUnavailable`).
+    pub jti_revocation_timeout_ms: u64,
     /// Minimum interval (seconds) between JWKS refreshes.
     pub jwks_min_refresh_interval: u64,
+    /// Accept invalid TLS certificates when fetching JWKS (local dev only).
+    pub jwks_insecure_tls: bool,
 
     // SMART discovery endpoint fields
     /// Token endpoint URL for `/.well-known/smart-configuration`.
@@ -138,7 +150,11 @@ impl std::fmt::Debug for AuthConfig {
             encounter_claim,
             fhir_user_claim,
             allowed_algorithms,
+            jti_revocation_enabled,
+            redis_url,
+            jti_revocation_timeout_ms,
             jwks_min_refresh_interval,
+            jwks_insecure_tls,
             smart_token_endpoint,
             smart_authorize_endpoint,
             smart_jwks_url,
@@ -166,7 +182,11 @@ impl std::fmt::Debug for AuthConfig {
             .field("encounter_claim", encounter_claim)
             .field("fhir_user_claim", fhir_user_claim)
             .field("allowed_algorithms", allowed_algorithms)
+            .field("jti_revocation_enabled", jti_revocation_enabled)
+            .field("redis_url", &url(redis_url))
+            .field("jti_revocation_timeout_ms", jti_revocation_timeout_ms)
             .field("jwks_min_refresh_interval", jwks_min_refresh_interval)
+            .field("jwks_insecure_tls", jwks_insecure_tls)
             .field("smart_token_endpoint", &url(smart_token_endpoint))
             .field("smart_authorize_endpoint", &url(smart_authorize_endpoint))
             .field("smart_jwks_url", &url(smart_jwks_url))
@@ -225,10 +245,22 @@ impl AuthConfig {
                 .split(',')
                 .map(|s| s.trim().to_string())
                 .collect(),
+            jti_revocation_enabled: env::var("HFS_AUTH_JTI_REVOCATION")
+                .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+                .unwrap_or(false),
+            redis_url: env::var("HFS_AUTH_REDIS_URL").ok(),
+            jti_revocation_timeout_ms: env::var("HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .filter(|&ms| ms > 0)
+                .unwrap_or(DEFAULT_JTI_REVOCATION_TIMEOUT_MS),
             jwks_min_refresh_interval: env::var("HFS_AUTH_JWKS_MIN_REFRESH_INTERVAL")
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(10),
+            jwks_insecure_tls: env::var("HFS_AUTH_INSECURE_TLS")
+                .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+                .unwrap_or(false),
             smart_token_endpoint: env::var("HFS_SMART_TOKEN_ENDPOINT").ok(),
             smart_authorize_endpoint: env::var("HFS_SMART_AUTHORIZE_ENDPOINT").ok(),
             smart_jwks_url: env::var("HFS_SMART_JWKS_URL").ok(),
@@ -308,6 +340,12 @@ impl AuthConfig {
         if self.allowed_algorithms.is_empty() {
             errors.push("HFS_AUTH_ALGORITHMS must list at least one signing algorithm".to_string());
         }
+        if self.jti_revocation_enabled && self.redis_url.as_deref().unwrap_or("").trim().is_empty()
+        {
+            errors.push(
+                "HFS_AUTH_REDIS_URL is required when HFS_AUTH_JTI_REVOCATION=true".to_string(),
+            );
+        }
 
         if errors.is_empty() {
             Ok(())
@@ -343,7 +381,11 @@ impl Default for AuthConfig {
                 "ES256".to_string(),
                 "ES384".to_string(),
             ],
+            jti_revocation_enabled: false,
+            redis_url: None,
+            jti_revocation_timeout_ms: DEFAULT_JTI_REVOCATION_TIMEOUT_MS,
             jwks_min_refresh_interval: 10,
+            jwks_insecure_tls: false,
             smart_token_endpoint: None,
             smart_authorize_endpoint: None,
             smart_jwks_url: None,
@@ -419,6 +461,9 @@ mod tests {
         "HFS_AUTH_ENCOUNTER_CLAIM",
         "HFS_AUTH_FHIR_USER_CLAIM",
         "HFS_AUTH_ALGORITHMS",
+        "HFS_AUTH_JTI_REVOCATION",
+        "HFS_AUTH_REDIS_URL",
+        "HFS_AUTH_JTI_REVOCATION_TIMEOUT_MS",
         "HFS_AUTH_JWKS_MIN_REFRESH_INTERVAL",
         "HFS_SMART_TOKEN_ENDPOINT",
         "HFS_SMART_AUTHORIZE_ENDPOINT",
@@ -504,6 +549,7 @@ mod tests {
         let config = AuthConfig::default();
         assert!(!config.enabled);
         assert_eq!(config.tenant_claim, "tenant_id");
+        assert!(!config.jti_revocation_enabled);
         assert_eq!(config.patient_claim, "patient");
         assert_eq!(config.encounter_claim, "encounter");
         assert_eq!(config.fhir_user_claim, "fhirUser");
@@ -584,5 +630,19 @@ mod tests {
             ..enabled_config()
         };
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_requires_redis_url_when_jti_revocation_is_enabled() {
+        let config = AuthConfig {
+            jti_revocation_enabled: true,
+            redis_url: None,
+            ..enabled_config()
+        };
+        let errors = config.validate().unwrap_err();
+        assert!(
+            errors.iter().any(|e| e.contains("HFS_AUTH_REDIS_URL")),
+            "expected a redis-url error, got {errors:?}"
+        );
     }
 }

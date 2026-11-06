@@ -9,7 +9,7 @@
 //! ## Architecture
 //!
 //! The FHIR crate is organized as follows:
-//! - **Generated modules** (`r4.rs`, `r4b.rs`, `r5.rs`, `r6.rs`): Complete FHIR type implementations
+//! - **Generated modules** (`r4/`, `r4b/`, `r5/`, `r6/` directories): Complete FHIR type implementations
 //! - **Infrastructure module** (`lib.rs`): Foundational types used by generated code
 //! - **Test modules**: Validation against official FHIR examples
 //!
@@ -2503,16 +2503,16 @@ where
                             },
                         );
                     }
-                } else if TypeId::of::<V>() == TypeId::of::<u32>() {
-                    if let Ok(int_val) = v.parse::<u32>() {
-                        return V::deserialize(de::value::U32Deserializer::new(int_val)).map(
-                            |value| Element {
-                                id: None,
-                                extension: None,
-                                value: Some(value),
-                            },
-                        );
-                    }
+                } else if TypeId::of::<V>() == TypeId::of::<u32>()
+                    && let Ok(int_val) = v.parse::<u32>()
+                {
+                    return V::deserialize(de::value::U32Deserializer::new(int_val)).map(|value| {
+                        Element {
+                            id: None,
+                            extension: None,
+                            value: Some(value),
+                        }
+                    });
                 }
 
                 // Fall back to normal string deserialization
@@ -2559,16 +2559,16 @@ where
                             },
                         );
                     }
-                } else if TypeId::of::<V>() == TypeId::of::<u32>() {
-                    if let Ok(int_val) = v.parse::<u32>() {
-                        return V::deserialize(de::value::U32Deserializer::new(int_val)).map(
-                            |value| Element {
-                                id: None,
-                                extension: None,
-                                value: Some(value),
-                            },
-                        );
-                    }
+                } else if TypeId::of::<V>() == TypeId::of::<u32>()
+                    && let Ok(int_val) = v.parse::<u32>()
+                {
+                    return V::deserialize(de::value::U32Deserializer::new(int_val)).map(|value| {
+                        Element {
+                            id: None,
+                            extension: None,
+                            value: Some(value),
+                        }
+                    });
                 }
 
                 // Fall back to normal string deserialization
@@ -2616,16 +2616,16 @@ where
                             },
                         );
                     }
-                } else if TypeId::of::<V>() == TypeId::of::<u32>() {
-                    if let Ok(int_val) = v.parse::<u32>() {
-                        return V::deserialize(de::value::U32Deserializer::new(int_val)).map(
-                            |value| Element {
-                                id: None,
-                                extension: None,
-                                value: Some(value),
-                            },
-                        );
-                    }
+                } else if TypeId::of::<V>() == TypeId::of::<u32>()
+                    && let Ok(int_val) = v.parse::<u32>()
+                {
+                    return V::deserialize(de::value::U32Deserializer::new(int_val)).map(|value| {
+                        Element {
+                            id: None,
+                            extension: None,
+                            value: Some(value),
+                        }
+                    });
                 }
 
                 // Fall back to normal string deserialization
@@ -3170,16 +3170,16 @@ where
         };
 
         // Prioritize returning the primitive decimal value if it exists
-        if let Some(precise_decimal) = &self.value {
-            if let Some(decimal_val) = precise_decimal.value() {
-                let result = EvaluationResult::fhir_decimal(decimal_val);
-                return match primitive_meta {
-                    Some(meta) => result.with_primitive_element(meta),
-                    None => result,
-                };
-            }
-            // If PreciseDecimal holds None for value, fall through to check id/extension
+        if let Some(precise_decimal) = &self.value
+            && let Some(decimal_val) = precise_decimal.value()
+        {
+            let result = EvaluationResult::fhir_decimal(decimal_val);
+            return match primitive_meta {
+                Some(meta) => result.with_primitive_element(meta),
+                None => result,
+            };
         }
+        // If PreciseDecimal holds None for value, fall through to check id/extension
 
         // If value is None, but id or extension exist, return an Object with those
         if self.id.is_some() || self.extension.is_some() {

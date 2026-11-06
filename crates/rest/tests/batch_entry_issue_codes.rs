@@ -178,12 +178,14 @@ async fn a_batch_entry_reports_the_issue_code_for_its_failure() {
             "not-supported",
         ),
         (
+            // This fork applies JSON Patch in bundles. Helios returns 501
+            // not-supported; here Patient/p1 is missing, so the outcome is 404.
             json!({
                 "request": { "method": "PATCH", "url": "Patient/p1" },
                 "resource": { "resourceType": "Patient" }
             }),
-            "400",
-            "invalid",
+            "404",
+            "not-found",
         ),
     ];
 

@@ -107,7 +107,6 @@ On an ES-backed composite the primary is the system of record: a write succeeds 
 | `HFS_COMPOSITE_SYNC_REPAIR_BATCH` | `100` | Records examined per pass, least recently failed first |
 
 To list what is owed: `SELECT * FROM secondary_sync_failures ORDER BY last_failed_at;` on the primary.
-
 ## Storage Backends
 
 | Mode | Value |

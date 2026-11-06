@@ -209,17 +209,24 @@ impl<S: ResourceStorage> AppState<S> {
     ///
     /// * `storage` - The storage backend (wrapped in Arc)
     /// * `config` - Server configuration
-    pub fn new(storage: Arc<S>, mut config: ServerConfig) -> Self {
+    pub fn new(storage: Arc<S>, mut config: ServerConfig) -> Self
+    where
+        S: 'static,
+    {
         let public_url = PublicUrl::parse(&config.base_url)
             .expect("AppState requires a valid HTTP(S) ServerConfig.base_url");
         config.base_url = public_url.as_str().to_string();
         let bulk_export_config = Arc::new(config.bulk_export.clone());
         let bulk_submit_config = Arc::new(config.bulk_submit.clone());
-        let validation = Arc::new(crate::validation::ValidationService::from_config(
-            &config.validation,
-            config.terminology_server.as_deref(),
-            config.default_fhir_version,
-        ));
+        let validation = Arc::new(
+            crate::validation::ValidationService::from_config(
+                &config.validation,
+                config.terminology_server.as_deref(),
+                config.default_fhir_version,
+            )
+            .unwrap_or_else(|e| panic!("validation service configuration failed: {e}"))
+            .with_storage_resolve(storage.clone()),
+        );
         Self {
             storage,
             config: Arc::new(config),
@@ -255,7 +262,10 @@ impl<S: ResourceStorage> AppState<S> {
         config: ServerConfig,
         auth_config: AuthConfig,
         auth_state: Option<Arc<AuthMiddlewareState>>,
-    ) -> Self {
+    ) -> Self
+    where
+        S: 'static,
+    {
         Self::with_auth_and_audit(storage, config, auth_config, auth_state, None, "Device/hfs")
     }
 
@@ -267,17 +277,24 @@ impl<S: ResourceStorage> AppState<S> {
         auth_state: Option<Arc<AuthMiddlewareState>>,
         audit_sink: Option<Arc<dyn AuditSink>>,
         audit_source_observer: impl Into<String>,
-    ) -> Self {
+    ) -> Self
+    where
+        S: 'static,
+    {
         let public_url = PublicUrl::parse(&config.base_url)
             .expect("AppState requires a valid HTTP(S) ServerConfig.base_url");
         config.base_url = public_url.as_str().to_string();
         let bulk_export_config = Arc::new(config.bulk_export.clone());
         let bulk_submit_config = Arc::new(config.bulk_submit.clone());
-        let validation = Arc::new(crate::validation::ValidationService::from_config(
-            &config.validation,
-            config.terminology_server.as_deref(),
-            config.default_fhir_version,
-        ));
+        let validation = Arc::new(
+            crate::validation::ValidationService::from_config(
+                &config.validation,
+                config.terminology_server.as_deref(),
+                config.default_fhir_version,
+            )
+            .unwrap_or_else(|e| panic!("validation service configuration failed: {e}"))
+            .with_storage_resolve(storage.clone()),
+        );
         Self {
             storage,
             config: Arc::new(config),

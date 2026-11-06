@@ -1,0 +1,404 @@
+//! Configuration for `cds-server` (CLI + env).
+//!
+//! # Environment variables (`CDS_*`)
+//!
+//! | Variable | Role |
+//! |----------|------|
+//! | `CDS_CLINICAL_REASONING_URL` | JVM sidecar base; empty → demo mode (no ELM) |
+//! | `CDS_HFS_BASE_URL` | **`hfsBaseUrl` sent to sidecar** — clinical data (patient chart HFS) |
+//! | `CDS_HTS_BASE_URL` | **`htsBaseUrl`** — HTS for ValueSet expansion during CQL |
+//! | `CDS_LIBRARY_BASE_URL` | **`libraryBaseUrl`** — KR for primary + include `Library` reads and manifest Binary fetch |
+//! | `CDS_SERVICES_MANIFEST_PATH` | Local JSON catalog (overrides KR Binary when set) |
+//! | `CDS_KR_SERVICES_BINARY_ID` | KR `Binary.id` holding base64 JSON service catalog |
+//! | `CDS_SIDECAR_TIMEOUT_SECS` | HTTP timeout for evaluate calls (default 120s) |
+//! | `CDS_MEASUREMENT_PERIOD_LOW` | eCQM reporting interval start (`YYYY-MM-DD`) → CQL `Measurement Period` |
+//! | `CDS_MEASUREMENT_PERIOD_HIGH` | eCQM reporting interval end (`YYYY-MM-DD`) |
+//! | `CDS_REQUIRE_FHIR_AUTHORIZATION` | Reject invoke without `fhirAuthorization` (production SMART) |
+//! | `CDS_FHIR_SERVER_ALLOWLIST` | Comma-separated allowed `fhirServer` hosts when SMART token is present |
+//! | `CDS_REQUIRE_LIBRARY_VERSION` | Require `libraryVersion` on every manifest evaluate service |
+//! | `CDS_VALIDATE_KR_LIBRARIES` | Probe KR for pinned libraries at startup (`GET /ready`) |
+//! | `CDS_SUBSCRIPTION_WEBHOOK_SECRET` | Optional shared secret for HFS → cds-server rest-hooks |
+//! | `CDS_FEEDBACK_FHIR_*` | Also used to POST critical-lab `Flag` resources from subscription events |
+//! | `CDS_FEEDBACK_OAUTH_*` | Client-credentials mint for feedback/Flag writes (preferred over static bearer) |
+//! | `CDS_ANALYTICS_CATALOG_PATH` | Optional JSON catalog for `POST /v1/nl-views` (defaults to the embedded bronze/SQLQuery pack) |
+
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+
+use crate::clinical_reasoning::{
+    ClinicalReasoningClient, ClinicalReasoningConfig, FhirServiceEndpoints,
+};
+use anyhow::Context as _;
+use clap::Parser;
+
+use crate::fhir_authorization::FhirAccessPolicy;
+use crate::library_version::LibraryVersionPolicy;
+use crate::measurement_period::MeasurementPeriod;
+
+/// CDS Hooks HTTP server.
+#[derive(Debug, Parser)]
+#[command(name = "cds-server")]
+pub struct Args {
+    /// Listen host.
+    #[arg(long, env = "CDS_SERVER_HOST", default_value = "127.0.0.1")]
+    pub host: String,
+
+    /// Listen port.
+    #[arg(long, env = "CDS_SERVER_PORT", default_value = "8095")]
+    pub port: u16,
+
+    /// Log level (RUST_LOG style supported via tracing-subscriber env filter).
+    #[arg(long, env = "CDS_LOG_LEVEL", default_value = "debug")]
+    pub log_level: String,
+
+    /// Enable CORS (wildcard origins when true).
+    #[arg(long, env = "CDS_ENABLE_CORS", default_value = "true")]
+    pub enable_cors: bool,
+
+    /// JVM clinical reasoning sidecar base URL. Unset or empty → demo mode (no ELM evaluation).
+    #[arg(
+        long,
+        env = "CDS_CLINICAL_REASONING_URL",
+        default_value = "http://127.0.0.1:8088"
+    )]
+    pub clinical_reasoning_url: Option<String>,
+
+    /// Clinical FHIR REST base (`hfsBaseUrl` → sidecar). Use the listen URL of your HFS process (scheme/host/port/path prefix), e.g. `http://localhost:8082` when `HFS_SERVER_PORT=8082`.
+    #[arg(
+        long,
+        env = "CDS_HFS_BASE_URL",
+        default_value = "http://127.0.0.1:8082"
+    )]
+    pub hfs_base_url: String,
+
+    /// Terminology FHIR REST base (`htsBaseUrl` → sidecar). Atrius default listen port is 9091.
+    #[arg(
+        long,
+        env = "CDS_HTS_BASE_URL",
+        default_value = "http://127.0.0.1:9091"
+    )]
+    pub hts_base_url: String,
+
+    /// Knowledge repo base URL — used for `libraryBaseUrl` → sidecar and to fetch `Binary` manifests.
+    #[arg(
+        long,
+        env = "CDS_LIBRARY_BASE_URL",
+        default_value = "http://127.0.0.1:8079"
+    )]
+    pub library_base_url: Option<String>,
+
+    /// Local JSON manifest path (same schema as KR Binary payload). Overrides KR Binary when set.
+    #[arg(long, env = "CDS_SERVICES_MANIFEST_PATH")]
+    pub services_manifest_path: Option<PathBuf>,
+
+    /// FHIR `Binary.id` on the KR (`GET {CDS_LIBRARY_BASE_URL}/Binary/{id}`) holding base64 JSON manifest.
+    #[arg(long, env = "CDS_KR_SERVICES_BINARY_ID")]
+    pub kr_services_binary_id: Option<String>,
+
+    /// HTTP timeout when fetching KR Binary (seconds).
+    #[arg(long, env = "CDS_KR_MANIFEST_HTTP_TIMEOUT_SECS", default_value = "30")]
+    pub kr_manifest_http_timeout_secs: u64,
+
+    /// Sidecar HTTP timeout (seconds).
+    #[arg(long, env = "CDS_SIDECAR_TIMEOUT_SECS", default_value = "120")]
+    pub sidecar_timeout_secs: u64,
+
+    /// eCQM measure reporting period start (inclusive). With [`Self::measurement_period_high`],
+    /// forwarded as the CQL `Measurement Period` parameter on every sidecar evaluate/$apply call.
+    #[arg(long, env = "CDS_MEASUREMENT_PERIOD_LOW")]
+    pub measurement_period_low: Option<String>,
+
+    /// eCQM measure reporting period end (inclusive). See [`Self::measurement_period_low`].
+    #[arg(long, env = "CDS_MEASUREMENT_PERIOD_HIGH")]
+    pub measurement_period_high: Option<String>,
+
+    /// When true, each CDS invoke must include `fhirAuthorization` (SMART bearer access to clinical FHIR).
+    #[arg(long, env = "CDS_REQUIRE_FHIR_AUTHORIZATION", default_value = "false")]
+    pub require_fhir_authorization: bool,
+
+    /// Comma-separated allowed hosts for `fhirServer` when `fhirAuthorization` is present (empty = any).
+    #[arg(long, env = "CDS_FHIR_SERVER_ALLOWLIST")]
+    pub fhir_server_allowlist: Option<String>,
+
+    /// Require explicit `libraryVersion` on manifest services that use legacy CQL evaluate.
+    #[arg(long, env = "CDS_REQUIRE_LIBRARY_VERSION", default_value = "false")]
+    pub require_library_version: bool,
+
+    /// Probe KR for manifest library pins and `planDefinitionId` at startup; expose on `GET /ready`.
+    #[arg(long, env = "CDS_VALIDATE_KR_LIBRARIES", default_value = "false")]
+    pub validate_kr_libraries: bool,
+
+    /// Clinical FHIR base where CDS feedback is persisted as `GuidanceResponse`.
+    /// Empty → feedback is acknowledged but not persisted.
+    #[arg(long, env = "CDS_FEEDBACK_FHIR_BASE_URL")]
+    pub feedback_fhir_base_url: Option<String>,
+
+    /// Static bearer token for feedback GuidanceResponse writes (dev/smoke override).
+    /// When set, wins over `CDS_FEEDBACK_OAUTH_*`. Prefer client-credentials in long-running
+    /// processes — access tokens expire (~300s on Keycloak).
+    #[arg(long, env = "CDS_FEEDBACK_FHIR_BEARER_TOKEN")]
+    pub feedback_fhir_bearer_token: Option<String>,
+
+    /// `X-Tenant-ID` header for feedback GuidanceResponse writes (multi-tenant HFS).
+    #[arg(long, env = "CDS_FEEDBACK_FHIR_TENANT_ID")]
+    pub feedback_fhir_tenant_id: Option<String>,
+
+    /// OAuth2 token endpoint for client-credentials (e.g. Keycloak
+    /// `/realms/fhir/protocol/openid-connect/token`).
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_TOKEN_URL")]
+    pub feedback_oauth_token_url: Option<String>,
+
+    /// Confidential client id (e.g. `cds-backend-client`).
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_CLIENT_ID")]
+    pub feedback_oauth_client_id: Option<String>,
+
+    /// Confidential client secret.
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_CLIENT_SECRET")]
+    pub feedback_oauth_client_secret: Option<String>,
+
+    /// Optional space-separated scopes for the token request.
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_SCOPE")]
+    pub feedback_oauth_scope: Option<String>,
+
+    /// Accept invalid TLS certs when calling the token URL (local Keycloak self-signed only).
+    #[arg(long, env = "CDS_FEEDBACK_OAUTH_TLS_INSECURE", default_value = "false")]
+    pub feedback_oauth_tls_insecure: bool,
+
+    /// Optional shared secret for `POST /internal/cds/fhir-notifications`
+    /// (`Authorization: Bearer` or `X-Cds-Webhook-Secret`).
+    #[arg(long, env = "CDS_SUBSCRIPTION_WEBHOOK_SECRET")]
+    pub subscription_webhook_secret: Option<String>,
+
+    /// Override the embedded bronze/SQLQuery catalog used by `POST /v1/nl-views`.
+    #[arg(long, env = "CDS_ANALYTICS_CATALOG_PATH")]
+    pub analytics_catalog_path: Option<PathBuf>,
+}
+
+impl Args {
+    pub fn socket_addr(&self) -> SocketAddr {
+        format!("{}:{}", self.host, self.port)
+            .parse()
+            .expect("valid listen address")
+    }
+
+    pub fn kr_http_client(&self) -> anyhow::Result<reqwest::Client> {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(self.kr_manifest_http_timeout_secs))
+            .build()
+            .context("reqwest client for KR manifest fetch")
+    }
+
+    /// Shared sidecar client + FHIR endpoints when `CDS_CLINICAL_REASONING_URL` is non-empty.
+    pub fn shared_sidecar(
+        &self,
+    ) -> anyhow::Result<Option<(Arc<ClinicalReasoningClient>, Arc<FhirServiceEndpoints>)>> {
+        let Some(ref url) = self.clinical_reasoning_url else {
+            return Ok(None);
+        };
+        let url = url.trim();
+        if url.is_empty() {
+            return Ok(None);
+        }
+
+        let cfg = ClinicalReasoningConfig::new(url)
+            .request_timeout(Duration::from_secs(self.sidecar_timeout_secs));
+        let client = ClinicalReasoningClient::new(cfg)?;
+
+        let mut endpoints =
+            FhirServiceEndpoints::new(self.hfs_base_url.trim(), self.hts_base_url.trim());
+        if let Some(ref lb) = self.library_base_url
+            && !lb.trim().is_empty()
+        {
+            endpoints = endpoints.with_library_base_url(lb.trim());
+        }
+
+        Ok(Some((Arc::new(client), Arc::new(endpoints))))
+    }
+
+    pub fn sidecar_configured(&self) -> bool {
+        self.clinical_reasoning_url
+            .as_deref()
+            .map(|s| !s.trim().is_empty())
+            .unwrap_or(false)
+    }
+
+    /// Configured eCQM reporting interval for this cds-server process (both bounds required).
+    pub fn measurement_period(&self) -> Option<MeasurementPeriod> {
+        let low = self.measurement_period_low.as_deref()?;
+        let high = self.measurement_period_high.as_deref()?;
+        MeasurementPeriod::parse_bounds(low.trim(), high.trim())
+    }
+
+    pub fn fhir_access_policy(&self) -> FhirAccessPolicy {
+        FhirAccessPolicy::from_config(
+            self.require_fhir_authorization,
+            self.fhir_server_allowlist.as_deref(),
+        )
+    }
+
+    pub fn library_version_policy(&self) -> LibraryVersionPolicy {
+        LibraryVersionPolicy::from_config(self.require_library_version, self.validate_kr_libraries)
+    }
+
+    pub fn kr_base_url(&self) -> Option<&str> {
+        self.library_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+    }
+
+    /// HTTP client for feedback/Flag FHIR calls (always verifies TLS).
+    fn feedback_http_client(&self) -> anyhow::Result<reqwest::Client> {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .context("reqwest client for feedback FHIR writes")
+    }
+
+    /// HTTP client for OAuth token mint (may skip TLS verify for local Keycloak).
+    fn feedback_oauth_http_client(&self) -> anyhow::Result<reqwest::Client> {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .danger_accept_invalid_certs(self.feedback_oauth_tls_insecure)
+            .build()
+            .context("reqwest client for feedback OAuth token")
+    }
+
+    /// Shared write-auth for GuidanceResponse + Flag POSTs.
+    pub fn feedback_write_auth(
+        &self,
+    ) -> anyhow::Result<Arc<dyn crate::fhir_write_auth::FhirWriteAuth>> {
+        let oauth_http = self.feedback_oauth_http_client()?;
+        Ok(crate::fhir_write_auth::build_fhir_write_auth(
+            oauth_http,
+            self.feedback_fhir_bearer_token.as_deref(),
+            self.feedback_oauth_token_url.as_deref(),
+            self.feedback_oauth_client_id.as_deref(),
+            self.feedback_oauth_client_secret.as_deref(),
+            self.feedback_oauth_scope.as_deref(),
+        ))
+    }
+
+    /// Feedback persistence store when `CDS_FEEDBACK_FHIR_BASE_URL` is configured.
+    pub fn feedback_store(
+        &self,
+        auth: Arc<dyn crate::fhir_write_auth::FhirWriteAuth>,
+    ) -> anyhow::Result<Option<Arc<crate::feedback_store::FeedbackStore>>> {
+        let Some(base) = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        else {
+            return Ok(None);
+        };
+        let http = self.feedback_http_client()?;
+        Ok(Some(Arc::new(crate::feedback_store::FeedbackStore::new(
+            http,
+            base,
+            auth,
+            self.feedback_fhir_tenant_id.clone(),
+        ))))
+    }
+
+    /// Measure / cohort / ViewDefinition suggestion façade.
+    pub fn analytics_state(
+        &self,
+        sidecar: Option<(Arc<ClinicalReasoningClient>, Arc<FhirServiceEndpoints>)>,
+        write_auth: Arc<dyn crate::fhir_write_auth::FhirWriteAuth>,
+        measurement_period: Option<crate::measurement_period::MeasurementPeriod>,
+    ) -> anyhow::Result<crate::analytics::AnalyticsState> {
+        let catalog = if let Some(path) = &self.analytics_catalog_path {
+            crate::analytics::catalog::ViewCatalog::load_file(path).map_err(anyhow::Error::msg)?
+        } else {
+            crate::analytics::catalog::ViewCatalog::embedded()
+        };
+        catalog.validate().map_err(anyhow::Error::msg)?;
+
+        let persist_base = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| self.hfs_base_url.trim());
+        let persist = if persist_base.is_empty() {
+            None
+        } else {
+            let http = self.feedback_http_client()?;
+            Some(Arc::new(crate::analytics::persist::FhirPersister::new(
+                http,
+                persist_base,
+                write_auth,
+                self.feedback_fhir_tenant_id.clone(),
+            )))
+        };
+
+        let engine = sidecar.map(|(client, endpoints)| {
+            Arc::new(crate::analytics::AnalyticsEngine {
+                client,
+                endpoints,
+                persist: persist.clone(),
+                measurement_period,
+                cohort_concurrency: crate::analytics::cohort::DEFAULT_COHORT_CONCURRENCY,
+            })
+        });
+
+        Ok(crate::analytics::AnalyticsState {
+            catalog: Arc::new(catalog),
+            engine,
+        })
+    }
+
+    /// Rest-hook receiver config (Observation fetch + optional Flag writes).
+    pub fn subscription_notify_config(
+        &self,
+        auth: Arc<dyn crate::fhir_write_auth::FhirWriteAuth>,
+    ) -> anyhow::Result<Option<Arc<crate::subscription_notifications::SubscriptionNotifyConfig>>>
+    {
+        let fhir_base = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| self.hfs_base_url.trim());
+        if fhir_base.is_empty() {
+            return Ok(None);
+        }
+
+        let http = self.feedback_http_client()?;
+
+        let persist_flags = self
+            .feedback_fhir_base_url
+            .as_deref()
+            .map(str::trim)
+            .is_some_and(|s| !s.is_empty());
+
+        let secret = self
+            .subscription_webhook_secret
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+
+        Ok(Some(Arc::new(
+            crate::subscription_notifications::SubscriptionNotifyConfig {
+                webhook_secret: secret,
+                fhir_http: http,
+                fhir_base_url: fhir_base.to_string(),
+                fhir_auth: auth,
+                fhir_tenant_id: self.feedback_fhir_tenant_id.clone(),
+                persist_flags,
+            },
+        )))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EvalTargets {
+    pub library_id: String,
+    pub expression: String,
+    pub library_version: Option<String>,
+    pub resolve_from_fhir: bool,
+}

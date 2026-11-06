@@ -4,7 +4,9 @@
 //! helpers from [`crate::helpers`] and BALP profile selection from
 //! [`crate::balp`].
 
-use crate::fhir_model::{AuditEvent, AuditEventAgent, AuditEventEntity, AuditEventSource, Meta};
+use crate::fhir_model::{
+    AuditEvent, AuditEventAgent, AuditEventEntity, AuditEventSource, Extension, Meta,
+};
 
 use crate::agent::AuditAgent;
 use crate::balp::{self, AuditAction, code_systems};
@@ -40,6 +42,9 @@ pub struct AuditEventBuilder {
     event_type_system: Option<String>,
     event_type_code: Option<String>,
     tenant: Option<String>,
+    id: Option<String>,
+    extra_subtypes: Vec<crate::fhir_model::Coding>,
+    extensions: Vec<Extension>,
 }
 
 impl AuditEventBuilder {
@@ -62,7 +67,29 @@ impl AuditEventBuilder {
             event_type_system: None,
             event_type_code: None,
             tenant: None,
+            id: None,
+            extra_subtypes: Vec::new(),
+            extensions: Vec::new(),
         }
+    }
+
+    /// Set a deterministic resource id. When omitted, `build` assigns a UUID.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Append a subtype coding. The restful-interaction coding derived from
+    /// [`Self::action`] is kept; R4 `subtype` is 0..*.
+    pub fn subtype(mut self, system: &str, code: &str) -> Self {
+        self.extra_subtypes.push(coding(system, code));
+        self
+    }
+
+    /// Append a FHIR extension (hospital Organization, correlation, …).
+    pub fn extension(mut self, extension: Extension) -> Self {
+        self.extensions.push(extension);
+        self
     }
 
     /// Set the FHIR audit action.
@@ -210,20 +237,25 @@ impl AuditEventBuilder {
         // Extra entities added via entity()
         entities.extend(self.extra_entities);
 
-        // Build the subtype coding (maps action code to restful-interaction)
-        let subtype = self.action.map(|a| {
+        // Restful-interaction from `action`, then any extra subtype codings (R4 0..*).
+        let mut subtype_codings = Vec::new();
+        if let Some(a) = self.action {
             let interaction = match a {
                 AuditAction::Create => "create",
                 AuditAction::Read => "read",
                 AuditAction::Update => "update",
                 AuditAction::Delete => "delete",
                 AuditAction::Query => "search",
-                // FHIR restful-interaction does not define "execute"; use "operation"
-                // for non-CRUD execution semantics.
                 AuditAction::Execute => "operation",
             };
-            vec![coding(code_systems::RESTFUL_INTERACTION, interaction)]
-        });
+            subtype_codings.push(coding(code_systems::RESTFUL_INTERACTION, interaction));
+        }
+        subtype_codings.extend(self.extra_subtypes);
+        let subtype = if subtype_codings.is_empty() {
+            None
+        } else {
+            Some(subtype_codings)
+        };
 
         // Event type: use override if set, otherwise default to "rest"
         let type_system = self
@@ -233,7 +265,9 @@ impl AuditEventBuilder {
         let type_code = self.event_type_code.as_deref().unwrap_or("rest");
 
         AuditEvent {
-            id: Some(fhir_string(uuid::Uuid::new_v4().to_string())),
+            id: Some(fhir_string(
+                self.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
+            )),
             meta: Some(Meta {
                 profile: Some(vec![canonical(profile_url)]),
                 tag: self
@@ -262,6 +296,11 @@ impl AuditEventBuilder {
                 None
             } else {
                 Some(entities)
+            },
+            extension: if self.extensions.is_empty() {
+                None
+            } else {
+                Some(self.extensions)
             },
             ..Default::default()
         }

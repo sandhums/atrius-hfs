@@ -38,6 +38,10 @@ docker build -f Dockerfile --build-arg BINARY_NAME=sof-server \
   --build-arg EXPOSE_PORT=8080 -t sof-server docker-context
 docker build -f Dockerfile --build-arg BINARY_NAME=fhirpath-server \
   --build-arg EXPOSE_PORT=3000 -t fhirpath-server docker-context
+docker build -f Dockerfile --build-arg BINARY_NAME=hts \
+  --build-arg EXPOSE_PORT=9091 -t hts docker-context
+docker build -f Dockerfile --build-arg BINARY_NAME=cds-server \
+  --build-arg EXPOSE_PORT=8095 -t cds-server docker-context
 ```
 
 `docker/bulk-submit/stage-context.sh` is a worked example of steps 1–2.
@@ -47,7 +51,7 @@ Build arguments:
 | Arg | Default | Purpose |
 |---|---|---|
 | `BINARY_NAME` | none (required) | Binary to copy in and exec; build fails if unset |
-| `EXPOSE_PORT` | `8080` | `EXPOSE`d port — CI uses `3000` for fhirpath-server, `8090` for hts |
+| `EXPOSE_PORT` | `8080` | `EXPOSE`d port — CI uses `3000` for fhirpath-server, `9091` for hts, `8095` for cds-server |
 | `BOOTSTRAP_DIR` | `""` | Sets `HTS_BOOTSTRAP_DIR`; the hts image bakes in `crates/hts/terminology-data` and points here for first-boot auto-import |
 
 Container assumptions:
@@ -55,7 +59,7 @@ Container assumptions:
 - Base image is `debian:trixie-slim`.
 - Runtime user is non-root user `helios` (uid/gid 1000) — not `hfs`.
 - Default exposed port is `8080` (overridable via `EXPOSE_PORT`).
-- Server host variables are set to `0.0.0.0` inside the container: `HFS_SERVER_HOST`, `SOF_SERVER_HOST`, `FHIRPATH_SERVER_HOST`, and `HTS_SERVER_HOST`.
+- Server host variables are set to `0.0.0.0` inside the container: `HFS_SERVER_HOST`, `SOF_SERVER_HOST`, `FHIRPATH_SERVER_HOST`, `HTS_SERVER_HOST`, and `CDS_SERVER_HOST`.
 - `HFS_DATABASE_URL` defaults to `:memory:`, and `/data` is a `VOLUME` owned by `helios` for SQLite and other persistent state.
 - Only the `hfs` image ships `data/` (the search-parameter definitions); CI gates this behind `include_data`. Without it the server falls back to a handful of embedded search parameters.
 

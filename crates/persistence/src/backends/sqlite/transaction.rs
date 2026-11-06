@@ -402,6 +402,18 @@ impl SqliteTransaction {
 
         // Re-index the resource for search, clearing the previous version's rows.
         self.index_resource(&conn, tenant_id, resource_type, id, &data, true, None)?;
+
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &conn,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Update,
+            Some(data.clone()),
+            Some(current.content().clone()),
+        )?;
         drop(conn);
 
         // A SearchParameter write invalidates this tenant's cached registry
@@ -675,6 +687,18 @@ impl SqliteTransaction {
         // Index the resource for search. Nothing to clear: the existence
         // probe above established there is no row for this id.
         self.index_resource(&conn, tenant_id, resource_type, &id, &data, false, prepared)?;
+
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &conn,
+            self.tenant.tenant_id(),
+            self.fhir_version,
+            resource_type,
+            &id,
+            version_id,
+            crate::core::OutboxEventType::Create,
+            Some(data.clone()),
+            None,
+        )?;
         drop(conn);
 
         // Mirrors the storage path: an overlay-affecting SearchParameter
@@ -783,6 +807,21 @@ impl Transaction for SqliteTransaction {
             params![tenant_id, resource_type, id, new_version_str, data, deleted_at, fhir_version_str],
         )
         .map_err(|e| internal_error(format!("Failed to insert deletion history: {}", e)))?;
+
+        let previous_resource: Value = serde_json::from_slice(&data).unwrap_or(Value::Null);
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &conn,
+            self.tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Delete,
+            None,
+            Some(previous_resource),
+        )?;
         drop(conn);
 
         // A SearchParameter delete invalidates this tenant's cached registry

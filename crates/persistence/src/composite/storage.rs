@@ -51,7 +51,7 @@ use crate::core::{
     InstanceHistoryProvider, NdjsonBatch, PatchCandidateValidator, PatientExportProvider,
     PurgableStorage, ResourceStorage, RevincludeProvider, SearchProvider, SearchResult, SofRunner,
     StorageCapabilities, SystemHistoryProvider, TerminologySearchProvider, TextSearchProvider,
-    TypeHistoryProvider, VersionedStorage,
+    TypeHistoryProvider, VersionedStorage, resolve_includes_iterative,
 };
 use crate::error::{BackendError, ResourceError, StorageError, StorageResult, TransactionError};
 use crate::tenant::TenantContext;
@@ -1109,6 +1109,13 @@ impl ResourceStorage for CompositeStorage {
         self.primary.sof_runner()
     }
 
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        // Outbox lives with the primary CRUD store so durability matches writes.
+        self.primary.subscription_outbox_store()
+    }
+
     fn sof_terminology_store(
         &self,
     ) -> Option<Arc<dyn crate::core::sof_terminology::SofTerminologyStore>> {
@@ -1574,7 +1581,23 @@ impl SearchProvider for CompositeStorage {
         tenant: &TenantContext,
         query: &SearchQuery,
     ) -> StorageResult<SearchResult> {
-        self.execute_routed_search(tenant, query).await
+        // Search backends that resolve `_include` inline (Elasticsearch) only
+        // walk JSON field names and drop `_revinclude` / `:iterate`. REST then
+        // skips `resolve_includes_iterative` whenever `included` is non-empty,
+        // so a mixed `_include`+`_revinclude` query silently loses the reverse
+        // side. Strip include directives from the routed query and resolve them
+        // here with the same FHIRPath+search path REST uses for SQLite/Postgres.
+        if query.includes.is_empty() {
+            return self.execute_routed_search(tenant, query).await;
+        }
+
+        let mut routed = query.clone();
+        routed.includes.clear();
+        let mut result = self.execute_routed_search(tenant, &routed).await?;
+        result.included =
+            resolve_includes_iterative(self, tenant, &result.resources.items, &query.includes)
+                .await?;
+        Ok(result)
     }
 
     async fn search_ids(
@@ -2101,6 +2124,16 @@ impl ConditionalStorage for CompositeStorage {
 
         Ok(result)
     }
+
+    async fn conditional_matches(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        search_params: &str,
+    ) -> StorageResult<Vec<StoredResource>> {
+        self.resolve_conditional_matches(tenant, resource_type, search_params)
+            .await
+    }
 }
 
 #[async_trait]
@@ -2372,7 +2405,7 @@ impl IncludeProvider for CompositeStorage {
         resources: &[StoredResource],
         includes: &[IncludeDirective],
     ) -> StorageResult<Vec<StoredResource>> {
-        crate::core::resolve_includes_iterative(self, tenant, resources, includes).await
+        resolve_includes_iterative(self, tenant, resources, includes).await
     }
 }
 
@@ -2384,56 +2417,18 @@ impl RevincludeProvider for CompositeStorage {
         resources: &[StoredResource],
         revincludes: &[IncludeDirective],
     ) -> StorageResult<Vec<StoredResource>> {
-        // Revinclude resolution - find resources that reference the primary results
-        // This typically requires search capability
-        let mut revincluded = Vec::new();
-
-        for revinclude in revincludes {
-            for resource in resources {
-                let reference = format!("{}/{}", resource.resource_type(), resource.id());
-
-                // Search for resources that reference this one
-                let query = SearchQuery::new(&revinclude.source_type).with_parameter(
-                    crate::types::SearchParameter {
-                        name: revinclude.search_param.clone(),
-                        param_type: crate::types::SearchParamType::Reference,
-                        modifier: None,
-                        values: vec![crate::types::SearchValue::eq(&reference)],
-                        chain: vec![],
-                        components: vec![],
-                    },
-                );
-
-                if let Ok(result) = self.search(tenant, &query).await {
-                    for item in result.resources.items {
-                        revincluded.push(item);
-                    }
-                }
-            }
-        }
-
-        // Deduplicate
-        let mut seen = std::collections::HashSet::new();
-        revincluded.retain(|r| seen.insert(format!("{}/{}", r.resource_type(), r.id())));
-
-        Ok(revincluded)
+        resolve_includes_iterative(self, tenant, resources, revincludes).await
     }
 }
 
 #[async_trait]
 impl TerminologySearchProvider for CompositeStorage {
     async fn expand_value_set(&self, _value_set_url: &str) -> StorageResult<Vec<(String, String)>> {
-        // Delegate to terminology backend if available
-        let term_backend = self
-            .config
-            .backends_with_role(super::config::BackendRole::Terminology)
-            .next();
-
-        if let Some(_backend) = term_backend {
-            // Would need to downcast to TerminologySearchProvider
-        }
-
-        // Fallback: not supported without terminology service
+        // No persistence backend implements TerminologySearchProvider, so there
+        // is nothing to register or downcast. REST expands `:in` / `:above` /
+        // `:below` via `HFS_TERMINOLOGY_SERVER` before search; this trait stays
+        // honest UnsupportedCapability rather than advertising in-storage
+        // terminology the composite cannot honour.
         Err(StorageError::Backend(BackendError::UnsupportedCapability {
             backend_name: "composite".to_string(),
             capability: "expand_value_set".to_string(),
@@ -3581,6 +3576,403 @@ mod tests {
         assert_eq!(count, 1);
     }
 
+    /// Composite search must populate `included` for `_include` and `_revinclude`
+    /// together. Search backends that resolve includes inline (Elasticsearch)
+    /// drop the reverse side; leaving that partial list in place would make REST
+    /// skip `resolve_includes_iterative`.
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn test_search_resolves_include_and_revinclude() {
+        use std::collections::HashMap;
+        use std::path::PathBuf;
+        use std::sync::Arc;
+
+        use crate::backends::sqlite::{SqliteBackend, SqliteBackendConfig};
+        use crate::core::{ResourceStorage, SearchProvider};
+        use crate::tenant::{TenantContext, TenantId, TenantPermissions};
+        use crate::types::{
+            IncludeDirective, IncludeType, SearchParamType, SearchParameter, SearchQuery,
+            SearchValue,
+        };
+
+        fn sqlite_with_spec_params() -> Arc<SqliteBackend> {
+            let data_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .and_then(|p| p.parent())
+                .map(|p| p.join("data"))
+                .unwrap_or_else(|| PathBuf::from("data"));
+            let config = SqliteBackendConfig {
+                fhir_version: FhirVersion::default(),
+                data_dir: Some(data_dir),
+                ..Default::default()
+            };
+            let backend =
+                SqliteBackend::with_config(":memory:", config).expect("create sqlite backend");
+            backend.init_schema().expect("init sqlite schema");
+            Arc::new(backend)
+        }
+
+        let primary = sqlite_with_spec_params();
+        let search = sqlite_with_spec_params();
+        let tenant = TenantContext::new(
+            TenantId::new("composite-include"),
+            TenantPermissions::full_access(),
+        );
+
+        for backend in [&primary, &search] {
+            backend
+                .create_or_update(
+                    &tenant,
+                    "Organization",
+                    "org-1",
+                    json!({
+                        "resourceType": "Organization",
+                        "id": "org-1",
+                        "name": "Include Org"
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .expect("seed organization");
+            backend
+                .create_or_update(
+                    &tenant,
+                    "Patient",
+                    "patient-1",
+                    json!({
+                        "resourceType": "Patient",
+                        "id": "patient-1",
+                        "managingOrganization": {"reference": "Organization/org-1"}
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .expect("seed patient");
+            backend
+                .create(
+                    &tenant,
+                    "Observation",
+                    json!({
+                        "resourceType": "Observation",
+                        "id": "obs-1",
+                        "status": "final",
+                        "subject": {"reference": "Patient/patient-1"},
+                        "code": {"coding": [{"code": "test"}]}
+                    }),
+                    FhirVersion::default(),
+                )
+                .await
+                .expect("seed observation");
+        }
+
+        let composite_config = CompositeConfig::builder()
+            .primary("primary", BackendKind::Sqlite)
+            .search_backend("search", BackendKind::Sqlite)
+            .build()
+            .expect("build composite config");
+
+        let mut backends = HashMap::new();
+        backends.insert("primary".to_string(), primary.clone() as DynStorage);
+        backends.insert("search".to_string(), search.clone() as DynStorage);
+
+        let mut search_providers = HashMap::new();
+        search_providers.insert("primary".to_string(), primary.clone() as DynSearchProvider);
+        search_providers.insert("search".to_string(), search.clone() as DynSearchProvider);
+
+        let composite = CompositeStorage::new(composite_config, backends)
+            .expect("create composite storage")
+            .with_search_providers(search_providers)
+            .with_full_primary(primary.clone());
+
+        let query = SearchQuery::new("Patient")
+            .with_parameter(SearchParameter {
+                name: "_id".to_string(),
+                param_type: SearchParamType::Token,
+                modifier: None,
+                values: vec![SearchValue::eq("patient-1")],
+                chain: vec![],
+                components: vec![],
+            })
+            .with_include(IncludeDirective {
+                include_type: IncludeType::Include,
+                source_type: "Patient".to_string(),
+                search_param: "organization".to_string(),
+                target_type: Some("Organization".to_string()),
+                iterate: false,
+            })
+            .with_include(IncludeDirective {
+                include_type: IncludeType::Revinclude,
+                source_type: "Observation".to_string(),
+                search_param: "subject".to_string(),
+                target_type: None,
+                iterate: false,
+            });
+
+        let result = composite
+            .search(&tenant, &query)
+            .await
+            .expect("composite include search should succeed");
+
+        assert_eq!(result.resources.len(), 1);
+        assert_eq!(result.resources.items[0].id(), "patient-1");
+
+        let included_keys: std::collections::HashSet<String> = result
+            .included
+            .iter()
+            .map(|r| format!("{}/{}", r.resource_type(), r.id()))
+            .collect();
+        assert!(
+            included_keys.contains("Organization/org-1"),
+            "forward _include Patient:organization must resolve managingOrganization, got {included_keys:?}"
+        );
+        assert!(
+            included_keys.iter().any(|k| k.starts_with("Observation/")),
+            "_revinclude Observation:subject must survive alongside _include, got {included_keys:?}"
+        );
+    }
+
+    /// The Elasticsearch shape of the bug above: a search backend that resolves
+    /// `_include` itself. Composite must (a) not hand it the include directives,
+    /// since its inline resolution is forward-only and drops `:iterate`, and
+    /// (b) not keep whatever it put in `included`.
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn test_search_replaces_backend_supplied_included() {
+        use std::collections::HashMap;
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        use crate::backends::sqlite::SqliteBackend;
+        use crate::core::{ResourceStorage, SearchProvider};
+        use crate::tenant::{TenantContext, TenantId, TenantPermissions};
+        use crate::types::{
+            IncludeDirective, IncludeType, SearchParamType, SearchParameter, SearchQuery,
+            SearchValue, StoredResource,
+        };
+
+        /// Wraps a real backend, records how many include directives it was
+        /// asked to handle, and always returns a sentinel `included` entry the
+        /// way Elasticsearch returns its own partial list.
+        struct InlineIncludeBackend {
+            inner: Arc<SqliteBackend>,
+            includes_seen: AtomicUsize,
+        }
+
+        #[async_trait]
+        impl ResourceStorage for InlineIncludeBackend {
+            fn backend_name(&self) -> &'static str {
+                "inline-include"
+            }
+
+            async fn create(
+                &self,
+                tenant: &TenantContext,
+                resource_type: &str,
+                resource: serde_json::Value,
+                fhir_version: FhirVersion,
+            ) -> StorageResult<StoredResource> {
+                self.inner
+                    .create(tenant, resource_type, resource, fhir_version)
+                    .await
+            }
+
+            async fn create_or_update(
+                &self,
+                tenant: &TenantContext,
+                resource_type: &str,
+                id: &str,
+                resource: serde_json::Value,
+                fhir_version: FhirVersion,
+            ) -> StorageResult<(StoredResource, bool)> {
+                self.inner
+                    .create_or_update(tenant, resource_type, id, resource, fhir_version)
+                    .await
+            }
+
+            async fn read(
+                &self,
+                tenant: &TenantContext,
+                resource_type: &str,
+                id: &str,
+            ) -> StorageResult<Option<StoredResource>> {
+                self.inner.read(tenant, resource_type, id).await
+            }
+
+            async fn update(
+                &self,
+                tenant: &TenantContext,
+                current: &StoredResource,
+                resource: serde_json::Value,
+            ) -> StorageResult<StoredResource> {
+                self.inner.update(tenant, current, resource).await
+            }
+
+            async fn delete(
+                &self,
+                tenant: &TenantContext,
+                resource_type: &str,
+                id: &str,
+            ) -> StorageResult<()> {
+                self.inner.delete(tenant, resource_type, id).await
+            }
+
+            async fn count(
+                &self,
+                tenant: &TenantContext,
+                resource_type: Option<&str>,
+            ) -> StorageResult<u64> {
+                self.inner.count(tenant, resource_type).await
+            }
+        }
+
+        #[async_trait]
+        impl SearchProvider for InlineIncludeBackend {
+            async fn search(
+                &self,
+                tenant: &TenantContext,
+                query: &SearchQuery,
+            ) -> StorageResult<SearchResult> {
+                self.includes_seen
+                    .fetch_add(query.includes.len(), Ordering::SeqCst);
+                let result = self.inner.search(tenant, query).await?;
+                let sentinel = StoredResource::new(
+                    "Organization",
+                    "backend-supplied",
+                    tenant.tenant_id().clone(),
+                    json!({"resourceType": "Organization", "id": "backend-supplied"}),
+                    FhirVersion::default(),
+                );
+                Ok(result.with_included(vec![sentinel]))
+            }
+
+            async fn search_count(
+                &self,
+                tenant: &TenantContext,
+                query: &SearchQuery,
+            ) -> StorageResult<u64> {
+                self.inner.search_count(tenant, query).await
+            }
+
+            fn search_param_registry(
+                &self,
+                tenant: &TenantContext,
+            ) -> Arc<parking_lot::RwLock<crate::search::SearchParameterRegistry>> {
+                self.inner.search_param_registry(tenant)
+            }
+        }
+
+        let data_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("data"))
+            .unwrap_or_else(|| std::path::PathBuf::from("data"));
+        let config = crate::backends::sqlite::SqliteBackendConfig {
+            fhir_version: FhirVersion::default(),
+            data_dir: Some(data_dir),
+            ..Default::default()
+        };
+        let sqlite = Arc::new(
+            SqliteBackend::with_config(":memory:", config).expect("create sqlite backend"),
+        );
+        sqlite.init_schema().expect("init sqlite schema");
+
+        let tenant = TenantContext::new(
+            TenantId::new("composite-inline-include"),
+            TenantPermissions::full_access(),
+        );
+
+        sqlite
+            .create_or_update(
+                &tenant,
+                "Organization",
+                "org-1",
+                json!({"resourceType": "Organization", "id": "org-1", "name": "Real Org"}),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("seed organization");
+        sqlite
+            .create_or_update(
+                &tenant,
+                "Patient",
+                "patient-1",
+                json!({
+                    "resourceType": "Patient",
+                    "id": "patient-1",
+                    "managingOrganization": {"reference": "Organization/org-1"}
+                }),
+                FhirVersion::default(),
+            )
+            .await
+            .expect("seed patient");
+
+        let inline = Arc::new(InlineIncludeBackend {
+            inner: sqlite.clone(),
+            includes_seen: AtomicUsize::new(0),
+        });
+
+        let composite_config = CompositeConfig::builder()
+            .primary("primary", BackendKind::Sqlite)
+            .search_backend("search", BackendKind::Elasticsearch)
+            .build()
+            .expect("build composite config");
+
+        let mut backends = HashMap::new();
+        backends.insert("primary".to_string(), sqlite.clone() as DynStorage);
+        backends.insert("search".to_string(), inline.clone() as DynStorage);
+
+        let mut search_providers = HashMap::new();
+        search_providers.insert("primary".to_string(), sqlite.clone() as DynSearchProvider);
+        search_providers.insert("search".to_string(), inline.clone() as DynSearchProvider);
+
+        let composite = CompositeStorage::new(composite_config, backends)
+            .expect("create composite storage")
+            .with_search_providers(search_providers)
+            .with_full_primary(sqlite.clone());
+
+        let query = SearchQuery::new("Patient")
+            .with_parameter(SearchParameter {
+                name: "_id".to_string(),
+                param_type: SearchParamType::Token,
+                modifier: None,
+                values: vec![SearchValue::eq("patient-1")],
+                chain: vec![],
+                components: vec![],
+            })
+            .with_include(IncludeDirective {
+                include_type: IncludeType::Include,
+                source_type: "Patient".to_string(),
+                search_param: "organization".to_string(),
+                target_type: Some("Organization".to_string()),
+                iterate: false,
+            });
+
+        let result = composite
+            .search(&tenant, &query)
+            .await
+            .expect("composite include search should succeed");
+
+        assert_eq!(
+            inline.includes_seen.load(Ordering::SeqCst),
+            0,
+            "composite must strip include directives before routing so a backend's \
+             forward-only inline resolution never runs"
+        );
+
+        let included_keys: std::collections::HashSet<String> = result
+            .included
+            .iter()
+            .map(|r| format!("{}/{}", r.resource_type(), r.id()))
+            .collect();
+        assert!(
+            !included_keys.contains("Organization/backend-supplied"),
+            "a search backend's own `included` list must not survive, got {included_keys:?}"
+        );
+        assert!(
+            included_keys.contains("Organization/org-1"),
+            "composite must resolve the include itself, got {included_keys:?}"
+        );
+    }
     /// A fake resource storage that also acts as a search provider. It
     /// records every `search` query it receives (so tests can assert which
     /// backend answered, and with which parameters) and returns a fixed set

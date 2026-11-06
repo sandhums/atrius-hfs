@@ -6,7 +6,7 @@
 
 use crate::fhir_model::{
     AuditEventEntityDetail, AuditEventEntityDetailValue, Boolean, Canonical, Code, CodeableConcept,
-    Coding, Instant, Reference, String as FhirString, Uri,
+    Coding, Identifier, Instant, Reference, String as FhirString, Uri,
 };
 use chrono::Utc;
 use helios_fhir::{Element, PrecisionInstant};
@@ -103,6 +103,46 @@ pub fn reference(value: &str) -> Reference {
     }
 }
 
+/// Build `AuditEvent.agent.who` for a JWT subject or FHIR reference.
+///
+/// Valid FHIR relative references (`ResourceType/id`) use `Reference.reference`.
+/// OIDC `sub` values and other identifiers use `Reference.identifier`.
+pub fn agent_who(identity: &str, issuer: Option<&str>) -> Reference {
+    if is_fhir_relative_reference(identity) {
+        return reference(identity);
+    }
+
+    let system = issuer
+        .filter(|s| !s.is_empty())
+        .map(|iss| format!("{iss}/claims/sub"))
+        .unwrap_or_else(|| "urn:ietf:params:oauth:claim:sub".to_string());
+
+    Reference {
+        identifier: Some(Box::new(Identifier {
+            system: Some(uri(&system)),
+            value: Some(fhir_string(identity)),
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+}
+
+/// True when `value` looks like a FHIR relative reference (`ResourceType/id`).
+#[must_use]
+pub fn is_fhir_relative_reference(value: &str) -> bool {
+    let Some((resource_type, id)) = value.split_once('/') else {
+        return false;
+    };
+    if resource_type.is_empty() || id.is_empty() || id.contains('/') {
+        return false;
+    }
+    resource_type
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+        && resource_type.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
 /// Create an `AuditEventEntityDetail` with a string value.
 pub fn entity_detail(name: &str, value: &str) -> AuditEventEntityDetail {
     AuditEventEntityDetail {
@@ -116,6 +156,17 @@ pub fn entity_detail(name: &str, value: &str) -> AuditEventEntityDetail {
 pub fn codeable_concept(c: Coding) -> CodeableConcept {
     CodeableConcept {
         coding: Some(vec![c]),
+        ..Default::default()
+    }
+}
+
+/// Extension with `valueReference` (hospital Organization, related resource).
+pub fn reference_extension(url: &str, reference_value: &str) -> crate::fhir_model::Extension {
+    crate::fhir_model::Extension {
+        url: fhir_string(url),
+        value: Some(crate::fhir_model::ExtensionValue::Reference(reference(
+            reference_value,
+        ))),
         ..Default::default()
     }
 }
@@ -218,5 +269,39 @@ mod tests {
             }
             _ => panic!("Expected String variant"),
         }
+    }
+
+    #[test]
+    fn test_agent_who_identifier_for_bare_subject() {
+        let r = agent_who("frontdesk", Some("https://idp.example/realms/fhir"));
+        assert!(r.reference.is_none());
+        let id = r.identifier.as_ref().unwrap();
+        assert_eq!(
+            id.system.as_ref().and_then(|s| s.value.as_deref()),
+            Some("https://idp.example/realms/fhir/claims/sub")
+        );
+        assert_eq!(
+            id.value.as_ref().and_then(|s| s.value.as_deref()),
+            Some("frontdesk")
+        );
+    }
+
+    #[test]
+    fn test_agent_who_pseudo_fhir_ref_uses_identifier() {
+        let r = agent_who("frontdesk/sweety", Some("https://idp.example/realms/fhir"));
+        assert!(r.reference.is_none());
+        assert_eq!(
+            r.identifier
+                .as_ref()
+                .and_then(|i| i.value.as_ref())
+                .and_then(|s| s.value.as_deref()),
+            Some("frontdesk/sweety")
+        );
+    }
+
+    #[test]
+    fn test_is_fhir_relative_reference() {
+        assert!(is_fhir_relative_reference("Practitioner/dr-patel"));
+        assert!(!is_fhir_relative_reference("frontdesk/sweety"));
     }
 }

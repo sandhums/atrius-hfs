@@ -1,0 +1,35 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-composition",
+  "url": "http://example.org/fhir/StructureDefinition/example-composition",
+  "name": "ExampleComposition",
+  "type": "Composition",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Composition",
+  "kind": "resource",
+  "derivation": "constraint",
+  "snapshot": {
+    "element": [
+      {
+        "id": "Composition",
+        "path": "Composition"
+      },
+      {
+        "id": "Composition.section",
+        "path": "Composition.section",
+        "min": 0,
+        "max": "*",
+        "base": { "path": "Composition.section", "min": 0, "max": "*" },
+        "type": [{ "code": "BackboneElement" }]
+      },
+      {
+        "id": "Composition.section.section",
+        "path": "Composition.section.section",
+        "short": "Nested Section",
+        "min": 0,
+        "max": "*",
+        "base": { "path": "Composition.section.section", "min": 0, "max": "*" },
+        "contentReference": "http://hl7.org/fhir/StructureDefinition/Composition#Composition.section"
+      }
+    ]
+  }
+}

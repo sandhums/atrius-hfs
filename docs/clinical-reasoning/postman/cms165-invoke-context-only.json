@@ -1,0 +1,13 @@
+{
+  "hook": "patient-view",
+  "hookInstance": "postman-context-only",
+  "context": {
+    "patientId": "cms165-demo",
+    "userId": "Practitioner/example",
+    "measurementPeriod": {
+      "low": "2026-01-01",
+      "high": "2026-12-31"
+    }
+  },
+  "prefetch": {}
+}

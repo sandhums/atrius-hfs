@@ -217,6 +217,12 @@ pub enum RestError {
         message: String,
     },
 
+    /// Profile / IG validation failed (HTTP 422) with a full OperationOutcome body.
+    ValidationOutcome {
+        /// FHIR OperationOutcome JSON (may include multiple issues).
+        outcome: serde_json::Value,
+    },
+
     /// A full-document validation pass rejected the request (HTTP 422).
     /// Carries the full multi-issue OperationOutcome from whichever pass
     /// produced it — the FHIR resource validator in enforce mode
@@ -441,6 +447,9 @@ impl fmt::Display for RestError {
             RestError::UnprocessableEntity { message } => {
                 write!(f, "Unprocessable entity: {}", message)
             }
+            RestError::ValidationOutcome { .. } => {
+                write!(f, "Profile validation failed")
+            }
             RestError::ValidationFailed { .. } => {
                 write!(f, "Resource validation failed")
             }
@@ -593,6 +602,11 @@ impl RestError {
                 "processing",
                 message.clone(),
             ),
+            RestError::ValidationOutcome { .. } => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "processing",
+                "Profile validation failed".to_string(),
+            ),
             // Unreachable from either renderer since #504: both go through
             // [`Self::client_outcome`], which intercepts `ValidationFailed`
             // above this table and surfaces the validator's own multi-issue
@@ -739,6 +753,9 @@ impl RestError {
     /// reached the code table first would re-flatten it. `MultiIssue` is the
     /// same shape for the request-level `400`: the outcome is the payload.
     pub(crate) fn client_outcome(&self) -> (StatusCode, serde_json::Value) {
+        if let RestError::ValidationOutcome { outcome } = self {
+            return (StatusCode::UNPROCESSABLE_ENTITY, outcome.clone());
+        }
         if let RestError::ValidationFailed { outcome } = self {
             return (StatusCode::UNPROCESSABLE_ENTITY, outcome.clone());
         }
@@ -758,7 +775,7 @@ impl IntoResponse for RestError {
         // Both the HTTP body and a Bundle entry's `response.outcome` are
         // rendered by `client_outcome`, so the two cannot describe the same
         // failure differently (#504). It also carries the `ValidationFailed`
-        // pass-through that used to live here.
+        // / `ValidationOutcome` pass-through that used to live here.
         let (status, operation_outcome) = self.client_outcome();
 
         // Unauthorized additionally carries a Bearer challenge in the
@@ -796,15 +813,14 @@ impl IntoResponse for RestError {
             retry_after_secs: Some(secs),
             ..
         } = &self
+            && let Ok(value) = axum::http::HeaderValue::from_str(&secs.to_string())
         {
-            if let Ok(value) = axum::http::HeaderValue::from_str(&secs.to_string()) {
-                return (
-                    status,
-                    [(axum::http::header::RETRY_AFTER, value)],
-                    Json(operation_outcome),
-                )
-                    .into_response();
-            }
+            return (
+                status,
+                [(axum::http::header::RETRY_AFTER, value)],
+                Json(operation_outcome),
+            )
+                .into_response();
         }
 
         (status, Json(operation_outcome)).into_response()
@@ -880,6 +896,9 @@ impl From<helios_auth::AuthError> for RestError {
                 ),
             },
             helios_auth::AuthError::InternalError(msg) => RestError::InternalError { message: msg },
+            helios_auth::AuthError::RevocationUnavailable => RestError::ServiceUnavailable {
+                message: "Authentication service temporarily unavailable".to_string(),
+            },
             other => RestError::Unauthorized {
                 message: other.to_string(),
             },
@@ -1677,6 +1696,22 @@ mod tests {
             outcome["issue"][0]["details"]["text"],
             "connection pool exhausted"
         );
+    }
+
+    #[test]
+    fn auth_revocation_unavailable_maps_to_503_transient() {
+        let err: RestError = helios_auth::AuthError::RevocationUnavailable.into();
+        let (status, code, message) = err.client_response();
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(code, "transient");
+        assert!(message.contains("temporarily unavailable"), "got {message}");
+    }
+
+    #[test]
+    fn auth_missing_jti_maps_to_401() {
+        let err: RestError = helios_auth::AuthError::MissingJti.into();
+        let (status, _, _) = err.client_response();
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
     }
 
     // ── From<BackendError> → RestError (all three arms) ────────────

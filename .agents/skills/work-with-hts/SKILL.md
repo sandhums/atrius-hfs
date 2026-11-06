@@ -10,18 +10,18 @@ Use this when working on the `hts` binary or terminology server behavior.
 ## Running
 
 ```bash
-# Default: SQLite, port 8090
+# Default: SQLite, port 9091
 cargo run --bin hts
 
 # Custom database path and port
-HTS_DATABASE_URL=./my-terminology.db HTS_SERVER_PORT=9090 cargo run --bin hts
+HTS_DATABASE_URL=./my-terminology.db HTS_SERVER_PORT=9091 cargo run --bin hts
 ```
 
 ## Environment
 
 | Variable | Default | Description |
 |---|---|---|
-| `HTS_SERVER_PORT` | `8090` | Server port |
+| `HTS_SERVER_PORT` | `9091` | Server port |
 | `HTS_SERVER_HOST` | `127.0.0.1` | Host to bind |
 | `HTS_LOG_LEVEL` | `info` | Log level: error, warn, info, debug, trace |
 | `HTS_DATABASE_URL` | `./data/hts.db` | SQLite file path or PostgreSQL connection URL |
@@ -56,21 +56,23 @@ When `HTS_BOOTSTRAP_DIR` points at a directory, HTS synchronizes recognized file
 | import bundle | POST | `/import` |
 | CRUD | GET/POST/PUT/DELETE | `/CodeSystem/:id`, `/ValueSet/:id`, `/ConceptMap/:id` |
 
+`$validate-code` on a stored ValueSet whose compose is only `concept is-a` / `descendent-of` includes (OR'd) uses `concept_closure` and does not materialise the expansion. Full `$expand` of a large product-class set can still 422 `too-costly` (`HTS_MAX_EXPANSION_SIZE`); paginate with `count`.
+
 ## Quick Examples
 
 ```bash
 # Import a FHIR Bundle containing CodeSystem, ValueSet, or ConceptMap resources
-curl -X POST http://localhost:8090/import \
+curl -X POST http://localhost:9091/import \
   -H "Content-Type: application/fhir+json" \
   -d @bundle.json
 
 # Lookup a concept
-curl -X POST http://localhost:8090/CodeSystem/\$lookup \
+curl -X POST http://localhost:9091/CodeSystem/\$lookup \
   -H "Content-Type: application/fhir+json" \
   -d '{"resourceType":"Parameters","parameter":[{"name":"url","valueUri":"http://example.org/cs"},{"name":"code","valueCode":"ABC"}]}'
 
 # Expand a value set
-curl -X POST http://localhost:8090/ValueSet/\$expand \
+curl -X POST http://localhost:9091/ValueSet/\$expand \
   -H "Content-Type: application/fhir+json" \
   -d '{"resourceType":"Parameters","parameter":[{"name":"url","valueUri":"http://example.org/vs"}]}'
 
@@ -105,7 +107,7 @@ Known limits: `$validate-code` on a VCL set expands it fully, so large sets (e.g
 
 ## HFS Integration
 
-Set `HFS_TERMINOLOGY_SERVER=http://localhost:8090` on HFS to enable:
+Set `HFS_TERMINOLOGY_SERVER=http://localhost:9091` on HFS to enable:
 
 - FHIR search `:in` modifier, using ValueSet expansion to filter by code.
 - FHIRPath `memberOf()` and `subsumes()` delegation through `FHIRPATH_TERMINOLOGY_SERVER`.
@@ -142,6 +144,16 @@ LOINC language translations under `AccessoryFiles/LinguisticVariants/`, such as 
 
 SNOMED CT descriptions in all languages — including per-language Description files from national extensions — are imported as `concept.designation` entries tagged with the RF2 language code. Every language refset marks its preferred synonyms with `preferredForLanguage` designations (a bare language tag plus a dialect tag like `en-US`/`da-DK`/`fr-CA` for published national refsets), and `en-US`→`en-GB` preference picks the display. Select language via the `displayLanguage` parameter or the `Accept-Language` header on `$lookup` / `$expand` / `$validate-code`; matching is BCP-47-aware (`de-DE` finds `de`, `fr` accepts `fr-CA`).
 
+SNOMED **extension** packages (e.g. the NRCeS India Drug Extension `IN1000189`) contain only their own module; their `Is-a` and attribute relationships point at International concepts absent from the package. Never import them standalone — the extension ends up severed from the International hierarchy (no `$subsumes` / `is-a` / ECL reach from International groupers, no ingredient attributes, unversioned `$lookup` misses the codes). Layer them onto the loaded International release instead:
+
+```bash
+hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260501T120000Z.zip --format snomed-rf2
+hts import ./SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260313T120000Z.zip \
+  --format snomed-rf2 --extends 20260501
+```
+
+`--extends <base-version>` writes the extension's concepts into the base `(url, version)` row, keeps relationships whose destination is in either the package or the base, and rebuilds the base closure + FTS once. It checks the package's module-dependency refset against the base and reports a mismatch plus the count of still-unresolved relationships as non-fatal errors (exit 2); a one-release skew with a handful of dangling destinations is normal. The merged row's title records both parts (`SNOMED CT (20260501 + IN1000189 20260313)`). Clients then use the base version (or none) — pinning the extension's own release date returns `not-found`.
+
 ## Format Auto-detection
 
 | Extension or pattern | Detected format |
@@ -154,6 +166,10 @@ SNOMED CT descriptions in all languages — including per-language Description f
 | `.zip` containing `RXNCONSO.RRF` | `rxnorm` |
 
 Zip files that cannot be auto-detected require `--format`.
+
+## SQLite caches
+
+Hot-path memos (implicit/inline indexes, `$lookup` / `$validate-code` responses, CodeSystem URL→storage id, CodeSystem language, …) live on the `SqliteTerminologyBackend` instance. Parallel tests with separate in-memory databases must not share those maps. `TerminologyCaches::invalidate_caches` clears them after bundle import and after CRUD writes. Do not restore process-wide `OnceLock` caches for system id or language.
 
 ## Exit Codes
 

@@ -112,10 +112,10 @@ fn find_extension_by_url(
         } = ext
         {
             // Check if this extension has the requested URL
-            if let Some(EvaluationResult::String(ext_url, _, _)) = ext_obj.get("url") {
-                if ext_url == url {
-                    matching_extensions.push(ext.clone());
-                }
+            if let Some(EvaluationResult::String(ext_url, _, _)) = ext_obj.get("url")
+                && ext_url == url
+            {
+                matching_extensions.push(ext.clone());
             }
         }
     }

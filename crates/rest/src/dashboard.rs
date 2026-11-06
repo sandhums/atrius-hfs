@@ -2504,13 +2504,13 @@ mod tests {
         BulkEntryOutcome, BulkEntryResult, BulkExportStorage, BulkProcessingOptions,
         BulkSubmitProvider, BulkSubmitRollbackProvider, EntryCountSummary, EntryResultContinuation,
         EntryResultPage, ExpiredExportRef, ExportClaimStrategy, ExportFileMetadata, ExportJobId,
-        ExportJobLease, ExportJobMetadata, ExportProgress, ExportWorkerStorage, FinalizedPart,
-        LeaseError, ManifestFetchParams, ManifestLease, ManifestPhase, ManifestPublicationResult,
-        ManifestPublicationStatus, ManifestWorkerView, NdjsonEntry, PollTokenTarget,
-        RawExportManifest, StartExportInput, StreamProcessingResult, StreamingBulkSubmitProvider,
-        SubmissionChange, SubmissionId, SubmissionManifest, SubmissionStatus, SubmissionSummary,
-        SubmitClaimStrategy, SubmitFileRecord, SubmitFileRow, SubmitWorkerStorage,
-        TypeExportProgress, UnindexedEntry, WorkerId, WorkerJobView,
+        ExportJobLease, ExportJobList, ExportJobMetadata, ExportProgress, ExportWorkerStorage,
+        FinalizedPart, LeaseError, ListExportsQuery, ManifestFetchParams, ManifestLease,
+        ManifestPhase, ManifestPublicationResult, ManifestPublicationStatus, ManifestWorkerView,
+        NdjsonEntry, PollTokenTarget, RawExportManifest, StartExportInput, StreamProcessingResult,
+        StreamingBulkSubmitProvider, SubmissionChange, SubmissionId, SubmissionManifest,
+        SubmissionStatus, SubmissionSummary, SubmitClaimStrategy, SubmitFileRecord, SubmitFileRow,
+        SubmitWorkerStorage, TypeExportProgress, UnindexedEntry, WorkerId, WorkerJobView,
     };
     use helios_persistence::error::{BackendError, StorageError};
     use helios_persistence::types::StoredResource;
@@ -3095,6 +3095,10 @@ mod tests {
                 tenant: &TenantContext,
                 include_completed: bool,
             ) -> StorageResult<Vec<ExportProgress>>;
+            async fn list_export_jobs(
+                tenant: &TenantContext,
+                query: &ListExportsQuery,
+            ) -> StorageResult<ExportJobList>;
             async fn get_export_job_metadata(
                 tenant: &TenantContext,
                 job_id: &ExportJobId,

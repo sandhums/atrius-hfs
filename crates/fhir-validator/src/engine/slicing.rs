@@ -19,15 +19,23 @@
 //! enforced (pinned by `tests/fixtures/extended/slicing_rules.json`), and a
 //! `max: 0` prohibited slice is enforced (the reference skips falsy bounds).
 //!
-//! Match types other than `pattern` (`type`, `profile`, `binding`,
-//! `resolve-ref`) are deliberately not evaluated yet — they arrive in a later
-//! phase alongside the converter's discriminator translation. A slice whose
-//! matcher we cannot evaluate matches nothing, and a slice with no `match`
-//! at all (a constraining slice) also matches nothing.
+//! Match types: `pattern` (partial deep equality), `type` (JSON/FHIR type
+//! codes), `profile` (meta.profile claim or resolvable schema type),
+//! `binding` (coded value equals the match payload when it is an inline
+//! code; a ValueSet canonical is expanded against embedded core terminology
+//! when `ValidationOptions::slice_binding_version` is set),
+//! `exists` (presence/absence of each `{path, exists}` entry, with
+//! `{extension: url}` path steps and choice-key prefixes), `extension`
+//! (a `{url, pattern | extension}` chain matched against extension arrays
+//! by containment), and `all` (AND of nested matchers). `resolve-ref` follows
+//! a Reference against the instance (`contained`, Bundle `entry.resource`)
+//! plus any prefetched `resolution_resources`. The engine does not hit storage.
+//! A slice with no `match` matches nothing unless the slice schema itself
+//! carries `pattern`/`fixed`.
 
 use super::errors::{self, ErrorKind};
 use super::walk::{SchemaSet, WalkCtx, add_schemas_to_set, is_partial_match, validate_node};
-use crate::schema::{Slice, Slicing};
+use crate::schema::{Match, Slice, Slicing};
 use indexmap::IndexMap;
 use serde_json::Value;
 use std::collections::HashSet;
@@ -67,7 +75,7 @@ pub(super) fn validate_slices(
                 if name == DEFAULT_SLICE {
                     continue;
                 }
-                if slice_matches(slice, item) {
+                if slice_matches_with_reslice(ctx, &slicing, name, slice, item) {
                     *counters.get_mut(name).expect("counter exists") += 1;
                     item_matches[index].push(name.clone());
                 }
@@ -207,19 +215,70 @@ pub(super) fn validate_slices(
     consumed
 }
 
-/// Does an item belong to a slice? Only `pattern` matching is evaluated
-/// today; a missing `match` (constraining slice) matches nothing, and a
-/// `match` with no `value` matches everything (lodash `_.isMatch` semantics
-/// for an empty source).
+/// Reslice-aware match: a child slice `parent/child` only matches when the
+/// parent slice also matches the item. Constraining slices without their own
+/// matcher inherit the same-named parent's matcher when present.
+fn slice_matches_with_reslice(
+    ctx: &WalkCtx<'_>,
+    slicing: &Slicing,
+    _name: &str,
+    slice: &Slice,
+    item: &Value,
+) -> bool {
+    if let Some(parent) = &slice.reslice {
+        let Some(parent_slice) = slicing.slices.get(parent) else {
+            return false;
+        };
+        if !slice_matches_ctx(ctx, parent_slice, item) {
+            return false;
+        }
+        // Child may add its own matcher on top of the parent.
+        if slice.match_.is_some() {
+            return slice_matches_ctx(ctx, slice, item);
+        }
+        return true;
+    }
+    if slice.match_.is_none() && slice.slice_is_constraining == Some(true) {
+        // Inherit matcher from a same-named non-constraining sibling/parent
+        // declaration if present in this layer (rare); otherwise match nothing.
+        return false;
+    }
+    slice_matches_ctx(ctx, slice, item)
+}
+
+/// Editor and tests: match without a walk context (no profile-schema lookup,
+/// no `resolve-ref`).
 pub(crate) fn slice_matches(slice: &Slice, item: &Value) -> bool {
+    slice_matches_opt(None, slice, item)
+}
+
+fn slice_matches_ctx(ctx: &WalkCtx<'_>, slice: &Slice, item: &Value) -> bool {
+    slice_matches_opt(Some(ctx), slice, item)
+}
+
+/// Does an item belong to a slice?
+///
+/// A missing `match` (constraining slice) matches nothing unless the slice
+/// schema carries `pattern`/`fixed`. A `match` with no `value` matches
+/// everything (lodash `_.isMatch` semantics for an empty source). `type_`
+/// defaults to `pattern` when absent.
+fn slice_matches_opt(ctx: Option<&WalkCtx<'_>>, slice: &Slice, item: &Value) -> bool {
     if let Some(match_) = &slice.match_ {
-        return match match_.value.as_ref() {
-            Some(pattern) => is_partial_match(item, pattern),
-            None => true,
+        let resolve_ref = match_.resolve_ref == Some(true);
+        let Some(value) = match_.value.as_ref() else {
+            return true;
+        };
+        return match match_.type_.as_deref().unwrap_or("pattern") {
+            "pattern" => is_partial_match(item, value),
+            "type" => typed_match(ctx, item, value, resolve_ref, type_leaf),
+            "profile" => typed_match(ctx, item, value, resolve_ref, profile_leaf),
+            "binding" => typed_match(ctx, item, value, resolve_ref, binding_leaf),
+            "exists" => exists_matches(item, value),
+            "extension" => extension_matches(item, value),
+            "all" => all_matches(ctx, value, item),
+            _ => false,
         };
     }
-    // The converter carries a pattern/value discriminator as the slice
-    // schema's pattern (or fixed) keyword rather than an explicit match.
     if let Some(schema) = &slice.schema {
         if let Some(pattern) = &schema.pattern {
             return is_partial_match(item, pattern);
@@ -229,6 +288,365 @@ pub(crate) fn slice_matches(slice: &Slice, item: &Value) -> bool {
         }
     }
     false
+}
+
+fn type_leaf(_ctx: Option<&WalkCtx<'_>>, item: &Value, expected: &str) -> bool {
+    json_fhir_types(item).iter().any(|t| t == expected)
+}
+
+fn profile_leaf(ctx: Option<&WalkCtx<'_>>, item: &Value, expected: &str) -> bool {
+    profile_matches(ctx, item, expected)
+}
+
+fn binding_leaf(ctx: Option<&WalkCtx<'_>>, item: &Value, expected: &str) -> bool {
+    binding_matches(ctx, item, expected)
+}
+
+fn all_matches(ctx: Option<&WalkCtx<'_>>, spec: &Value, item: &Value) -> bool {
+    let Some(parts) = spec.as_array() else {
+        return false;
+    };
+    if parts.is_empty() {
+        return false;
+    }
+    parts.iter().all(|part| {
+        let Ok(nested) = serde_json::from_value::<Match>(part.clone()) else {
+            return false;
+        };
+        slice_matches_opt(
+            ctx,
+            &Slice {
+                match_: Some(nested),
+                min: None,
+                max: None,
+                order: None,
+                reslice: None,
+                slice_is_constraining: None,
+                schema: None,
+            },
+            item,
+        )
+    })
+}
+
+/// Walk a converter-nested expected value (`{resource: "Patient"}`) or a
+/// `$this` scalar. `resolve-ref` runs at the focused leaf against the instance
+/// graph plus any prefetched `resolution_resources`.
+fn typed_match(
+    ctx: Option<&WalkCtx<'_>>,
+    item: &Value,
+    expected: &Value,
+    resolve_ref: bool,
+    leaf: fn(Option<&WalkCtx<'_>>, &Value, &str) -> bool,
+) -> bool {
+    match expected {
+        Value::String(want) => {
+            if resolve_ref {
+                let Some(ctx) = ctx else {
+                    return false;
+                };
+                return local_resolve(ctx.root, ctx.resolution_resources, item)
+                    .is_some_and(|resolved| leaf(Some(ctx), resolved, want));
+            }
+            leaf(ctx, item, want)
+        }
+        Value::Object(map) => map.iter().all(|(key, nested)| {
+            focus_child(item, key)
+                .is_some_and(|child| typed_match(ctx, child, nested, resolve_ref, leaf))
+        }),
+        _ => false,
+    }
+}
+
+fn focus_child<'a>(item: &'a Value, key: &str) -> Option<&'a Value> {
+    if let Some(v) = item.get(key) {
+        return Some(v);
+    }
+    item.as_object().and_then(|map| {
+        map.iter().find_map(|(k, v)| {
+            k.strip_prefix(key)
+                .and_then(|s| s.chars().next())
+                .is_some_and(char::is_uppercase)
+                .then_some(v)
+        })
+    })
+}
+
+/// Resolve a Reference (or reference string) against `root` plus `extra`:
+/// `contained` resources, Bundle `entry.resource` (plus their contained),
+/// and any caller-prefetched store resources. No I/O.
+fn local_resolve<'a>(root: &'a Value, extra: &'a [Value], node: &Value) -> Option<&'a Value> {
+    let reference = node
+        .as_str()
+        .or_else(|| node.get("reference").and_then(Value::as_str))?;
+    in_scope_resources(root, extra)
+        .into_iter()
+        .find(|c| reference_hits(reference, c))
+}
+
+fn in_scope_resources<'a>(root: &'a Value, extra: &'a [Value]) -> Vec<&'a Value> {
+    let mut out = Vec::new();
+    push_resource_tree(&mut out, root);
+    if root.get("resourceType").and_then(Value::as_str) == Some("Bundle")
+        && let Some(entries) = root.get("entry").and_then(Value::as_array)
+    {
+        for entry in entries {
+            if let Some(resource) = entry.get("resource") {
+                push_resource_tree(&mut out, resource);
+            }
+        }
+    }
+    for resource in extra {
+        push_resource_tree(&mut out, resource);
+    }
+    out
+}
+
+fn push_resource_tree<'a>(out: &mut Vec<&'a Value>, resource: &'a Value) {
+    if resource.get("resourceType").is_some() {
+        out.push(resource);
+    }
+    if let Some(contained) = resource.get("contained").and_then(Value::as_array) {
+        for child in contained {
+            if child.get("resourceType").is_some() {
+                out.push(child);
+            }
+        }
+    }
+}
+
+fn reference_hits(reference: &str, candidate: &Value) -> bool {
+    let rt = candidate.get("resourceType").and_then(Value::as_str);
+    let id = candidate.get("id").and_then(Value::as_str);
+    if let Some(frag) = reference.strip_prefix('#') {
+        return id == Some(frag);
+    }
+    if !reference.contains('/') {
+        return id == Some(reference);
+    }
+    let tail = reference.rsplit('/').next().unwrap_or(reference);
+    let type_id = reference
+        .rsplit('/')
+        .nth(1)
+        .map(|t| (t, tail))
+        .filter(|(t, _)| !t.is_empty() && t.chars().next().is_some_and(char::is_uppercase));
+    if let Some((ty, id_part)) = type_id {
+        return rt == Some(ty) && id == Some(id_part);
+    }
+    false
+}
+
+/// `exists` matcher: every `{path, exists}` entry must hold on the item.
+fn exists_matches(item: &Value, spec: &Value) -> bool {
+    let Some(entries) = spec.as_array() else {
+        return false;
+    };
+    entries.iter().all(|entry| {
+        let expected = entry.get("exists").and_then(Value::as_bool).unwrap_or(true);
+        entry
+            .get("path")
+            .and_then(Value::as_array)
+            .is_some_and(|path| path_exists(item, path) == expected)
+    })
+}
+
+/// Walk one exists-path over instance JSON. Steps are element keys (with a
+/// choice-prefix fallback: `value` also reaches `valueQuantity`) or
+/// `{extension: url}` selections; arrays fan out existentially.
+fn path_exists(current: &Value, segs: &[Value]) -> bool {
+    let Some(seg) = segs.first() else {
+        return !current.is_null();
+    };
+    let rest = &segs[1..];
+    match current {
+        Value::Array(items) => items.iter().any(|item| path_exists(item, segs)),
+        Value::Object(map) => {
+            if let Some(key) = seg.as_str() {
+                if map.get(key).is_some_and(|v| path_exists(v, rest)) {
+                    return true;
+                }
+                map.iter().any(|(k, v)| {
+                    k.strip_prefix(key)
+                        .and_then(|s| s.chars().next())
+                        .is_some_and(char::is_uppercase)
+                        && path_exists(v, rest)
+                })
+            } else if let Some(url) = seg.get("extension").and_then(Value::as_str) {
+                map.get("extension")
+                    .and_then(Value::as_array)
+                    .is_some_and(|exts| {
+                        exts.iter().any(|e| {
+                            e.get("url").and_then(Value::as_str) == Some(url)
+                                && path_exists(e, rest)
+                        })
+                    })
+            } else {
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
+/// `extension` matcher: some element of the item's `extension` array has the
+/// matcher's `url` and satisfies its `pattern` (partial match) or its nested
+/// `extension` matcher (chained complex extensions).
+fn extension_matches(item: &Value, matcher: &Value) -> bool {
+    let Some(url) = matcher.get("url").and_then(Value::as_str) else {
+        return false;
+    };
+    let Some(exts) = item.get("extension").and_then(Value::as_array) else {
+        return false;
+    };
+    exts.iter().any(|e| {
+        if e.get("url").and_then(Value::as_str) != Some(url) {
+            return false;
+        }
+        if let Some(nested) = matcher.get("extension") {
+            return extension_matches(e, nested);
+        }
+        match matcher.get("pattern") {
+            Some(pattern) => is_partial_match(e, pattern),
+            None => true,
+        }
+    })
+}
+
+/// Infer FHIR type codes from a JSON value (resourceType, primitives, Coding).
+fn json_fhir_types(item: &Value) -> Vec<String> {
+    match item {
+        Value::String(_) => vec![
+            "string".into(),
+            "uri".into(),
+            "url".into(),
+            "canonical".into(),
+            "code".into(),
+            "id".into(),
+            "markdown".into(),
+            "oid".into(),
+            "uuid".into(),
+            "base64Binary".into(),
+            "date".into(),
+            "dateTime".into(),
+            "instant".into(),
+            "time".into(),
+        ],
+        Value::Bool(_) => vec!["boolean".into()],
+        Value::Number(n) => {
+            if n.is_i64() || n.is_u64() {
+                vec![
+                    "integer".into(),
+                    "positiveInt".into(),
+                    "unsignedInt".into(),
+                    "decimal".into(),
+                ]
+            } else {
+                vec!["decimal".into()]
+            }
+        }
+        Value::Object(map) => {
+            if let Some(rt) = map.get("resourceType").and_then(Value::as_str) {
+                return vec![rt.to_string()];
+            }
+            if map.contains_key("system") && map.contains_key("code") {
+                return vec!["Coding".into()];
+            }
+            if map.contains_key("coding") || (map.contains_key("text") && map.len() <= 2) {
+                return vec!["CodeableConcept".into()];
+            }
+            if map.contains_key("reference") || map.contains_key("identifier") {
+                return vec!["Reference".into()];
+            }
+            if map.contains_key("value") && (map.contains_key("unit") || map.contains_key("system"))
+            {
+                return vec!["Quantity".into()];
+            }
+            if map.contains_key("url") {
+                return vec!["Extension".into()];
+            }
+            Vec::new()
+        }
+        Value::Array(_) | Value::Null => Vec::new(),
+    }
+}
+
+fn profile_matches(ctx: Option<&WalkCtx<'_>>, item: &Value, profile: &str) -> bool {
+    if let Some(profiles) = item
+        .get("meta")
+        .and_then(|m| m.get("profile"))
+        .and_then(Value::as_array)
+        && profiles.iter().any(|p| p.as_str() == Some(profile))
+    {
+        return true;
+    }
+    // Extension slices: match by url when the profile canonical is the
+    // extension URL (common IG pattern).
+    if let Some(url) = item.get("url").and_then(Value::as_str)
+        && url == profile
+    {
+        return true;
+    }
+    // Resolvable profile whose `type` matches the item's resourceType / JSON type.
+    let Some(ctx) = ctx else {
+        return false;
+    };
+    if let Some(schema) = ctx.resolver.resolve(profile) {
+        if let Some(ty) = schema.type_.as_deref() {
+            if json_fhir_types(item).iter().any(|t| t == ty) {
+                return true;
+            }
+            if item.get("resourceType").and_then(Value::as_str) == Some(ty) {
+                return true;
+            }
+        }
+        if let Some(name) = schema.name.as_deref()
+            && item.get("resourceType").and_then(Value::as_str) == Some(name)
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// Binding discriminator: an inline code matches Coding / code / CodeableConcept
+/// as before. A ValueSet canonical expands against embedded core terminology
+/// when the walk has a version; otherwise only a literal URL on the instance
+/// matches (extended-fixture contract).
+fn binding_matches(ctx: Option<&WalkCtx<'_>>, item: &Value, needle: &str) -> bool {
+    if needle.contains('/') {
+        if let Some(tx) = ctx.and_then(|c| c.terminology.as_deref())
+            && let Some(coded) = crate::effects::coded_value(item, None)
+            && tx.member(needle, &coded) == Some(true)
+        {
+            return true;
+        }
+        if item.as_str() == Some(needle)
+            || item.get("system").and_then(Value::as_str) == Some(needle)
+        {
+            return true;
+        }
+        if let Some(coding) = item.get("coding").and_then(Value::as_array) {
+            return coding
+                .iter()
+                .any(|c| c.get("system").and_then(Value::as_str) == Some(needle));
+        }
+        return false;
+    }
+    match item {
+        Value::String(s) => s == needle,
+        Value::Object(map) => {
+            if map.get("code").and_then(Value::as_str) == Some(needle) {
+                return true;
+            }
+            if let Some(coding) = map.get("coding").and_then(Value::as_array) {
+                return coding
+                    .iter()
+                    .any(|c| c.get("code").and_then(Value::as_str) == Some(needle));
+            }
+            false
+        }
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -264,20 +682,222 @@ mod slice_match_tests {
     }
 
     #[test]
-    fn a_schema_fixed_stands_in_for_the_match() {
-        let s = slice(json!({ "schema": { "fixed": { "system": "http://x" } } }));
-        assert!(slice_matches(&s, &json!({ "system": "http://x" })));
+    fn type_matcher_walks_a_nested_discriminator_path() {
+        let s = slice(json!({
+            "match": { "type": "type", "value": { "valueQuantity": "Quantity" } }
+        }));
+        assert!(slice_matches(
+            &s,
+            &json!({ "valueQuantity": { "value": 1.0, "unit": "mg" } })
+        ));
+        assert!(!slice_matches(
+            &s,
+            &json!({ "valueCodeableConcept": { "text": "x" } })
+        ));
     }
 
     #[test]
-    fn no_discriminator_at_all_matches_nothing() {
-        let s = slice(json!({ "min": 1 }));
-        assert!(!slice_matches(&s, &json!({ "system": "http://x" })));
+    fn exists_matcher_requires_the_nominated_path() {
+        let s = slice(json!({
+            "match": { "type": "exists", "value": [{ "path": ["value"], "exists": true }] }
+        }));
+        assert!(slice_matches(&s, &json!({ "value": 1 })));
+        assert!(!slice_matches(&s, &json!({ "code": "x" })));
     }
 
     #[test]
-    fn a_schema_with_neither_pattern_nor_fixed_matches_nothing() {
-        let s = slice(json!({ "schema": { "type": "Identifier" } }));
-        assert!(!slice_matches(&s, &json!({ "system": "http://x" })));
+    fn local_resolve_hits_contained_and_skips_the_store() {
+        let root = json!({
+            "resourceType": "Observation",
+            "contained": [{ "resourceType": "Patient", "id": "p1" }]
+        });
+        let resolved = local_resolve(&root, &[], &json!({ "reference": "#p1" }));
+        assert_eq!(resolved.unwrap()["resourceType"], "Patient");
+        assert!(local_resolve(&root, &[], &json!({ "reference": "Patient/missing" })).is_none());
+    }
+
+    #[test]
+    fn local_resolve_hits_prefetched_store_resources() {
+        let root = json!({
+            "resourceType": "Observation",
+            "subject": { "reference": "Patient/p1" }
+        });
+        let extra = json!({ "resourceType": "Patient", "id": "p1", "name": [{"family": "A"}] });
+        let resolved = local_resolve(
+            &root,
+            std::slice::from_ref(&extra),
+            &json!({ "reference": "Patient/p1" }),
+        );
+        assert_eq!(resolved.unwrap()["name"][0]["family"], "A");
+        assert!(local_resolve(&root, &[], &json!({ "reference": "Patient/p1" })).is_none());
+    }
+
+    #[test]
+    fn resolve_ref_without_context_matches_nothing() {
+        let s = slice(json!({
+            "match": {
+                "type": "type",
+                "value": "Patient",
+                "resolve-ref": true
+            }
+        }));
+        assert!(!slice_matches(&s, &json!({ "reference": "#p1" })));
+    }
+
+    #[test]
+    fn all_matcher_ands_nested_discriminators() {
+        let s = slice(json!({
+            "match": {
+                "type": "all",
+                "value": [
+                    { "type": "type", "value": "Coding" },
+                    { "type": "pattern", "value": { "system": "http://x" } }
+                ]
+            }
+        }));
+        assert!(slice_matches(
+            &s,
+            &json!({ "system": "http://x", "code": "a" })
+        ));
+        assert!(!slice_matches(
+            &s,
+            &json!({ "system": "http://y", "code": "a" })
+        ));
+        assert!(!slice_matches(&s, &json!({ "reference": "Patient/1" })));
+    }
+
+    #[test]
+    fn binding_canonical_expands_when_version_is_set() {
+        use crate::engine::{ErrorKind, ValidationOptions, Validator};
+        use crate::resolver::SchemaRegistry;
+        use crate::schema::FhirSchema;
+        use helios_fhir::FhirVersion;
+        use std::sync::Arc;
+
+        let primitive = json!({ "kind": "primitive-type" });
+        let schema: FhirSchema = serde_json::from_value(json!({
+            "elements": {
+                "resourceType": { "type": "string" },
+                "category": {
+                    "array": true,
+                    "elements": {
+                        "system": { "type": "uri" },
+                        "code": { "type": "code" }
+                    },
+                    "slicing": {
+                        "slices": {
+                            "fromVs": {
+                                "match": {
+                                    "type": "binding",
+                                    "value": "http://hl7.org/fhir/ValueSet/observation-category"
+                                },
+                                "min": 1
+                            }
+                        }
+                    }
+                }
+            }
+        }))
+        .unwrap();
+        let mut registry = SchemaRegistry::new();
+        registry.insert_named("Obs", schema);
+        registry.insert_named("string", serde_json::from_value(primitive.clone()).unwrap());
+        registry.insert_named("uri", serde_json::from_value(primitive.clone()).unwrap());
+        registry.insert_named("code", serde_json::from_value(primitive).unwrap());
+        let validator = Validator::new(Arc::new(registry));
+        let resource = json!({
+            "resourceType": "Obs",
+            "category": [{
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+            }]
+        });
+        let without = validator.validate_sync(&resource, &ValidationOptions::default());
+        assert!(
+            without
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::SliceCardinality),
+            "no expansion → slice inactive: {:?}",
+            without.errors
+        );
+        let with = validator.validate_sync(
+            &resource,
+            &ValidationOptions {
+                slice_binding_version: Some(FhirVersion::R4),
+                ..Default::default()
+            },
+        );
+        assert!(
+            with.errors.is_empty(),
+            "core terminology must match laboratory: {:?}",
+            with.errors
+        );
+    }
+
+    #[test]
+    fn resolve_ref_slice_matches_prefetched_store_target() {
+        use crate::engine::{ErrorKind, ValidationOptions, Validator};
+        use crate::resolver::SchemaRegistry;
+        use crate::schema::FhirSchema;
+        use std::sync::Arc;
+
+        let primitive = json!({ "kind": "primitive-type" });
+        let schema: FhirSchema = serde_json::from_value(json!({
+            "elements": {
+                "resourceType": { "type": "string" },
+                "focus": {
+                    "array": true,
+                    "elements": {
+                        "reference": { "type": "string" }
+                    },
+                    "slicing": {
+                        "slices": {
+                            "patient": {
+                                "match": {
+                                    "type": "type",
+                                    "value": "Patient",
+                                    "resolve-ref": true
+                                },
+                                "min": 1
+                            }
+                        }
+                    }
+                }
+            }
+        }))
+        .unwrap();
+        let mut registry = SchemaRegistry::new();
+        registry.insert_named("Obs", schema);
+        registry.insert_named("string", serde_json::from_value(primitive).unwrap());
+        let validator = Validator::new(Arc::new(registry));
+        let resource = json!({
+            "resourceType": "Obs",
+            "focus": [{ "reference": "Patient/p1" }]
+        });
+        let without = validator.validate_sync(&resource, &ValidationOptions::default());
+        assert!(
+            without
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::SliceCardinality),
+            "unresolved Patient/p1 must not match the slice: {:?}",
+            without.errors
+        );
+        let with = validator.validate_sync(
+            &resource,
+            &ValidationOptions {
+                resolution_resources: vec![json!({
+                    "resourceType": "Patient",
+                    "id": "p1"
+                })],
+                ..Default::default()
+            },
+        );
+        assert!(
+            with.errors.is_empty(),
+            "prefetched Patient/p1 must match resolve-ref: {:?}",
+            with.errors
+        );
     }
 }

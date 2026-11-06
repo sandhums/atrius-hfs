@@ -867,34 +867,33 @@ pub fn evaluate(
     // as a path on the context."
     // This applies when current_item is None (not in an iteration) and the expression
     // starts with a simple member identifier.
-    if current_item.is_none() {
-        if let Expression::Term(Term::Invocation(Invocation::Member(initial_name))) = expr {
-            let global_context_item = if let Some(this_item) = &context.this {
-                this_item.clone()
-            } else if !context.resources.is_empty() {
-                convert_resource_to_result(&context.resources[0])
-            } else {
-                EvaluationResult::Empty
-            };
+    if current_item.is_none()
+        && let Expression::Term(Term::Invocation(Invocation::Member(initial_name))) = expr
+    {
+        let global_context_item = if let Some(this_item) = &context.this {
+            this_item.clone()
+        } else if !context.resources.is_empty() {
+            convert_resource_to_result(&context.resources[0])
+        } else {
+            EvaluationResult::Empty
+        };
 
-            if let EvaluationResult::Object {
-                map: obj_map,
-                type_info: _,
-            } = &global_context_item
-            {
-                if let Some(EvaluationResult::String(ctx_type, _, _)) = obj_map.get("resourceType")
-                {
-                    // The parser ensures initial_name is cleaned of backticks.
-                    if leading_type_matches(initial_name, ctx_type) {
-                        // The initial identifier matches the context type.
-                        // The expression resolves to the context item itself.
-                        return Ok(global_context_item);
-                    }
+        if let EvaluationResult::Object {
+            map: obj_map,
+            type_info: _,
+        } = &global_context_item
+        {
+            if let Some(EvaluationResult::String(ctx_type, _, _)) = obj_map.get("resourceType") {
+                // The parser ensures initial_name is cleaned of backticks.
+                if leading_type_matches(initial_name, ctx_type) {
+                    // The initial identifier matches the context type.
+                    // The expression resolves to the context item itself.
+                    return Ok(global_context_item);
                 }
             }
-            // If no match, or context is not an Object with resourceType,
-            // evaluation proceeds normally (initial_name treated as member access on context).
         }
+        // If no match, or context is not an Object with resourceType,
+        // evaluation proceeds normally (initial_name treated as member access on context).
     }
 
     let result = match expr {
@@ -933,100 +932,98 @@ pub fn evaluate(
                 }
             }
             // Check for special handling of the 'extension' function
-            if let Invocation::Function(func_name, args_exprs) = invocation {
-                if func_name == "extension" {
-                    let evaluated_args = args_exprs
-                        .iter()
-                        .map(|arg_expr| evaluate(arg_expr, context, None)) // Args evaluated in their own scope
-                        .collect::<Result<Vec<_>, _>>()?;
+            if let Invocation::Function(func_name, args_exprs) = invocation
+                && func_name == "extension"
+            {
+                let evaluated_args = args_exprs
+                    .iter()
+                    .map(|arg_expr| evaluate(arg_expr, context, None)) // Args evaluated in their own scope
+                    .collect::<Result<Vec<_>, _>>()?;
 
-                    let base_candidate = evaluate(left_expr.as_ref(), context, current_item)?;
-                    let mut final_base_for_extension = base_candidate.clone();
+                let base_candidate = evaluate(left_expr.as_ref(), context, current_item)?;
+                let mut final_base_for_extension = base_candidate.clone();
 
-                    // If base_candidate is a primitive, check if left_expr was a field access
-                    // to find a potential underscore-prefixed peer element.
-                    // We need to handle two key scenarios:
-                    // 1. If the base is a primitive value, we need to look for the "_" prefixed element
-                    // 2. Even if the base is an object, it might not have extension directly, but in an underscore property
+                // If base_candidate is a primitive, check if left_expr was a field access
+                // to find a potential underscore-prefixed peer element.
+                // We need to handle two key scenarios:
+                // 1. If the base is a primitive value, we need to look for the "_" prefixed element
+                // 2. Even if the base is an object, it might not have extension directly, but in an underscore property
 
-                    // First, try to extract field names and parent objects
-                    let mut field_name = None;
-                    let mut parent_obj = None;
+                // First, try to extract field names and parent objects
+                let mut field_name = None;
+                let mut parent_obj = None;
 
-                    // Extract field name and parent object based on expression structure
-                    match left_expr.as_ref() {
-                        Expression::Term(Term::Invocation(Invocation::Member(
-                            field_name_from_term,
-                        ))) => {
-                            // Scenario 1: `field.extension()`
-                            field_name = Some(field_name_from_term.to_string());
+                // Extract field name and parent object based on expression structure
+                match left_expr.as_ref() {
+                    Expression::Term(Term::Invocation(Invocation::Member(
+                        field_name_from_term,
+                    ))) => {
+                        // Scenario 1: `field.extension()`
+                        field_name = Some(field_name_from_term.to_string());
 
-                            // Find the parent object
-                            if let Some(EvaluationResult::Object { map, .. }) = current_item {
-                                parent_obj = Some(map.clone());
-                            } else if let Some(EvaluationResult::Object { ref map, .. }) =
-                                context.this
-                            {
-                                parent_obj = Some(map.clone());
-                            }
-                        }
-                        Expression::Invocation(
-                            parent_expr_of_field,
-                            Invocation::Member(field_name_from_invocation),
-                        ) => {
-                            // Scenario 2: `object.field.extension()`
-                            field_name = Some(field_name_from_invocation.to_string());
-
-                            // Evaluate the parent expression (e.g., `object` in `object.field`)
-                            // Ensure parent_expr_of_field is evaluated in global context
-                            let parent_obj_eval_result =
-                                evaluate(parent_expr_of_field, context, None)?;
-                            if let EvaluationResult::Object {
-                                map: actual_parent_map,
-                                type_info: _,
-                            } = parent_obj_eval_result
-                            {
-                                parent_obj = Some(actual_parent_map);
-                            }
-                        }
-                        _ => {
-                            // `left_expr` is not a simple field access or object.field access.
-                            // No special underscore handling possible
-                        }
-                    }
-
-                    // If we have both a field name and parent object, look for extensions in underscore property
-                    if let (Some(field), Some(parent)) = (&field_name, &parent_obj) {
-                        // We need to handle several cases for extension access:
-                        // 1. Direct access to the extension on this object (handled by default extension_function)
-                        // 2. FHIR-specific case: birthDate.extension(...) looks in _birthDate.extension
-
-                        // Special FHIR pattern: look for the extension in the underscore-prefixed property
-                        // This is the key behavior needed for tests like Patient.birthDate.extension('...')
-                        let underscore_key = format!("_{}", field);
-                        if let Some(EvaluationResult::Object {
-                            map: underscore_obj,
-                            ..
-                        }) = parent.get(&underscore_key)
+                        // Find the parent object
+                        if let Some(EvaluationResult::Object { map, .. }) = current_item {
+                            parent_obj = Some(map.clone());
+                        } else if let Some(EvaluationResult::Object { ref map, .. }) = context.this
                         {
-                            // Found an underscore-prefixed object, use it as the base for extension function
-                            final_base_for_extension = EvaluationResult::Object {
-                                map: underscore_obj.clone(),
-                                type_info: None,
-                            };
-
-                            // If extensions is directly accessible in the underscore object,
-                            // we don't need special URL handling since extension_function will handle it
-
-                            // For cases where we have a variable reference in the URL or we want direct object access
-                            // the extension_function handles it directly
+                            parent_obj = Some(map.clone());
                         }
                     }
-                    return crate::extension_function::extension_function(
-                        &final_base_for_extension,
-                        &evaluated_args,
-                    );
+                    Expression::Invocation(
+                        parent_expr_of_field,
+                        Invocation::Member(field_name_from_invocation),
+                    ) => {
+                        // Scenario 2: `object.field.extension()`
+                        field_name = Some(field_name_from_invocation.to_string());
+
+                        // Evaluate the parent expression (e.g., `object` in `object.field`)
+                        // Ensure parent_expr_of_field is evaluated in global context
+                        let parent_obj_eval_result = evaluate(parent_expr_of_field, context, None)?;
+                        if let EvaluationResult::Object {
+                            map: actual_parent_map,
+                            type_info: _,
+                        } = parent_obj_eval_result
+                        {
+                            parent_obj = Some(actual_parent_map);
+                        }
+                    }
+                    _ => {
+                        // `left_expr` is not a simple field access or object.field access.
+                        // No special underscore handling possible
+                    }
                 }
+
+                // If we have both a field name and parent object, look for extensions in underscore property
+                if let (Some(field), Some(parent)) = (&field_name, &parent_obj) {
+                    // We need to handle several cases for extension access:
+                    // 1. Direct access to the extension on this object (handled by default extension_function)
+                    // 2. FHIR-specific case: birthDate.extension(...) looks in _birthDate.extension
+
+                    // Special FHIR pattern: look for the extension in the underscore-prefixed property
+                    // This is the key behavior needed for tests like Patient.birthDate.extension('...')
+                    let underscore_key = format!("_{}", field);
+                    if let Some(EvaluationResult::Object {
+                        map: underscore_obj,
+                        ..
+                    }) = parent.get(&underscore_key)
+                    {
+                        // Found an underscore-prefixed object, use it as the base for extension function
+                        final_base_for_extension = EvaluationResult::Object {
+                            map: underscore_obj.clone(),
+                            type_info: None,
+                        };
+
+                        // If extensions is directly accessible in the underscore object,
+                        // we don't need special URL handling since extension_function will handle it
+
+                        // For cases where we have a variable reference in the URL or we want direct object access
+                        // the extension_function handles it directly
+                    }
+                }
+                return crate::extension_function::extension_function(
+                    &final_base_for_extension,
+                    &evaluated_args,
+                );
             }
             // `Type.member`, where `Type` is the context resource's own type, is
             // the shape every FHIR search-parameter expression starts with —
@@ -1450,10 +1447,10 @@ pub fn evaluate(
     };
 
     // Record debug trace step if tracer is active
-    if let Some(tracer) = &context.debug_tracer {
-        if let Ok(ref res) = result {
-            tracer.lock().record(expr, res);
-        }
+    if let Some(tracer) = &context.debug_tracer
+        && let Ok(ref res) = result
+    {
+        tracer.lock().record(expr, res);
     }
 
     result
@@ -1535,12 +1532,10 @@ fn evaluate_with_context(
             map: obj_map,
             type_info: _,
         } = &global_context_item
+            && let Some(EvaluationResult::String(ctx_type, _, _)) = obj_map.get("resourceType")
+            && leading_type_matches(initial_name, ctx_type)
         {
-            if let Some(EvaluationResult::String(ctx_type, _, _)) = obj_map.get("resourceType") {
-                if leading_type_matches(initial_name, ctx_type) {
-                    return Ok((global_context_item, context));
-                }
-            }
+            return Ok((global_context_item, context));
         }
     }
 
@@ -1706,61 +1701,58 @@ fn evaluate_term(
             }
 
             // Handle variables (%var, %context) next and return
-            if let Invocation::Member(name) = invocation {
-                if let Some(var_name) = name.strip_prefix('%') {
-                    if var_name == "context" || var_name == "resource" || var_name == "rootResource"
-                    {
-                        // Return %context / %resource / %rootResource value. In this
-                        // engine all three resolve to the resource(s) in scope: the
-                        // root resource being evaluated.
-                        // Correctly wrap the entire conditional result in Ok()
-                        return Ok(if context.resources.is_empty() {
-                            EvaluationResult::Empty
-                        } else if context.resources.len() == 1 {
-                            convert_resource_to_result(&context.resources[0])
-                        } else {
-                            EvaluationResult::Collection {
-                                items: context
-                                    .resources
-                                    .iter()
-                                    .map(convert_resource_to_result)
-                                    .collect(),
-                                has_undefined_order: false, // Resources in context are typically ordered
-                                type_info: None,
-                            }
-                        });
-                    } else if var_name == "ucum" {
-                        // Return %ucum system variable - the UCUM system URI
-                        return Ok(EvaluationResult::string(
-                            "http://unitsofmeasure.org".to_string(),
-                        ));
-                    } else if var_name == "sct" {
-                        // Return %sct system variable - the SNOMED CT system URI
-                        return Ok(EvaluationResult::string(
-                            "http://snomed.info/sct".to_string(),
-                        ));
-                    } else if var_name == "loinc" {
-                        // Return %loinc system variable - the LOINC system URI
-                        return Ok(EvaluationResult::string("http://loinc.org".to_string()));
-                    } else if var_name == "vs-administrative-gender" {
-                        // Return %vs-administrative-gender system variable
-                        return Ok(EvaluationResult::string(
-                            "http://hl7.org/fhir/ValueSet/administrative-gender".to_string(),
-                        ));
-                    } else if var_name == "ext-patient-birthTime" {
-                        // Return %ext-patient-birthTime extension URL
-                        return Ok(EvaluationResult::string(
-                            "http://hl7.org/fhir/StructureDefinition/patient-birthTime".to_string(),
-                        ));
+            if let Invocation::Member(name) = invocation
+                && let Some(var_name) = name.strip_prefix('%')
+            {
+                if var_name == "context" || var_name == "resource" || var_name == "rootResource" {
+                    // Return %context / %resource / %rootResource value. In this
+                    // engine all three resolve to the resource(s) in scope: the
+                    // root resource being evaluated.
+                    // Correctly wrap the entire conditional result in Ok()
+                    return Ok(if context.resources.is_empty() {
+                        EvaluationResult::Empty
+                    } else if context.resources.len() == 1 {
+                        convert_resource_to_result(&context.resources[0])
                     } else {
-                        // Return other variable value or error if undefined
-                        return match context.lookup_variable(var_name) {
-                            Some(value) => Ok(value.clone()),
-                            None => {
-                                Err(EvaluationError::UndefinedVariable(format!("%{}", var_name)))
-                            }
-                        };
-                    }
+                        EvaluationResult::Collection {
+                            items: context
+                                .resources
+                                .iter()
+                                .map(convert_resource_to_result)
+                                .collect(),
+                            has_undefined_order: false, // Resources in context are typically ordered
+                            type_info: None,
+                        }
+                    });
+                } else if var_name == "ucum" {
+                    // Return %ucum system variable - the UCUM system URI
+                    return Ok(EvaluationResult::string(
+                        "http://unitsofmeasure.org".to_string(),
+                    ));
+                } else if var_name == "sct" {
+                    // Return %sct system variable - the SNOMED CT system URI
+                    return Ok(EvaluationResult::string(
+                        "http://snomed.info/sct".to_string(),
+                    ));
+                } else if var_name == "loinc" {
+                    // Return %loinc system variable - the LOINC system URI
+                    return Ok(EvaluationResult::string("http://loinc.org".to_string()));
+                } else if var_name == "vs-administrative-gender" {
+                    // Return %vs-administrative-gender system variable
+                    return Ok(EvaluationResult::string(
+                        "http://hl7.org/fhir/ValueSet/administrative-gender".to_string(),
+                    ));
+                } else if var_name == "ext-patient-birthTime" {
+                    // Return %ext-patient-birthTime extension URL
+                    return Ok(EvaluationResult::string(
+                        "http://hl7.org/fhir/StructureDefinition/patient-birthTime".to_string(),
+                    ));
+                } else {
+                    // Return other variable value or error if undefined
+                    return match context.lookup_variable(var_name) {
+                        Some(value) => Ok(value.clone()),
+                        None => Err(EvaluationError::UndefinedVariable(format!("%{}", var_name))),
+                    };
                 }
             }
 
@@ -2131,7 +2123,7 @@ fn evaluate_invocation_with_context(
 ///
 /// An EvaluationResult representation of the resource, typically as an Object
 #[inline] // Suggest inlining this simple function call
-fn convert_resource_to_result(resource: &FhirResource) -> EvaluationResult {
+pub fn convert_resource_to_result(resource: &FhirResource) -> EvaluationResult {
     // Now that FhirResource implements IntoEvaluationResult, just call the method.
     resource.to_evaluation_result()
 }
@@ -6639,6 +6631,10 @@ fn call_function(
             }
             crate::resolve_function::resolve_function(invocation_base, context)
         }
+        "htmlChecks" | "htmlchecks" => {
+            crate::html_checks_function::html_checks_function(invocation_base, args)
+        }
+        "htmlChecks2" => crate::html_checks_function::html_checks2_function(invocation_base, args),
         "hasValue" => {
             // hasValue() returns true only if the element is a primitive with an actual value.
             // Every Object is false: valued primitives convert to primitive variants, so an
@@ -7718,7 +7714,7 @@ fn apply_integer_multiplicative(
 }
 
 /// Applies an additive operator to two values
-fn apply_additive(
+pub fn apply_additive(
     left: &EvaluationResult,
     op: &str,
     right: &EvaluationResult,
@@ -7977,14 +7973,14 @@ fn apply_additive(
                     },
                 ) => {
                     // Special case: if both collections contain single strings, concatenate the strings
-                    if left_items.len() == 1 && right_items.len() == 1 {
-                        if let (
+                    if left_items.len() == 1
+                        && right_items.len() == 1
+                        && let (
                             EvaluationResult::String(l, _, _),
                             EvaluationResult::String(r, _, _),
                         ) = (&left_items[0], &right_items[0])
-                        {
-                            return Ok(EvaluationResult::string(format!("{}{}", l, r)));
-                        }
+                    {
+                        return Ok(EvaluationResult::string(format!("{}{}", l, r)));
                     }
 
                     // Otherwise, concatenate the collections
@@ -8318,9 +8314,7 @@ fn apply_type_operation(
         // First validate that the type is known - extract namespace and type will validate
         let validation_result =
             crate::resource_type::extract_namespace_and_type_with_context(type_spec, context);
-        if let Err(e) = validation_result {
-            return Err(e);
-        }
+        validation_result?;
 
         // Handle with polymorphic_access
         let poly_result = crate::polymorphic_access::apply_polymorphic_type_operation(
@@ -8331,14 +8325,16 @@ fn apply_type_operation(
             context,
         );
 
-        if op == "as" && context.is_strict_mode && actual_value != &EvaluationResult::Empty {
-            if let Ok(EvaluationResult::Empty) = poly_result {
-                return Err(EvaluationError::SemanticError(format!(
-                    "Type cast of '{}' to '{:?}' (FHIR type path) failed in strict mode, resulting in empty.",
-                    actual_value.type_name(),
-                    type_spec
-                )));
-            }
+        if op == "as"
+            && context.is_strict_mode
+            && actual_value != &EvaluationResult::Empty
+            && let Ok(EvaluationResult::Empty) = poly_result
+        {
+            return Err(EvaluationError::SemanticError(format!(
+                "Type cast of '{}' to '{:?}' (FHIR type path) failed in strict mode, resulting in empty.",
+                actual_value.type_name(),
+                type_spec
+            )));
         }
         return poly_result;
     }
@@ -9152,11 +9148,12 @@ pub(crate) fn compare_equality(
                     }
                 ) && !matches!(prim_val, EvaluationResult::Collection { .. }) =>
                 {
-                    if obj_map.contains_key("fhirType") && obj_map.contains_key("value") {
-                        if let Some(obj_val) = obj_map.get("value") {
-                            // Compare the Object's "value" field with the direct primitive value
-                            return compare_equality(obj_val, op, prim_val, context);
-                        }
+                    if obj_map.contains_key("fhirType")
+                        && obj_map.contains_key("value")
+                        && let Some(obj_val) = obj_map.get("value")
+                    {
+                        // Compare the Object's "value" field with the direct primitive value
+                        return compare_equality(obj_val, op, prim_val, context);
                     }
                     // If not a FHIR primitive wrapper or "value" is missing, they are not equal.
                     EvaluationResult::boolean(false)
@@ -9176,11 +9173,12 @@ pub(crate) fn compare_equality(
                     }
                 ) && !matches!(prim_val, EvaluationResult::Collection { .. }) =>
                 {
-                    if obj_map.contains_key("fhirType") && obj_map.contains_key("value") {
-                        if let Some(obj_val) = obj_map.get("value") {
-                            // Compare the direct primitive value with the Object's "value" field
-                            return compare_equality(prim_val, op, obj_val, context);
-                        }
+                    if obj_map.contains_key("fhirType")
+                        && obj_map.contains_key("value")
+                        && let Some(obj_val) = obj_map.get("value")
+                    {
+                        // Compare the direct primitive value with the Object's "value" field
+                        return compare_equality(prim_val, op, obj_val, context);
                     }
                     // If not a FHIR primitive wrapper or "value" is missing, they are not equal.
                     EvaluationResult::boolean(false)

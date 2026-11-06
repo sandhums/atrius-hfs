@@ -12,8 +12,7 @@
 use async_trait::async_trait;
 use helios_persistence::tenant::TenantContext;
 use rusqlite::OptionalExtension;
-use std::collections::HashMap;
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::{Arc, RwLock};
 
 use crate::error::HtsError;
 use crate::traits::{
@@ -29,26 +28,6 @@ use super::{
     BoolMap, LookupResponseMap, PropCodesMap, ResolvedMetaMap, SqliteTerminologyBackend,
     StringOptionMap, ValidateCodeResponseMap,
 };
-
-// ─── Process-wide CodeSystem URL → language cache ──────────────────────────
-//
-// `$lookup` reports the CS's primary language as the `preferredForLanguage`
-// designation tag (see `operations/lookup.rs`). Pre-iter9 the value was
-// extracted via a full `search(url=Some(system))` call which selected the
-// entire `resource_json` blob (multi-MB for SNOMED/LOINC) and parsed it just
-// to read `.language`. Under 50-VU lookup load this allocation/parse cost
-// dominated $lookup and dragged steady-state RPS from ~12-14k to ~2-3k.
-//
-// The cache memoises `Option<language>` per CS URL across requests. Cache
-// invalidation is coarse: any write to `code_systems` calls
-// `invalidate_cs_language_cache()` (alongside `invalidate_cs_id_cache()` in
-// the import path).  Imports happen at startup and the cache is then stable
-// for the life of the process.
-static CS_LANGUAGE_CACHE: OnceLock<RwLock<HashMap<String, Option<String>>>> = OnceLock::new();
-
-fn cs_language_cache() -> &'static RwLock<HashMap<String, Option<String>>> {
-    CS_LANGUAGE_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
-}
 
 // ─── Per-instance CodeSystem property-code caches ──────────────────────────
 //
@@ -69,10 +48,10 @@ pub(super) fn lookup_property_codes(
     system_url: &str,
     canonical: &str,
 ) -> Arc<Vec<String>> {
-    if let Ok(read) = cache.read() {
-        if let Some(v) = read.get(system_url) {
-            return v.clone();
-        }
+    if let Ok(read) = cache.read()
+        && let Some(v) = read.get(system_url)
+    {
+        return v.clone();
     }
     let codes = Arc::new(cs_property_local_codes(conn, system_url, canonical));
     if let Ok(mut w) = cache.write() {
@@ -106,22 +85,6 @@ pub(super) fn cached_inactive_property_codes(
         system_url,
         "inactive",
     )
-}
-
-/// Clear the process-wide URL→language cache. Called by code paths that
-/// write to the `code_systems` table (CRUD + bulk import) — paired with
-/// `invalidate_cs_id_cache()`.
-///
-/// Only the two pre-iter3 caches (`CS_LANGUAGE_CACHE` here and
-/// `SYSTEM_ID_CACHE` in `value_set.rs`) remain global statics; the iter3
-/// caches were converted to per-instance fields on `SqliteTerminologyBackend`
-/// to fix test-isolation regressions when cargo runs tests in parallel.
-pub(crate) fn invalidate_cs_language_cache() {
-    if let Some(cache) = CS_LANGUAGE_CACHE.get() {
-        if let Ok(mut w) = cache.write() {
-            w.clear();
-        }
-    }
 }
 
 // ─── Per-instance $lookup response cache ────────────────────────────────────
@@ -191,6 +154,14 @@ impl SqliteTerminologyBackend {
     pub(super) fn cs_exists_cache(&self) -> &Arc<RwLock<BoolMap>> {
         &self.cs_exists_cache
     }
+
+    pub(super) fn cs_system_id_cache(&self) -> &Arc<RwLock<super::SystemIdCacheMap>> {
+        &self.cs_system_id_cache
+    }
+
+    pub(super) fn cs_language_cache(&self) -> &Arc<RwLock<StringOptionMap>> {
+        &self.cs_language_cache
+    }
 }
 
 #[async_trait]
@@ -237,12 +208,11 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         } else {
             None
         };
-        if let Some(ref k) = cache_key {
-            if let Ok(read) = self.lookup_response_cache().read() {
-                if let Some(arc) = read.get(k) {
-                    return Ok((**arc).clone());
-                }
-            }
+        if let Some(ref k) = cache_key
+            && let Ok(read) = self.lookup_response_cache().read()
+            && let Some(arc) = read.get(k)
+        {
+            return Ok((**arc).clone());
         }
 
         let pool = self.pool().clone();
@@ -443,6 +413,9 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
             ) {
                 Ok((id, _, version)) => (id, version),
                 Err(HtsError::NotFound(_)) => {
+                    if system == crate::bcp47::BCP47_SYSTEM {
+                        return Ok(crate::bcp47::validate_system_code(&req.code));
+                    }
                     let text = format!(
                         "A definition for CodeSystem {system} could not be found, so the code cannot be validated"
                     );
@@ -700,10 +673,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         // per-instance cache without entering spawn_blocking or the r2d2 pool.
         // The cache is invalidated alongside the in-memory expansion indexes
         // when `import_bundle` succeeds (see `mod.rs::import_bundle`).
-        if let Ok(read) = self.cs_version_for_url_cache().read() {
-            if let Some(cached) = read.get(url) {
-                return Ok(cached.clone());
-            }
+        if let Ok(read) = self.cs_version_for_url_cache().read()
+            && let Some(cached) = read.get(url)
+        {
+            return Ok(cached.clone());
         }
 
         let pool = self.pool().clone();
@@ -740,10 +713,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
     /// drop everything except the boolean. Cache is per-instance and
     /// flushed by `import_bundle` (see `mod.rs::import_bundle`).
     async fn code_system_exists(&self, _ctx: &TenantContext, url: &str) -> Result<bool, HtsError> {
-        if let Ok(read) = self.cs_exists_cache().read() {
-            if let Some(&cached) = read.get(url) {
-                return Ok(cached);
-            }
+        if let Ok(read) = self.cs_exists_cache().read()
+            && let Some(&cached) = read.get(url)
+        {
+            return Ok(cached);
         }
 
         let pool = self.pool().clone();
@@ -776,14 +749,13 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         _ctx: &TenantContext,
         url: &str,
     ) -> Result<Option<String>, HtsError> {
-        // Fast path: serve from the process-wide cache without touching the
+        // Fast path: serve from the per-instance cache without touching the
         // pool or spawn_blocking. CS language is effectively immutable per row;
-        // the cache is invalidated whenever code_systems is written (see
-        // `invalidate_cs_language_cache`).
-        if let Ok(read) = cs_language_cache().read() {
-            if let Some(cached) = read.get(url) {
-                return Ok(cached.clone());
-            }
+        // [`TerminologyCaches::invalidate_caches`] clears this on every write.
+        if let Ok(read) = self.cs_language_cache().read()
+            && let Some(cached) = read.get(url)
+        {
+            return Ok(cached.clone());
         }
 
         let pool = self.pool().clone();
@@ -816,7 +788,7 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
         .await
         .map_err(|e| HtsError::Internal(format!("Blocking task error: {e}")))??;
 
-        if let Ok(mut w) = cs_language_cache().write() {
+        if let Ok(mut w) = self.cs_language_cache().write() {
             w.insert(url.to_string(), lang.clone());
         }
         Ok(lang)
@@ -1602,10 +1574,10 @@ impl CodeSystemOperations for SqliteTerminologyBackend {
                 .flatten();
             let mut out: std::collections::HashMap<String, serde_json::Value> =
                 std::collections::HashMap::new();
-            if let Some(json_str) = resource_json {
-                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&json_str) {
-                    walk_concepts(&v, &codes, &mut out);
-                }
+            if let Some(json_str) = resource_json
+                && let Ok(v) = serde_json::from_str::<serde_json::Value>(&json_str)
+            {
+                walk_concepts(&v, &codes, &mut out);
             }
             Ok(out)
         })
@@ -1684,10 +1656,11 @@ fn walk_concepts(
         return;
     };
     for c in concepts {
-        if let Some(code) = c.get("code").and_then(|v| v.as_str()) {
-            if codes.iter().any(|x| x == code) && !out.contains_key(code) {
-                out.insert(code.to_string(), c.clone());
-            }
+        if let Some(code) = c.get("code").and_then(|v| v.as_str())
+            && codes.iter().any(|x| x == code)
+            && !out.contains_key(code)
+        {
+            out.insert(code.to_string(), c.clone());
         }
         walk_concepts(c, codes, out);
     }
@@ -1752,19 +1725,17 @@ fn cs_property_local_codes(
         .ok()
         .flatten();
     let suffix = format!("#{canonical}");
-    if let Some(json) = resource_json {
-        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&json) {
-            if let Some(props) = v.get("property").and_then(|p| p.as_array()) {
-                for p in props {
-                    let uri = p.get("uri").and_then(|u| u.as_str()).unwrap_or("");
-                    if uri.ends_with(&suffix) || uri == canonical {
-                        if let Some(local_code) = p.get("code").and_then(|c| c.as_str()) {
-                            if !codes.iter().any(|c| c == local_code) {
-                                codes.push(local_code.to_string());
-                            }
-                        }
-                    }
-                }
+    if let Some(json) = resource_json
+        && let Ok(v) = serde_json::from_str::<serde_json::Value>(&json)
+        && let Some(props) = v.get("property").and_then(|p| p.as_array())
+    {
+        for p in props {
+            let uri = p.get("uri").and_then(|u| u.as_str()).unwrap_or("");
+            if (uri.ends_with(&suffix) || uri == canonical)
+                && let Some(local_code) = p.get("code").and_then(|c| c.as_str())
+                && !codes.iter().any(|c| c == local_code)
+            {
+                codes.push(local_code.to_string());
             }
         }
     }
@@ -1822,10 +1793,10 @@ fn resolve_code_system(
     // $lookup call (LK01-04 hot path).
     if date.is_none() {
         let key = (url.to_string(), version.map(|s| s.to_string()));
-        if let Ok(read) = cache.read() {
-            if let Some(v) = read.get(&key) {
-                return Ok(v.clone());
-            }
+        if let Ok(read) = cache.read()
+            && let Some(v) = read.get(&key)
+        {
+            return Ok(v.clone());
         }
         // Compute then cache.
         let resolved = resolve_code_system_uncached(conn, url, version, date)?;
@@ -2392,6 +2363,78 @@ mod tests {
         assert!(resp.result);
         assert_eq!(resp.display, Some("Alpha Beta Charlie".into()));
         assert!(resp.message.is_none());
+    }
+
+    #[tokio::test]
+    async fn validate_code_bcp47_grammar_when_codesystem_absent() {
+        let b = backend();
+
+        let ok = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "pa-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(ok.result);
+        assert_eq!(ok.system.as_deref(), Some("urn:ietf:bcp:47"));
+
+        let bad = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "Punjabi".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!bad.result);
+    }
+
+    #[tokio::test]
+    async fn validate_code_loaded_bcp47_uses_stored_concepts() {
+        let b = backend();
+        let conn = b.pool().get().unwrap();
+        conn.execute_batch(
+            "INSERT INTO code_systems (id, url, version, name, status, content, created_at, updated_at)
+             VALUES ('bcp47', 'urn:ietf:bcp:47', '1', 'BCP 47', 'active', 'complete',
+                     '2024-01-01', '2024-01-01');
+             INSERT INTO concepts (id, system_id, code, display)
+             VALUES (1, 'bcp47', 'en', 'English');",
+        )
+        .unwrap();
+
+        let stored = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "en".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(stored.result);
+
+        let regional = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    system: Some("urn:ietf:bcp:47".into()),
+                    code: "hi-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!regional.result);
     }
 
     fn seed_snomed_current_stub(b: &SqliteTerminologyBackend) {

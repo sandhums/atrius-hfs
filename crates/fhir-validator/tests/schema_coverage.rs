@@ -117,6 +117,9 @@ fn declared_fields(ctx: Ctx) -> BTreeSet<String> {
             must_support: Some(true),
             summary: Some(true),
             short: Some(String::new()),
+            max_length: Some(0),
+            min_value: Some(Value::Null),
+            max_value: Some(Value::Null),
             regex: Some(String::new()),
             context: Some(Vec::new()),
         }),
@@ -166,14 +169,14 @@ fn expected_absent(ctx: Ctx) -> BTreeSet<String> {
         // treats "not an array" as "must be singular" (`engine/walk.rs`) —
         // stricter than the format's tri-state, so nothing is lost on packs we
         // generate ourselves.
-        Ctx::Schema => &["scalar"],
+        Ctx::Schema => &["scalar", "maxLength", "minValue", "maxValue"],
         // Unexercised rather than unimplemented: the core spec bundles contain
         // no re-slicing, so an IG corpus would be needed to cover these.
         // (`order` used to live here — the converter now emits it under
         // `ordered: true`.)
         Ctx::Slice => &["reslice", "sliceIsConstraining"],
-        // Only reachable via a `resolve()`-style discriminator, which
-        // `build_match` does not translate.
+        // `resolve-ref` is emitted when a discriminator path contains
+        // `resolve()`; core packs have none of those paths.
         Ctx::Match => &["resolve-ref"],
         _ => &[],
     };

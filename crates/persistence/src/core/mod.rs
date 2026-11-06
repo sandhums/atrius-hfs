@@ -108,10 +108,12 @@ pub mod history;
 pub mod patch;
 pub mod patient_compartment;
 pub mod preconditions;
+pub mod schema_ledger;
 pub mod search;
 pub mod sof_runner;
 pub mod sof_terminology;
 pub mod storage;
+pub mod subscription_outbox;
 pub mod tenant_discovery;
 pub mod transaction;
 pub mod user_settings;
@@ -122,9 +124,11 @@ pub mod write_observer;
 pub use backend::{Backend, BackendCapability, BackendConfig, BackendKind, BackendPoolStats};
 pub use bulk_export::{
     BulkExportStorage, ExpiredExportRef, ExportDataProvider, ExportFileMetadata, ExportJobId,
-    ExportJobMetadata, ExportLevel, ExportManifest, ExportOutputFile, ExportProgress,
-    ExportRequest, ExportStatus, GroupExportProvider, NdjsonBatch, PatientExportProvider,
-    RawExportManifest, RawManifestEntry, StartExportInput, TypeExportProgress, TypeFilter,
+    ExportJobList, ExportJobListRow, ExportJobMetadata, ExportLevel, ExportManifest,
+    ExportOutputFile, ExportProgress, ExportRequest, ExportStatus, GroupExportProvider,
+    ListExportsQuery, NdjsonBatch, PatientExportProvider, RawExportManifest, RawManifestEntry,
+    StartExportInput, TypeExportProgress, TypeFilter, decode_export_job_cursor,
+    decode_export_job_cursor_raw, encode_export_job_cursor, encode_export_job_cursor_raw,
 };
 pub use bulk_export_output::{
     DownloadUrl, ExportOutputStore, ExportPartKey, ExportPartWriter, FinalizedPart,
@@ -140,10 +144,10 @@ pub use bulk_submit::{
     BatchCommitObserver, BatchCommitted, BatchObserverHandle, BulkEntryOutcome, BulkEntryResult,
     BulkProcessingOptions, BulkSubmitProvider, BulkSubmitRollbackProvider, ChangeType,
     EntryCountSummary, EntryResultContinuation, EntryResultCursor, EntryResultPage,
-    IMPORT_MODE_PARAMETER_URL, ImportMode, ManifestPhase, ManifestStatus, NdjsonEntry,
-    PagedEntryResult, ReceiptListingCursor, StreamProcessingResult, StreamingBulkSubmitProvider,
-    SubmissionChange, SubmissionId, SubmissionManifest, SubmissionStatus, SubmissionSummary,
-    UnindexedEntry, merge_resource,
+    IMPORT_MODE_PARAMETER_URL, ImportMode, IngestValidator, ManifestPhase, ManifestStatus,
+    NdjsonEntry, PagedEntryResult, ReceiptListingCursor, StreamProcessingResult,
+    StreamingBulkSubmitProvider, SubmissionChange, SubmissionId, SubmissionManifest,
+    SubmissionStatus, SubmissionSummary, UnindexedEntry, merge_resource,
 };
 pub use bulk_submit_input::{
     FileTokenProvider, RemoteFile, RemoteManifest, SubmitInputFetcher, submission_output_job_id,
@@ -169,13 +173,17 @@ pub use history::{
     DifferentialHistoryProvider, HistoryEntry, HistoryMethod, HistoryPage, HistoryParams,
     InstanceHistoryProvider, SystemHistoryProvider, TypeHistoryProvider,
 };
-pub use patch::{PatchError, apply_patch, apply_patch_for_version, decode_bundle_patch_resource};
+pub use patch::{
+    PatchError, apply_patch, apply_patch_for_version, apply_resource_patch, bundle_patch_format,
+    decode_bundle_patch_resource, patch_format_from_bundle_resource, patched_from_bundle_entry,
+};
 pub use preconditions::{
     EntityTag, EntityTagPrecondition, MalformedPrecondition, bundle_if_match_gate,
-    bundle_if_none_exist_gate, conditional_if_match_gate, delete_under_precondition,
-    if_match_field_satisfied, multiple_matches_entry, not_supported_entry,
-    precondition_failed_entry,
+    bundle_if_none_exist_gate, bundle_if_none_match_gate, conditional_if_match_gate,
+    delete_under_precondition, if_match_field_satisfied, if_none_match_create_lost_diagnostics,
+    multiple_matches_entry, not_supported_entry, precondition_failed_entry,
 };
+pub use schema_ledger::{BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, SCHEMA_FLAVOUR};
 pub use search::{
     FullSearchProvider, INCLUDE_TRUNCATION_OUTCOME_ID, IncludeProvider, MAX_ITERATE_INCLUDED,
     MultiTypeSearchProvider, RevincludeProvider, SearchProvider, SearchResult,
@@ -189,6 +197,11 @@ pub use storage::{
     ConditionalPatchPreparation, ConditionalPatchResult, ConditionalStorage,
     ConditionalUpdateResult, DailyResourceCount, PatchFormat, PurgableStorage, ResourceCountDelta,
     ResourceStorage, TenantRecord, WriteMarker, bucket_floor, restore_cas_miss,
+};
+pub use subscription_outbox::{
+    CLOUDEVENTS_SPEC_VERSION, DynSubscriptionOutboxStore, InMemorySubscriptionOutbox,
+    OUTBOX_EVENT_TYPE, OutboxEventType, SubscriptionOutboxEntry, SubscriptionOutboxStore,
+    subscription_outbox_source, subscription_outbox_writes_enabled,
 };
 pub use tenant_discovery::{
     CountBasis, DiscoveredTenant, DiscoveryCoverage, DiscoveryCursor, DiscoveryRequest,

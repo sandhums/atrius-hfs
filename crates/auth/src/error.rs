@@ -33,6 +33,23 @@ pub enum AuthError {
         kid: String,
     },
 
+    /// Access token was revoked (e.g. user logged out).
+    #[error("Token revoked: {jti}")]
+    TokenRevoked {
+        /// The revoked JWT ID.
+        jti: String,
+    },
+
+    /// The token has no usable `jti`, so it cannot be placed on the logout
+    /// blocklist. Returned only when JTI revocation is enabled.
+    #[error("Token is missing a jti claim (required when JTI revocation is enabled)")]
+    MissingJti,
+
+    /// The Redis deny-list could not be consulted (timeout or connection error).
+    /// Fail-closed: a token that cannot be checked is not accepted.
+    #[error("Token revocation check unavailable")]
+    RevocationUnavailable,
+
     /// Authenticated principal lacks required scopes.
     #[error("Forbidden: insufficient scope for {operation} on {resource_type}")]
     Forbidden {

@@ -411,6 +411,17 @@ pub trait ResourceStorage: Send + Sync {
         false
     }
 
+    /// Optional durable subscription outbox backed by this store.
+    ///
+    /// SQL backends (Postgres/SQLite) return a store that shares their connection
+    /// pool. Other backends default to `None`; the subscription engine then falls
+    /// back to in-process dispatch.
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        None
+    }
+
     /// Cheap readiness probe of the underlying store, used by the `/_readiness`
     /// endpoint to decide whether this instance should receive traffic.
     ///
@@ -1732,6 +1743,26 @@ pub trait ConditionalStorage: ResourceStorage {
                 Ok(ConditionalPatchResult::MultipleMatches(n))
             }
         }
+    }
+
+    /// Resources matching conditional criteria, without writing.
+    ///
+    /// Used by Bundle PATCH so REST can apply the patch in memory, run
+    /// `check_write`, then `update`. Default is unsupported; SQL backends
+    /// implement this via the same match set `conditional_patch` uses.
+    async fn conditional_matches(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        search_params: &str,
+    ) -> StorageResult<Vec<crate::types::StoredResource>> {
+        let _ = (tenant, resource_type, search_params);
+        Err(StorageError::Backend(
+            crate::error::BackendError::UnsupportedCapability {
+                backend_name: "unknown".to_string(),
+                capability: "conditional_matches".to_string(),
+            },
+        ))
     }
 }
 

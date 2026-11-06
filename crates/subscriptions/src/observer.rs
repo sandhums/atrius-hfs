@@ -5,8 +5,10 @@
 //! adapter subscribes the engine to it. It turns each resource write that
 //! carries a [`WriteNotice`] into the [`ResourceEvent`] the handlers used to
 //! build by hand, and hands it to
-//! the bounded engine ingress. Lifecycle changes are applied synchronously;
-//! DATA notices reserve ingress capacity before their payload is cloned.
+//! adapter subscribes the engine to it. Lifecycle changes and data notices
+//! go through the bounded engine ingress. When a durable outbox is attached,
+//! the resource transaction already wrote the row, so [`SubscriptionEngine::enqueue_resource_event`]
+//! only wakes the worker.
 //!
 //! What gets announced is decided by the write path, not here: a write whose
 //! notice is `None` (for example a conditional create) is deliberately silent,
@@ -72,9 +74,15 @@ fn resource_event(event: &WriteEvent) -> Option<ResourceEvent> {
 
 impl WriteObserver for SubscriptionWriteObserver {
     fn on_write(&self, event: &WriteEvent) {
-        if let WriteEvent::Resource(write) = event {
-            self.engine.observe_write(write);
+        let WriteEvent::Resource(write) = event else {
+            return;
+        };
+        if self.engine.has_outbox() {
+            // The SQL backend wrote the outbox row in this resource transaction.
+            self.engine.enqueue_resource_event();
+            return;
         }
+        self.engine.observe_write(write);
     }
 }
 

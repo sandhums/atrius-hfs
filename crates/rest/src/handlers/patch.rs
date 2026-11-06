@@ -158,6 +158,17 @@ where
         .await?;
     super::sof::reject_unknown_view_definition_resource(&resource_type, &patched_content)?;
 
+    // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
+    state
+        .validation()
+        .check_write(
+            tenant.tenant_id(),
+            existing.fhir_version(),
+            &resource_type,
+            &patched_content,
+        )
+        .await?;
+
     // Update the resource
     let stored = state
         .storage()

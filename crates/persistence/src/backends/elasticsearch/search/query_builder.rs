@@ -278,6 +278,14 @@ impl<'a> EsQueryBuilder<'a> {
 
         let base = strip_reference_version(&comp.reference);
 
+        // Also match a reference indexed as an absolute URL, through the
+        // `Type/id` the writer stores for those (#2394).
+        let should = json!([
+            { "term": { "search_params.reference.reference": base } },
+            { "prefix": { "search_params.reference.reference": format!("{base}/_history/") } },
+            { "term": { "search_params.reference.reference_target": base } }
+        ]);
+
         Some(json!({
             "nested": {
                 "path": "search_params.reference",
@@ -287,10 +295,7 @@ impl<'a> EsQueryBuilder<'a> {
                             { "terms": { "search_params.reference.name": comp.params } },
                             {
                                 "bool": {
-                                    "should": [
-                                        { "term": { "search_params.reference.reference": base } },
-                                        { "prefix": { "search_params.reference.reference": format!("{base}/_history/") } }
-                                    ],
+                                    "should": should,
                                     "minimum_should_match": 1
                                 }
                             }
@@ -326,6 +331,17 @@ impl<'a> EsQueryBuilder<'a> {
             "_text" => return fts::build_text_clause(param),
             "_content" => return fts::build_content_clause(param),
             _ => {}
+        }
+
+        // Token `:in` lists collapse to per-system `terms` queries so ES
+        // does not hit `too_many_nested_clauses` (maxClauseCount 2048).
+        if param.param_type == SearchParamType::Token {
+            if let Some(combined) = token::build_multi_value_clause(param) {
+                if matches!(param.modifier, Some(SearchModifier::Not)) {
+                    return Some(json!({ "bool": { "must_not": [combined] } }));
+                }
+                return Some(combined);
+            }
         }
 
         // Dispatch based on parameter type
@@ -636,6 +652,21 @@ pub fn build_count_query(tenant_id: &str, resource_type: &str, query: &SearchQue
 mod tests {
     use super::*;
     use crate::types::{CursorValue, SearchValue, SortDirection};
+
+    /// #2394: compartment membership also matches absolute references through
+    /// the stored `Type/id`.
+    #[test]
+    fn compartment_clause_matches_absolute_reference_target() {
+        let comp = CompartmentMembership {
+            params: vec!["patient".to_string()],
+            reference: "Patient/p1/_history/3".to_string(),
+        };
+        let s = serde_json::to_string(&EsQueryBuilder::build_compartment_clause(&comp).unwrap())
+            .unwrap();
+        assert!(
+            s.contains(r#"{"term":{"search_params.reference.reference_target":"Patient/p1"}}"#)
+        );
+    }
 
     /// Encodes a `Previous` cursor at the given resource ID, used to
     /// exercise the backward-paging path of `build`.
@@ -1014,15 +1045,28 @@ mod tests {
 
         let clause = &es_query.body["query"]["bool"]["must"][0];
         let negated = &clause["bool"]["must_not"][0];
-        let should = negated["bool"]["should"].as_array().expect("OR of values");
-        assert_eq!(should.len(), 2);
-
-        let inner = serde_json::to_string(negated).unwrap();
+        // Code-only values collapse to one `terms` nested query.
         assert!(
-            !inner.contains("must_not"),
+            negated["nested"].is_object(),
+            "must_not wraps one collapsed nested query"
+        );
+        let listed = negated
+            .pointer("/nested/query/bool/must")
+            .and_then(|must| must.as_array())
+            .and_then(|must| {
+                must.iter().find_map(|c| {
+                    c.pointer("/terms/search_params.token.code")
+                        .or_else(|| c.pointer("/term/search_params.token.code"))
+                })
+            })
+            .expect("code terms");
+        let inner = serde_json::to_string(listed).unwrap();
+        assert!(inner.contains("en-US") && inner.contains("es"));
+        let whole = serde_json::to_string(negated).unwrap();
+        assert!(
+            !whole.contains("must_not"),
             "values must not be negated individually"
         );
-        assert!(inner.contains("en-US") && inner.contains("es"));
     }
 
     #[test]

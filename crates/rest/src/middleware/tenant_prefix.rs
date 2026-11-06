@@ -26,6 +26,7 @@ const RESERVED_SYSTEM_PATHS: &[&str] = &[
     // are also valid without a tenant prefix when the request carries
     // `X-Tenant-ID`; treating their first segment as a tenant would strip the
     // namespace before route matching and make advertised links unusable.
+    "export-jobs",
     "export-status",
     "export-file",
     "bulk-submit-status",
@@ -242,6 +243,7 @@ mod tests {
         assert!(extract_tenant_from_path("/_history", &version).is_none());
 
         for namespace in [
+            "export-jobs",
             "export-status",
             "export-file",
             "bulk-submit-status",
@@ -303,6 +305,7 @@ mod tests {
         assert!(is_reserved_path("health", &version));
 
         for namespace in [
+            "export-jobs",
             "export-status",
             "export-file",
             "bulk-submit-status",

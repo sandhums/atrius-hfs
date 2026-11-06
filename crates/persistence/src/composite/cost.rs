@@ -268,7 +268,6 @@ impl CostEstimator {
             BackendKind::Sqlite => 1,
             BackendKind::Postgres => 5,
             BackendKind::Elasticsearch => 10,
-            BackendKind::Neo4j => 15,
             BackendKind::S3 => 50,
             _ => 10,
         };

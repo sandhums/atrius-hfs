@@ -85,7 +85,7 @@
 //! - `Accept` - Content negotiation (application/fhir+json, application/fhir+xml)
 //! - `Content-Type` - Request body format
 //! - `ETag` / `If-Match` - Optimistic locking for updates
-//! - `If-None-Match` - Conditional read
+//! - `If-None-Match` - Conditional read; on PUT, create-if-absent (`*`)
 //! - `If-None-Exist` - Conditional create
 //! - `If-Modified-Since` - Conditional read by date
 //! - `Prefer` - Response preference (return=minimal, return=representation, return=OperationOutcome)
@@ -890,6 +890,34 @@ where
                 supported_channel_types: supported,
                 smtp,
                 messaging,
+                max_retries: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_MAX_RETRIES",
+                    default_sub_config.max_retries,
+                ),
+                retry_initial_delay: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_RETRY_INITIAL_DELAY_MS",
+                    default_sub_config.retry_initial_delay,
+                ),
+                retry_max_delay: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_RETRY_MAX_DELAY_MS",
+                    default_sub_config.retry_max_delay,
+                ),
+                retry_backoff_factor: subscription_f64_from_env(
+                    "HFS_SUBSCRIPTION_RETRY_BACKOFF_FACTOR",
+                    default_sub_config.retry_backoff_factor,
+                ),
+                heartbeat_check_interval: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_HEARTBEAT_INTERVAL_MS",
+                    default_sub_config.heartbeat_check_interval,
+                ),
+                error_threshold: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_ERROR_THRESHOLD",
+                    default_sub_config.error_threshold,
+                ),
+                off_threshold: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_OFF_THRESHOLD",
+                    default_sub_config.off_threshold,
+                ),
                 handshake_initial_delay: subscription_duration_ms_from_env(
                     "HFS_SUBSCRIPTION_HANDSHAKE_INITIAL_DELAY_MS",
                     default_sub_config.handshake_initial_delay,
@@ -906,6 +934,23 @@ where
                 handshake_retry_max_delay: subscription_duration_ms_from_env(
                     "HFS_SUBSCRIPTION_HANDSHAKE_RETRY_MAX_MS",
                     default_sub_config.handshake_retry_max_delay,
+                ),
+                outbox_poll_interval: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_POLL_INTERVAL_MS",
+                    default_sub_config.outbox_poll_interval,
+                ),
+                outbox_batch_size: subscription_u32_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_BATCH_SIZE",
+                    default_sub_config.outbox_batch_size,
+                )
+                .max(1),
+                outbox_claim_lease: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_CLAIM_LEASE_MS",
+                    default_sub_config.outbox_claim_lease,
+                ),
+                outbox_process_timeout: subscription_duration_ms_from_env(
+                    "HFS_SUBSCRIPTION_OUTBOX_PROCESS_TIMEOUT_MS",
+                    default_sub_config.outbox_process_timeout,
                 ),
                 persist_status: subscription_bool_from_env(
                     "HFS_SUBSCRIPTION_PERSIST_STATUS",
@@ -932,13 +977,22 @@ where
                         public_url.as_str().to_string()
                     }
                 });
-            let engine =
+            let mut engine =
                 helios_subscriptions::SubscriptionEngine::with_outbound_auth_and_url_resolver(
                     sub_config,
                     public_base_url_for_tenant,
                     resolve_default_message_source,
                     outbound_auth_provider,
                 );
+            if let Some(outbox) = storage_arc.subscription_outbox_store() {
+                engine = engine.with_outbox(outbox);
+                info!("Subscription durable outbox ENABLED");
+            } else {
+                info!(
+                    "Subscription durable outbox unavailable for backend '{}'; using in-process dispatch",
+                    storage_arc.backend_name()
+                );
+            }
             // Server-driven status transitions are written back into the stored
             // `Subscription` (issue #357), so the engine's own decisions survive
             // a restart and `GET /Subscription/{id}` stops contradicting
@@ -948,13 +1002,10 @@ where
             // composite deployment that is the *composite*, not the primary, so
             // the rewritten resource also reaches the Elasticsearch index and
             // `GET /Subscription?status=active` answers from current documents.
-            let engine =
+            engine =
                 engine
                     .with_status_store(Arc::clone(&storage_arc)
                         as Arc<dyn helios_persistence::core::ResourceStorage>);
-            // Reported from the engine rather than the config flag, so the line
-            // reflects what is actually wired: it reads OFF if either the flag is
-            // false or no store was attached.
             if engine.persists_status() {
                 info!("Subscriptions engine ENABLED (status write-back ON)");
             } else {
@@ -965,10 +1016,20 @@ where
             }
             let engine = Arc::new(engine);
             // Every committed write reaches the engine through the shared
-            // post-commit observer (#1078), not through per-handler calls.
+            // post-commit observer (#1078). The observer enqueues onto the
+            // durable outbox when one is attached.
             observability.observers.subscribe(Arc::new(
                 helios_subscriptions::SubscriptionWriteObserver::new(Arc::clone(&engine)),
             ));
+            if tokio::runtime::Handle::try_current().is_ok() {
+                engine.start_outbox_worker();
+                engine.start_heartbeat_worker();
+            } else {
+                warn!(
+                    "No Tokio runtime available at app construction; subscription outbox \
+                     and heartbeat workers not started"
+                );
+            }
             spawn_subscription_rehydration(Arc::clone(&engine), Arc::clone(&storage_arc), &config);
             // The operator page's read path (#580): a plain-data snapshot of the
             // engine's inventory, registered process-globally so the UI crate
@@ -1337,6 +1398,15 @@ fn subscription_dispatch_config(
         *field = subscription_dispatch_limit(name, lookup(name).as_deref(), *field);
     }
     config
+}
+
+#[cfg(feature = "subscriptions")]
+fn subscription_f64_from_env(name: &str, default: f64) -> f64 {
+    std::env::var(name)
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .filter(|v: &f64| v.is_finite() && *v > 0.0)
+        .unwrap_or(default)
 }
 
 #[cfg(feature = "subscriptions")]

@@ -155,7 +155,7 @@ impl CoreTerminology {
     /// `Some(true)` in-set, `Some(false)` definitely out, `None` can't judge
     /// offline (value set not embedded, or shape not coded). This is the sync
     /// core both `validate_code` and the editor's binding check share.
-    fn member(&self, value_set: &str, coded: &CodedValue) -> Option<bool> {
+    pub fn member(&self, value_set: &str, coded: &CodedValue) -> Option<bool> {
         match coded {
             CodedValue::Code(code) => self.contains(value_set, None, code),
             CodedValue::Coding(coding) => {
@@ -211,7 +211,7 @@ impl CoreTerminology {
                     path.clone(),
                     format!(
                         "code is not in the required value set '{}'",
-                        strip_version(&binding.value_set)
+                        crate::resolver::strip_canonical_version(&binding.value_set)
                     ),
                 ));
             }
@@ -220,7 +220,6 @@ impl CoreTerminology {
     }
 }
 
-/// Strips a `|version` suffix from a canonical URL (`…/administrative-gender|4.0.1`).
 fn strip_version(url: &str) -> &str {
     url.split('|').next().unwrap_or(url)
 }

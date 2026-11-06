@@ -1824,6 +1824,17 @@ impl PostgresBackend {
                         (current.version_id().parse::<i32>().unwrap_or(0) + 1).to_string(),
                         current.content().clone(),
                     );
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            txn.tenant().tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &content,
+                        )
+                        .await
+                    {
+                        return Ok((failed, None, None));
+                    }
                     let updated = txn.update(&current, content).await?;
 
                     Ok((
@@ -1838,6 +1849,17 @@ impl PostgresBackend {
                     ))
                 }
                 None => {
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            txn.tenant().tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &entry.resource,
+                        )
+                        .await
+                    {
+                        return Ok((failed, None, None));
+                    }
                     let created = txn
                         .create(&entry.resource_type, entry.resource.clone())
                         .await?;
@@ -1861,6 +1883,17 @@ impl PostgresBackend {
                 }
             }
         } else {
+            if let Some(failed) = options
+                .ingest_validation_error(
+                    txn.tenant().tenant_id().as_str(),
+                    entry.line_number,
+                    &entry.resource_type,
+                    &entry.resource,
+                )
+                .await
+            {
+                return Ok((failed, None, None));
+            }
             let created = txn
                 .create(&entry.resource_type, entry.resource.clone())
                 .await?;

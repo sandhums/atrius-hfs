@@ -17,11 +17,6 @@
 //! | Terminology expansion | Terminology Service | Dedicated code hierarchies |
 //! | Bulk analytics | S3 + Parquet | Cost-effective columnar storage |
 //!
-//! Note that [`BackendKind`](crate::core::BackendKind) also names `Cassandra`
-//! and `Neo4j`, and the builder accepts them, but no backend is implemented for
-//! either — see [`backends`](crate::backends). A graph role configured with
-//! `BackendKind::Neo4j` cannot be instantiated at runtime.
-//!
 //! # Design Principles
 //!
 //! 1. **Single Source of Truth**: One primary backend handles all FHIR resource CRUD

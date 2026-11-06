@@ -7,6 +7,7 @@ use tracing::{debug, warn};
 use super::AuthProvider;
 use crate::config::AuthConfig;
 use crate::error::AuthError;
+use crate::jti::JtiRevocation;
 use crate::jwks::JwksCache;
 use crate::principal::{LaunchContext, Principal};
 use crate::scope::ScopeSet;
@@ -15,6 +16,7 @@ use crate::scope::ScopeSet;
 /// using keys from a JWKS endpoint.
 pub struct JwksBearerAuthProvider {
     jwks_cache: Arc<JwksCache>,
+    jti_revocation: Arc<dyn JtiRevocation>,
     expected_audience: Option<String>,
     expected_issuer: Option<String>,
     tenant_claim: String,
@@ -26,7 +28,11 @@ pub struct JwksBearerAuthProvider {
 
 impl JwksBearerAuthProvider {
     /// Create a new JWKS Bearer auth provider.
-    pub fn new(jwks_cache: Arc<JwksCache>, config: &AuthConfig) -> Self {
+    pub fn new(
+        jwks_cache: Arc<JwksCache>,
+        jti_revocation: Arc<dyn JtiRevocation>,
+        config: &AuthConfig,
+    ) -> Self {
         let allowed_algorithms = config
             .allowed_algorithms
             .iter()
@@ -35,6 +41,7 @@ impl JwksBearerAuthProvider {
 
         Self {
             jwks_cache,
+            jti_revocation,
             expected_audience: config.expected_audience.clone(),
             expected_issuer: config.expected_issuer.clone(),
             tenant_claim: config.tenant_claim.clone(),
@@ -130,7 +137,12 @@ impl AuthProvider for JwksBearerAuthProvider {
             .unwrap_or("")
             .to_string();
 
-        let jti = claims.get("jti").and_then(|v| v.as_str()).map(String::from);
+        let jti = claims
+            .get("jti")
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
 
         let exp = claims
             .get("exp")
@@ -140,13 +152,29 @@ impl AuthProvider for JwksBearerAuthProvider {
         let expires_at = chrono::DateTime::from_timestamp(exp, 0)
             .ok_or_else(|| AuthError::ValidationError("Invalid 'exp' timestamp".to_string()))?;
 
-        // 8. Parse scopes from every claim an IdP may carry them in
+        // 8. Reject revoked tokens (access tokens reuse jti until expiry; the BFF
+        //    writes revoked JTIs on logout/refresh, so this is a deny-list check,
+        //    not a replay cache). A token with no jti cannot be named on that
+        //    list, so when the checker requires one we refuse it rather than
+        //    silently skipping the check.
+        if self.jti_revocation.requires_jti() && jti.is_none() {
+            return Err(AuthError::MissingJti);
+        }
+        if let Some(ref jti_value) = jti
+            && self.jti_revocation.is_revoked(jti_value).await?
+        {
+            return Err(AuthError::TokenRevoked {
+                jti: jti_value.clone(),
+            });
+        }
+
+        // 9. Parse scopes from every claim an IdP may carry them in.
         let scopes = scopes_from_claims(&claims);
         if scopes.raw().is_empty() {
             debug!(sub = %subject, "No scope, scp or roles claim found in token");
         }
 
-        // 9. Extract tenant from configured claim
+        // 10. Extract tenant from configured claim
         let tenant_id = claims
             .get(&self.tenant_claim)
             .and_then(|v| v.as_str())
@@ -175,7 +203,12 @@ impl AuthProvider for JwksBearerAuthProvider {
             serde_json::Map::new()
         };
 
-        debug!(sub = %subject, iss = %issuer, "Token validated successfully");
+        debug!(
+            sub = %subject,
+            fhir_user = ?launch_context.as_ref().and_then(|c| c.fhir_user.as_deref()),
+            iss = %issuer,
+            "Token validated successfully"
+        );
 
         Ok(Principal {
             subject,

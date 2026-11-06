@@ -43,15 +43,23 @@
 //!
 //! ## Current limitations (hardening backlog)
 //!
-//! - Slice matchers: only `pattern` matching is evaluated. `type`,
-//!   `profile`, `binding`, and `resolve-ref` matchers are parsed but inert
-//!   (such slices match nothing and never enforce a minimum; the converter
-//!   emits a warning when it cannot build a pattern match).
-//! - `refers` (reference target types) is carried but not enforced.
-//! - `extensible`-strength bindings are never checked (only `required`,
-//!   per the FHIR Schema spec); a warning mode may come later.
-//! - Constraint evaluation resolves `%resource`/`%rootResource` (and
-//!   `%context`) to the root resource, so invariants relying on
+//! - Slice matchers: `pattern`, `type`, `profile`, `binding`, `exists`, and
+//!   `extension('url')` paths are evaluated (`engine/slicing.rs`). `resolve()`
+//!   follows References in the instance (`contained`, Bundle entries) and in
+//!   `ValidationOptions::resolution_resources` (store prefetch from REST). An
+//!   unresolved reference does not match. The engine never hits storage itself.
+//!   Binding discriminators that name a ValueSet canonical expand against
+//!   embedded core terminology when `ValidationOptions::slice_binding_version`
+//!   is set (HFS write/`$validate` always sets it). Mixed-kind discriminator
+//!   sets AND as `type: "all"`. `resolve()` is in-scope plus optional store prefetch.
+//! - `refers` (reference target types) is enforced when
+//!   `ValidationOptions::enforce_refers` is set (off by default for suite parity).
+//! - `extensible`-strength bindings warn when
+//!   `EffectHandlers::check_extensible_bindings` is set; only `required` is
+//!   checked by default.
+//! - Constraint evaluation uses per-node invariant evaluation (see
+//!   `fhirpath_effects`); `%resource`/`%rootResource`/`%context` resolve to
+//!   the root resource, so invariants relying on
 //!   nested-resource `%resource` semantics can misfire (helios-fhirpath
 //!   limitation; see `fhirpath_effects`).
 //! - Schema sets are assembled per node without cross-resource memoization;
@@ -65,6 +73,7 @@ pub mod converter;
 pub mod editor;
 pub mod effects;
 pub mod engine;
+pub mod packages;
 pub mod packs;
 pub mod resolver;
 pub mod schema;
@@ -86,6 +95,11 @@ pub use engine::{
     ErrorKind, Severity, SyncOutcome, UnknownProfilePolicy, ValidationError, ValidationOptions,
     Validator, dotted_to_fhirpath,
 };
-pub use resolver::{CompositeResolver, SchemaRegistry, SchemaResolver};
+pub use packages::{
+    MaterializeReport, PackageCache, PackageError, PackageId, PackageManifest, PackageRef,
+    ResolvedPackage, ScannedPackage, materialize_package, materialize_package_layers,
+    materialize_tgz, resolve_packages, scan_package_dir,
+};
+pub use resolver::{CompositeResolver, SchemaRegistry, SchemaResolver, strip_canonical_version};
 pub use schema::{Binding, Constraint, FhirSchema, Match, Slice, Slicing};
 pub use terminology::{CoreTerminology, core_terminology};

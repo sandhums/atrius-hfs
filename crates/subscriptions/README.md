@@ -518,7 +518,7 @@ A Kafka-backed architecture addresses most of the single-instance and performanc
 ## Current Limitations
 
 - FHIRPath filter criteria are not evaluated — Phase 2 uses direct JSON field matching only
-- Heartbeat delivery is not yet implemented — the `heartbeat_period` field is stored but no background task fires heartbeats
+- Heartbeat delivery runs on a background worker. `heartbeatPeriod` is the silence interval: an event, handshake, or heartbeat resets it.
 - Batch and transaction bundle entries do not emit subscription events — only direct CRUD handlers (create, update, delete, patch) do
 - [`eventTrigger`](https://hl7.org/fhir/subscriptiontopic.html) is not supported — only `resourceTrigger` (create, update, delete) is implemented
 - The engine is in-memory only and single-instance — subscriptions and topics are not shared across cluster nodes or reloaded from storage on restart (see [Clustering](#clustering) above)

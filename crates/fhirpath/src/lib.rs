@@ -284,6 +284,7 @@ mod extension_function;
 // Curated catalog of built-in functions; re-exported below.
 mod fhir_type_hierarchy;
 mod functions;
+mod html_checks_function;
 mod long_conversion;
 mod not_function;
 mod polymorphic_access;
@@ -295,7 +296,7 @@ mod resource_type;
 pub mod semantic_check;
 mod set_operations;
 mod subset_functions;
-mod terminology_client;
+pub mod terminology_client;
 mod terminology_functions;
 #[cfg(test)]
 mod terminology_stub;

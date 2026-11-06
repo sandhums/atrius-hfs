@@ -65,6 +65,19 @@ pub struct ValidationOptions {
     /// hundreds of canonical resources — useful to a profile author,
     /// noise to everyone else.
     pub check_extension_context: bool,
+    /// When true, enforce `refers` (Reference target resource-type) checks.
+    /// Off by default to preserve upstream conformance-suite parity.
+    pub enforce_refers: bool,
+    /// When set, binding discriminators that name a ValueSet canonical consult
+    /// the embedded core terminology for this version at slice mark time.
+    /// Unset (default) leaves ValueSet URLs unmatched unless the instance
+    /// literally carries the URL, which is what the extended fixtures pin.
+    pub slice_binding_version: Option<FhirVersion>,
+    /// Extra resources the `resolve-ref` discriminator and FHIRPath
+    /// `resolve()` may search, in addition to `contained` / Bundle entries.
+    /// Callers that have a tenant store prefetch relative `Type/id` targets
+    /// here; the engine itself never performs I/O.
+    pub resolution_resources: Vec<Value>,
 }
 
 impl Default for ValidationOptions {
@@ -74,6 +87,9 @@ impl Default for ValidationOptions {
             use_meta_profiles: true,
             check_extension_context: false,
             unknown_profile: UnknownProfilePolicy::default(),
+            enforce_refers: false,
+            slice_binding_version: None,
+            resolution_resources: Vec::new(),
         }
     }
 }
@@ -119,7 +135,15 @@ impl Validator {
             mut errors,
             deferred,
         } = self.validate_sync(resource, opts);
-        crate::effects::execute(resource, version, &deferred, effects, &mut errors).await;
+        crate::effects::execute(
+            resource,
+            version,
+            &deferred,
+            effects,
+            &opts.resolution_resources,
+            &mut errors,
+        )
+        .await;
         errors
     }
 }

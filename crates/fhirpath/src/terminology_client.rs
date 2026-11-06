@@ -61,7 +61,7 @@ fn parse_request_timeout(raw: Option<&str>) -> Option<Duration> {
 /// long to keep a rate-limited failure instead of re-sending the request, and the
 /// `TerminologySession` stores the resulting `retry_at`.
 #[derive(Debug)]
-pub(crate) struct RequestError {
+pub struct RequestError {
     /// The error callers see.
     pub(crate) error: FhirPathError,
     /// How long the server asked the client to wait, from the `Retry-After` header of a 429
@@ -431,6 +431,48 @@ impl TerminologyClient {
         read_response(response, "ValueSet validation failed").await
     }
 
+    /// Validates a code against a ValueSet using a full FHIR `Parameters` resource body.
+    ///
+    /// Preferred when the caller already has a complete `$validate-code` parameter set
+    /// (for example from the validation crate’s request serializer). Uses the same URL
+    /// routing as [`Self::validate_vs`]: HL7 core canonicals may target
+    /// `[base]/ValueSet/{id}/$validate-code` with the `url` parameter stripped from the body.
+    pub async fn validate_code_with_parameters(
+        &self,
+        valueset_canonical: &str,
+        mut parameters: Value,
+    ) -> RequestResult<Value> {
+        let local_valueset_id = Self::local_valueset_id_from_canonical(valueset_canonical);
+        let url = if let Some(valueset_id) = local_valueset_id {
+            if let Some(param_array) = parameters
+                .get_mut("parameter")
+                .and_then(|p| p.as_array_mut())
+            {
+                param_array.retain(|p| {
+                    p.get("name")
+                        .and_then(|n| n.as_str())
+                        .map(|n| n != "url")
+                        .unwrap_or(true)
+                });
+            }
+            format!("{}/ValueSet/{valueset_id}/$validate-code", self.base_url)
+        } else {
+            format!("{}/ValueSet/$validate-code", self.base_url)
+        };
+
+        let response = self
+            .send_with_retry(|| {
+                self.client
+                    .post(&url)
+                    .json(&parameters)
+                    .header("Content-Type", "application/fhir+json")
+                    .header("Accept", "application/fhir+json")
+            })
+            .await?;
+
+        read_response(response, "ValueSet validation failed").await
+    }
+
     /// Validates a code against a CodeSystem
     ///
     /// # Arguments
@@ -586,6 +628,13 @@ impl TerminologyClient {
             .await?;
 
         read_response(response, "Translation failed").await
+    }
+
+    /// HL7 core ValueSet canonicals may be routed to an instance `$validate-code` target.
+    /// Atrius leaves this disabled until local ValueSet ids are wired; routing stays on
+    /// `[base]/ValueSet/$validate-code`.
+    fn local_valueset_id_from_canonical(_valueset_url: &str) -> Option<&str> {
+        None
     }
 }
 

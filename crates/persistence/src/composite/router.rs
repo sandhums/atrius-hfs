@@ -555,7 +555,7 @@ mod tests {
         CompositeConfig::builder()
             .primary("sqlite", BackendKind::Sqlite)
             .search_backend("es", BackendKind::Elasticsearch)
-            .graph_backend("neo4j", BackendKind::Neo4j)
+            .graph_backend("graph", BackendKind::Postgres)
             .build()
             .unwrap()
     }

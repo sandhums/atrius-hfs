@@ -627,6 +627,99 @@ mod tests {
         (directory, state)
     }
 
+    /// Router with both `/import` and `CodeSystem` DELETE, so a resource that
+    /// exists only in the HTS normalized tables can be deleted.
+    fn import_and_delete_router() -> (TempDir, Router) {
+        let (directory, state) = make_state();
+        let router = Router::new()
+            .route(
+                "/import",
+                post(crate::operations::import_bundle::import_handler::<SqliteTerminologyBackend>),
+            )
+            .route(
+                "/CodeSystem/{id}",
+                get(read_code_system::<SqliteTerminologyBackend>)
+                    .delete(delete_code_system::<SqliteTerminologyBackend>),
+            )
+            .with_state(state);
+        (directory, router)
+    }
+
+    /// An imported CodeSystem is deletable.
+    ///
+    /// `POST /import` writes only the HTS normalized tables, so the resource has
+    /// no `helios-persistence` row. Deleting used to fail the store read and
+    /// return HTTP 500 `resource not found`, which left no way at all to drop a
+    /// code retired upstream — import only upserts, so stale codes accumulated
+    /// forever.
+    #[tokio::test]
+    async fn delete_removes_a_code_system_that_was_only_imported() {
+        let (_directory, app) = import_and_delete_router();
+
+        let bundle = json!({
+            "resourceType": "Bundle",
+            "type": "collection",
+            "entry": [{ "resource": {
+                "resourceType": "CodeSystem",
+                "id": "imported-cs",
+                "url": "http://example.org/imported-cs",
+                "version": "1.0",
+                "name": "ImportedCS",
+                "status": "active",
+                "content": "complete",
+                "concept": [{ "code": "RETIRED", "display": "Retired code" }]
+            }}]
+        });
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/import")
+                    .header(header::CONTENT_TYPE, "application/fhir+json")
+                    .body(Body::from(bundle.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/CodeSystem/imported-cs")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.status(),
+            StatusCode::NO_CONTENT,
+            "imported CodeSystem should be deletable"
+        );
+    }
+
+    /// An id that exists nowhere is 404, not 500.
+    #[tokio::test]
+    async fn delete_of_absent_code_system_is_not_found() {
+        let (_directory, app) = import_and_delete_router();
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/CodeSystem/never-existed")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
     fn code_system_router() -> (TempDir, Router) {
         let (directory, state) = make_state();
         let router = Router::new()

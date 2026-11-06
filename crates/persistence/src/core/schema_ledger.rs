@@ -1,0 +1,686 @@
+//! Named schema-migration ledger shared by the SQL backends.
+//!
+//! The recorded `schema_version` integer is "how many steps have run" under
+//! **one** numbering. This fork inserted `subscription_outbox` as v16→v17 and
+//! shifted every later Helios step by +1, so the same integer means different
+//! applied DDL on an upstream-numbered database versus a fork-numbered one.
+//!
+//! Dispatch keys off stable step **names**. The integer is kept as an operator
+//! stamp (`SCHEMA_VERSION`) and as a one-time bootstrap for databases that
+//! predate this ledger. Once `schema_migrations` has rows, those names are the
+//! source of truth.
+
+use std::collections::HashSet;
+
+/// Written into `schema_version.flavour` after this fork has touched a database.
+pub const SCHEMA_FLAVOUR: &str = "atrius";
+
+/// Ledger row for the v1 catalog (`create_schema_v1`). Not a migrate step.
+pub const BASE_STEP: &str = "base";
+
+/// Fork-only step inserted as v16→v17. Helios numbering has no such step; its
+/// v16→v17 is this fork's `bulk_provider_submissions`.
+pub const OUTBOX_STEP: &str = "subscription_outbox";
+
+/// Fork-only tip step: `subscription_outbox.dead_at` so exhausted claims are
+/// tombstoned instead of retried hourly forever.
+pub const OUTBOX_DEAD_LETTER_STEP: &str = "subscription_outbox_dead_letter";
+
+/// Index of [`OUTBOX_STEP`] in both SQL backends' ordered step lists.
+pub const OUTBOX_STEP_INDEX: usize = 15;
+
+/// Which integer sequence `schema_version` was stamped with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Numbering {
+    /// This fork's ladder (outbox is v17).
+    Fork,
+    /// Upstream Helios ladder (outbox was never a numbered step).
+    Upstream,
+}
+
+/// Decide how to interpret a legacy integer when `schema_migrations` is empty.
+///
+/// - `flavour = atrius` or `version >= tip` → fork numbering.
+/// - Outbox table present → fork numbering (that step ran under this fork).
+/// - `version >= 17` and no outbox → upstream numbering.
+/// - Otherwise the integers still coincide (pre-insertion).
+pub fn classify_numbering(
+    flavour: Option<&str>,
+    recorded_version: i32,
+    tip: i32,
+    outbox_exists: bool,
+) -> Numbering {
+    if flavour == Some(SCHEMA_FLAVOUR) || recorded_version >= tip || outbox_exists {
+        Numbering::Fork
+    } else if recorded_version >= 17 {
+        Numbering::Upstream
+    } else {
+        Numbering::Fork
+    }
+}
+
+/// Zero-based indices into the backend step list implied by a legacy integer.
+///
+/// Recorded version `V` means migrate steps that produce versions `2..=V` have
+/// run. [`BASE_STEP`] is not included.
+///
+/// Under [`Numbering::Upstream`] with `V >= 17`, index [`OUTBOX_STEP_INDEX`] is
+/// omitted and Helios v16+ maps onto fork indices `16..` (provider onwards).
+pub fn implied_applied_indices(
+    recorded_version: i32,
+    numbering: Numbering,
+    n_steps: usize,
+) -> HashSet<usize> {
+    if recorded_version <= 1 {
+        return HashSet::new();
+    }
+    match numbering {
+        Numbering::Fork => {
+            let n = ((recorded_version - 1) as usize).min(n_steps);
+            (0..n).collect()
+        }
+        Numbering::Upstream => {
+            if recorded_version <= 16 {
+                let n = ((recorded_version - 1) as usize).min(n_steps);
+                (0..n).collect()
+            } else {
+                let mut set: HashSet<usize> = (0..OUTBOX_STEP_INDEX).collect();
+                for k in (OUTBOX_STEP_INDEX + 1)..n_steps {
+                    if recorded_version >= k as i32 + 1 {
+                        set.insert(k);
+                    }
+                }
+                set
+            }
+        }
+    }
+}
+
+/// [`implied_applied_indices`] resolved to step names.
+pub fn implied_applied_names<'a>(
+    recorded_version: i32,
+    numbering: Numbering,
+    steps: &[&'a str],
+) -> HashSet<&'a str> {
+    implied_applied_indices(recorded_version, numbering, steps.len())
+        .into_iter()
+        .map(|i| steps[i])
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fork_v17_includes_outbox_excludes_provider() {
+        let idx = implied_applied_indices(17, Numbering::Fork, 37);
+        assert!(idx.contains(&15), "outbox");
+        assert!(!idx.contains(&16), "provider is fork v18");
+        assert_eq!(idx.len(), 16);
+    }
+
+    #[test]
+    fn upstream_v17_excludes_outbox_includes_provider() {
+        let idx = implied_applied_indices(17, Numbering::Upstream, 37);
+        assert!(!idx.contains(&15), "Helios never ran the outbox step");
+        assert!(idx.contains(&16), "Helios v16→v17 is provider");
+        assert_eq!(idx.len(), 16);
+    }
+
+    #[test]
+    fn pre_insertion_integers_agree() {
+        let fork = implied_applied_indices(16, Numbering::Fork, 18);
+        let up = implied_applied_indices(16, Numbering::Upstream, 18);
+        assert_eq!(fork, up);
+        assert!(!fork.contains(&15));
+        assert_eq!(fork.len(), 15);
+    }
+
+    #[test]
+    fn upstream_sqlite_v18_runs_only_outbox_as_missing() {
+        let idx = implied_applied_indices(18, Numbering::Upstream, 18);
+        assert!(!idx.contains(&15));
+        assert!(idx.contains(&16));
+        assert!(idx.contains(&17));
+        assert_eq!(idx.len(), 17, "all except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v36_skips_outbox_and_later_helios_steps() {
+        let idx = implied_applied_indices(36, Numbering::Upstream, 45);
+        assert!(!idx.contains(&15));
+        assert!(idx.contains(&16));
+        assert!(idx.contains(&35), "autovacuum is Helios v36");
+        assert!(!idx.contains(&36), "publication is Helios v37");
+        assert!(!idx.contains(&38), "file-progress is Helios v39");
+        assert!(!idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "secondary_sync is Helios v41");
+        assert_eq!(idx.len(), 35);
+    }
+
+    #[test]
+    fn classify_flavour_and_tip_are_fork() {
+        assert_eq!(
+            classify_numbering(Some(SCHEMA_FLAVOUR), 36, 46, false),
+            Numbering::Fork
+        );
+        assert_eq!(classify_numbering(None, 46, 46, false), Numbering::Fork);
+        assert_eq!(classify_numbering(None, 20, 46, true), Numbering::Fork);
+    }
+
+    #[test]
+    fn classify_no_outbox_below_tip_is_upstream() {
+        assert_eq!(classify_numbering(None, 36, 46, false), Numbering::Upstream);
+        assert_eq!(classify_numbering(None, 18, 19, false), Numbering::Upstream);
+    }
+
+    #[test]
+    fn classify_below_insertion_is_fork() {
+        assert_eq!(classify_numbering(None, 16, 46, false), Numbering::Fork);
+    }
+
+    #[test]
+    fn upstream_postgres_v36_skips_later_fork_tip_steps() {
+        let idx = implied_applied_indices(36, Numbering::Upstream, 45);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(!idx.contains(&36), "publication");
+        assert!(!idx.contains(&37), "types");
+        assert!(!idx.contains(&38), "file-progress");
+        assert!(!idx.contains(&39), "attempts");
+        assert!(!idx.contains(&40), "secondary_sync");
+        assert!(!idx.contains(&41), "reference-target-id");
+        assert!(!idx.contains(&42), "slot-2");
+        assert!(!idx.contains(&43), "manifest phase");
+        assert!(!idx.contains(&44), "outbox dead-letter");
+        assert_eq!(idx.len(), 35);
+    }
+
+    #[test]
+    fn upstream_postgres_v38_runs_fork_steps_after_types() {
+        let idx = implied_applied_indices(38, Numbering::Upstream, 45);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&35), "autovacuum is Helios v36");
+        assert!(idx.contains(&36), "publication is Helios v37");
+        assert!(idx.contains(&37), "types is Helios v38");
+        assert!(!idx.contains(&38), "file-progress is Helios v39");
+        assert!(!idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "secondary_sync is Helios v41");
+        assert!(!idx.contains(&41), "reference-target-id is Helios v42");
+        assert!(!idx.contains(&42), "slot-2 is fork-only");
+        assert!(!idx.contains(&43), "manifest phase");
+        assert!(!idx.contains(&44), "outbox dead-letter");
+        assert_eq!(idx.len(), 37, "all Helios steps through v38 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v39_runs_fork_steps_after_file_progress() {
+        let idx = implied_applied_indices(39, Numbering::Upstream, 45);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&37), "types is Helios v38");
+        assert!(idx.contains(&38), "file-progress is Helios v39");
+        assert!(!idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "secondary_sync is Helios v41");
+        assert!(!idx.contains(&41), "reference-target-id is Helios v42");
+        assert!(!idx.contains(&42), "slot-2 is fork-only");
+        assert!(!idx.contains(&43), "manifest phase");
+        assert!(!idx.contains(&44), "outbox dead-letter");
+        assert_eq!(idx.len(), 38, "all Helios steps through v39 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v40_runs_fork_steps_after_attempts() {
+        let idx = implied_applied_indices(40, Numbering::Upstream, 45);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&38), "file-progress is Helios v39");
+        assert!(idx.contains(&39), "attempts is Helios v40");
+        assert!(!idx.contains(&40), "secondary_sync is Helios v41");
+        assert!(!idx.contains(&41), "reference-target-id is Helios v42");
+        assert!(!idx.contains(&42), "slot-2 is fork-only");
+        assert!(!idx.contains(&43), "manifest phase");
+        assert!(!idx.contains(&44), "outbox dead-letter");
+        assert_eq!(idx.len(), 39, "all Helios steps through v40 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v23_runs_later_steps_after_helios_fts_map() {
+        // 35 steps: Helios v23 maps onto fork indices 16..=22 (provider …
+        // resource_fts_map). live_type (23), phase (24), publication (25),
+        // types (26), folded (27), drop_token_display (28), index_pending (29),
+        // resource_key (30), file_progress (31), attempts (32), secondary_sync (33)
+        // and dead_letter (34) must still run.
+        let idx = implied_applied_indices(23, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&22), "resource_fts_map is Helios v23");
+        assert!(!idx.contains(&23), "live_type is Helios v24");
+        assert!(!idx.contains(&24), "phase is Helios v25");
+        assert!(!idx.contains(&25), "publication is Helios v26");
+        assert!(!idx.contains(&26), "types is Helios v27");
+        assert!(!idx.contains(&27), "folded is Helios v28");
+        assert!(!idx.contains(&28), "drop_token_display is Helios v29");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 22, "all Helios steps through v23 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v25_runs_later_steps_after_helios_phase() {
+        let idx = implied_applied_indices(25, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&23), "live_type is Helios v24");
+        assert!(idx.contains(&24), "phase is Helios v25");
+        assert!(!idx.contains(&25), "publication is Helios v26");
+        assert!(!idx.contains(&26), "types is Helios v27");
+        assert!(!idx.contains(&27), "folded is Helios v28");
+        assert!(!idx.contains(&28), "drop_token_display is Helios v29");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 24, "all Helios steps through v25 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v27_runs_folded_and_later_after_types() {
+        let idx = implied_applied_indices(27, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&26), "types is Helios v27");
+        assert!(!idx.contains(&27), "folded is Helios v28");
+        assert!(!idx.contains(&28), "drop_token_display is Helios v29");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 26, "all Helios steps through v27 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v28_runs_later_after_folded() {
+        let idx = implied_applied_indices(28, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&26), "types is Helios v27");
+        assert!(idx.contains(&27), "folded is Helios v28");
+        assert!(!idx.contains(&28), "drop_token_display is Helios v29");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 27, "all Helios steps through v28 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v29_runs_later_after_token_display_drop() {
+        let idx = implied_applied_indices(29, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&27), "folded is Helios v28");
+        assert!(idx.contains(&28), "drop_token_display is Helios v29");
+        assert!(!idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 28, "all Helios steps through v29 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v30_runs_resource_key_and_dead_letter_after_index_pending() {
+        let idx = implied_applied_indices(30, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&28), "drop_token_display is Helios v29");
+        assert!(idx.contains(&29), "index_pending is Helios v30");
+        assert!(!idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 29, "all Helios steps through v30 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v31_runs_dead_letter_after_resource_key() {
+        let idx = implied_applied_indices(31, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&29), "index_pending is Helios v30");
+        assert!(idx.contains(&30), "resource_key is Helios v31");
+        assert!(!idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 30, "all Helios steps through v31 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v32_runs_dead_letter_after_file_progress() {
+        let idx = implied_applied_indices(32, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&30), "resource_key is Helios v31");
+        assert!(idx.contains(&31), "file_progress is Helios v32");
+        assert!(!idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 31, "all Helios steps through v32 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v33_runs_dead_letter_after_attempts() {
+        let idx = implied_applied_indices(33, Numbering::Upstream, 35);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&31), "file_progress is Helios v32");
+        assert!(idx.contains(&32), "attempts is Helios v33");
+        assert!(!idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 32, "all Helios steps through v33 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v34_runs_dead_letter_after_secondary_sync() {
+        let idx = implied_applied_indices(34, Numbering::Upstream, 37);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&32), "attempts is Helios v33");
+        assert!(idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(!idx.contains(&34), "date range is Helios v35");
+        assert!(!idx.contains(&36), "dead_letter stays after login sessions");
+        assert_eq!(idx.len(), 33, "all Helios steps through v34 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v36_runs_completed_after_login_sessions() {
+        let idx = implied_applied_indices(36, Numbering::Upstream, 42);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&33), "secondary_sync is Helios v34");
+        assert!(idx.contains(&34), "date range is Helios v35");
+        assert!(idx.contains(&35), "login sessions are Helios v36");
+        assert!(!idx.contains(&36), "completed is Helios v37");
+        assert!(!idx.contains(&37), "composite slot is Helios v38");
+        assert!(!idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "history index is Helios v40");
+        assert!(!idx.contains(&40), "sof terminology is Helios v41");
+        assert!(!idx.contains(&41), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 35, "all Helios steps through v36 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v37_runs_dead_letter_after_file_progress_completed() {
+        let idx = implied_applied_indices(37, Numbering::Upstream, 42);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&35), "login sessions are Helios v36");
+        assert!(idx.contains(&36), "completed is Helios v37");
+        assert!(!idx.contains(&37), "composite slot is Helios v38");
+        assert!(!idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "history index is Helios v40");
+        assert!(!idx.contains(&40), "sof terminology is Helios v41");
+        assert!(!idx.contains(&41), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 36, "all Helios steps through v37 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v38_runs_dead_letter_after_composite_slot() {
+        let idx = implied_applied_indices(38, Numbering::Upstream, 42);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&36), "completed is Helios v37");
+        assert!(idx.contains(&37), "composite slot is Helios v38");
+        assert!(!idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "history index is Helios v40");
+        assert!(!idx.contains(&40), "sof terminology is Helios v41");
+        assert!(!idx.contains(&41), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 37, "all Helios steps through v38 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v39_runs_dead_letter_after_date_start() {
+        let idx = implied_applied_indices(39, Numbering::Upstream, 42);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&37), "composite slot is Helios v38");
+        assert!(idx.contains(&38), "date start is Helios v39");
+        assert!(!idx.contains(&39), "history index is Helios v40");
+        assert!(!idx.contains(&40), "sof terminology is Helios v41");
+        assert!(!idx.contains(&41), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 38, "all Helios steps through v39 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v40_runs_dead_letter_after_history() {
+        let idx = implied_applied_indices(40, Numbering::Upstream, 42);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&38), "date start is Helios v39");
+        assert!(idx.contains(&39), "history index is Helios v40");
+        assert!(!idx.contains(&40), "sof terminology is Helios v41");
+        assert!(!idx.contains(&41), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 39, "all Helios steps through v40 except outbox");
+    }
+
+    #[test]
+    fn upstream_sqlite_v41_runs_dead_letter_after_terminology() {
+        let idx = implied_applied_indices(41, Numbering::Upstream, 42);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&38), "date start is Helios v39");
+        assert!(idx.contains(&39), "history index is Helios v40");
+        assert!(idx.contains(&40), "sof terminology is Helios v41");
+        assert!(!idx.contains(&41), "dead_letter is fork-only tip");
+        assert_eq!(idx.len(), 40, "all Helios steps through v41 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v41_runs_dead_letter_after_secondary_sync() {
+        let idx = implied_applied_indices(41, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&39), "attempts is Helios v40");
+        assert!(idx.contains(&40), "secondary_sync is Helios v41");
+        assert!(!idx.contains(&41), "reference-target-id is Helios v42");
+        assert!(!idx.contains(&42), "date range is Helios v43");
+        assert!(!idx.contains(&44), "patient export refs are Helios v45");
+        assert!(!idx.contains(&46), "reindex-id is Helios v47");
+        assert!(!idx.contains(&47), "composite slot is Helios v48");
+        assert!(!idx.contains(&48), "live tenant index is Helios v49");
+        assert!(!idx.contains(&49), "date recent end is Helios v50");
+        assert!(!idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 40, "all Helios steps through v41 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v44_runs_patient_refs_after_login_sessions() {
+        let idx = implied_applied_indices(44, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&41), "reference-target-id is Helios v42");
+        assert!(idx.contains(&42), "date range is Helios v43");
+        assert!(idx.contains(&43), "login sessions are Helios v44");
+        assert!(!idx.contains(&44), "patient export refs are Helios v45");
+        assert!(!idx.contains(&45), "completed is Helios v46");
+        assert!(!idx.contains(&46), "reindex-id is Helios v47");
+        assert!(!idx.contains(&47), "composite slot is Helios v48");
+        assert!(!idx.contains(&48), "live tenant index is Helios v49");
+        assert!(!idx.contains(&49), "date recent end is Helios v50");
+        assert!(!idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 43, "all Helios steps through v44 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v46_runs_reindex_id_after_file_progress_completed() {
+        let idx = implied_applied_indices(46, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&43), "login sessions are Helios v44");
+        assert!(idx.contains(&44), "patient export refs are Helios v45");
+        assert!(idx.contains(&45), "completed is Helios v46");
+        assert!(!idx.contains(&46), "reindex-id is Helios v47");
+        assert!(!idx.contains(&47), "composite slot is Helios v48");
+        assert!(!idx.contains(&48), "live tenant index is Helios v49");
+        assert!(!idx.contains(&49), "date recent end is Helios v50");
+        assert!(!idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 45, "all Helios steps through v46 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v47_runs_slot2_after_reindex_id() {
+        let idx = implied_applied_indices(47, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&45), "completed is Helios v46");
+        assert!(idx.contains(&46), "reindex-id is Helios v47");
+        assert!(!idx.contains(&47), "composite slot is Helios v48");
+        assert!(!idx.contains(&48), "live tenant index is Helios v49");
+        assert!(!idx.contains(&49), "date recent end is Helios v50");
+        assert!(!idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 46, "all Helios steps through v47 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v48_runs_slot2_after_composite_slot() {
+        let idx = implied_applied_indices(48, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&46), "reindex-id is Helios v47");
+        assert!(idx.contains(&47), "composite slot is Helios v48");
+        assert!(!idx.contains(&48), "live tenant index is Helios v49");
+        assert!(!idx.contains(&49), "date recent end is Helios v50");
+        assert!(!idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 47, "all Helios steps through v48 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v49_runs_date_recent_end_after_live_tenant_index() {
+        let idx = implied_applied_indices(49, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&47), "composite slot is Helios v48");
+        assert!(idx.contains(&48), "live tenant index is Helios v49");
+        assert!(!idx.contains(&49), "date recent end is Helios v50");
+        assert!(!idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 48, "all Helios steps through v49 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v50_runs_terminology_after_date_recent_end() {
+        let idx = implied_applied_indices(50, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&48), "live tenant index is Helios v49");
+        assert!(idx.contains(&49), "date recent end is Helios v50");
+        assert!(!idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 49, "all Helios steps through v50 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v51_runs_bulk_index_pending_after_terminology() {
+        let idx = implied_applied_indices(51, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&49), "date recent end is Helios v50");
+        assert!(idx.contains(&50), "sof terminology is Helios v51");
+        assert!(!idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 50, "all Helios steps through v51 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v52_runs_composite_partial_after_bulk_index_pending() {
+        let idx = implied_applied_indices(52, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&50), "sof terminology is Helios v51");
+        assert!(idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(!idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 51, "all Helios steps through v52 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v53_runs_slot2_after_composite_partial() {
+        let idx = implied_applied_indices(53, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&51), "bulk index pending is Helios v52");
+        assert!(idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            !idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 52, "all Helios steps through v53 except outbox");
+    }
+
+    #[test]
+    fn upstream_postgres_v54_runs_bulk_submissions_index_after_composite_partial() {
+        let idx = implied_applied_indices(54, Numbering::Upstream, 57);
+        assert!(!idx.contains(&15), "outbox");
+        assert!(idx.contains(&52), "composite partial is Helios v53");
+        assert!(
+            idx.contains(&53),
+            "bulk submissions updated_at is Helios v54"
+        );
+        assert!(!idx.contains(&54), "slot-2 is fork-only");
+        assert!(!idx.contains(&56), "outbox dead-letter");
+        assert_eq!(idx.len(), 53, "all Helios steps through v54 except outbox");
+    }
+}

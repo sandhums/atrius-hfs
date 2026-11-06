@@ -1786,6 +1786,17 @@ impl SqliteBackend {
                         current.content().clone(),
                     );
 
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            txn.tenant().tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &content,
+                        )
+                        .await
+                    {
+                        return Ok((failed, None, None));
+                    }
                     let updated = txn.update(&current, content).await?;
 
                     Ok((
@@ -1803,6 +1814,17 @@ impl SqliteBackend {
                 // with AlreadyExists — the same outcome the storage-path
                 // create produced, recorded as this entry's error.
                 None => {
+                    if let Some(failed) = options
+                        .ingest_validation_error(
+                            txn.tenant().tenant_id().as_str(),
+                            entry.line_number,
+                            &entry.resource_type,
+                            &entry.resource,
+                        )
+                        .await
+                    {
+                        return Ok((failed, None, None));
+                    }
                     let resource = {
                         let _span = crate::perf::span(crate::perf::Phase::EntryClone);
                         entry.resource.clone()
@@ -1830,6 +1852,17 @@ impl SqliteBackend {
                 }
             }
         } else {
+            if let Some(failed) = options
+                .ingest_validation_error(
+                    txn.tenant().tenant_id().as_str(),
+                    entry.line_number,
+                    &entry.resource_type,
+                    &entry.resource,
+                )
+                .await
+            {
+                return Ok((failed, None, None));
+            }
             let resource = {
                 let _span = crate::perf::span(crate::perf::Phase::EntryClone);
                 entry.resource.clone()

@@ -22,6 +22,9 @@
 //! Inline `resource:` parameters on `$viewdefinition-run` are handled by the
 //! REST layer via the in-process `helios-sof` FHIRPath evaluator, so this
 //! module does not need a per-backend inline runner.
+//!
+//! This compiler belongs in persistence (it needs the backend dialect). Do not
+//! move it into `helios-sof` — see `docs/sof-layering.md`.
 
 pub mod compile_path;
 pub mod compile_view;

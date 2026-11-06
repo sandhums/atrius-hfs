@@ -1,0 +1,669 @@
+//! Shared HTTP client for a FHIR terminology server (HTS or compatible).
+//!
+//! Used by the REST search `:in` path, write-path/`$validate` bindings,
+//! FHIRPath `%terminologies`, and the UI ValueSet picker. A process-wide TTL
+//! cache is shared across those callers so a miss in one is a hit in another.
+
+use std::sync::OnceLock;
+use std::time::{Duration, Instant};
+
+use dashmap::DashMap;
+use helios_observability::redact::redact_url;
+use reqwest::{Client, RequestBuilder, Response};
+use serde_json::{Value, json};
+
+/// Renders a reqwest error with its URL passed through [`redact_url`].
+///
+/// reqwest ends its message with `for url (...)`, query included, so a
+/// credential in the configured terminology-server URL must not ride along
+/// (#2149).
+fn transport_error_text(error: reqwest::Error) -> String {
+    let url = error.url().map(|url| redact_url(url.as_str()));
+    let error = error.without_url();
+    match url {
+        Some(url) => format!("{error} for url ({url})"),
+        None => error.to_string(),
+    }
+}
+
+const VALIDATE_TTL: Duration = Duration::from_secs(300);
+const EXPAND_TTL: Duration = Duration::from_secs(300);
+const FHIR_JSON: &str = "application/fhir+json";
+/// Page size for `$expand`. HTS (and FHIR) page when `count` is omitted — Atrius
+/// HTS returns 16 — so `:in` on a 546-code Diabetes ValueSet used to miss
+/// `44054006` and score CMS951 IP as empty.
+const EXPAND_PAGE_SIZE: i64 = 10_000;
+const EXPAND_COLLECT_CAP: usize = 1_000_000;
+
+/// Three retries after the initial request, with 1s, 2s and 4s backoff.
+const GATEWAY_RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_secs(1),
+    Duration::from_secs(2),
+    Duration::from_secs(4),
+];
+
+/// Errors talking to a terminology server.
+#[derive(Debug, thiserror::Error)]
+pub enum TerminologyError {
+    /// The HTTP request itself failed (network, DNS, timeout).
+    #[error("Terminology server request failed: {0}")]
+    Network(String),
+
+    /// The server responded with a non-2xx status code.
+    #[error("Terminology server returned HTTP {status}: {body}")]
+    ServerError {
+        /// HTTP status code.
+        status: u16,
+        /// Response body (optionally truncated).
+        body: String,
+    },
+
+    /// The response body could not be parsed as expected.
+    #[error("Failed to parse terminology server response: {0}")]
+    Parse(String),
+}
+
+/// A single expanded code from a FHIR ValueSet expansion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExpandedCode {
+    /// Code system URL. May be empty.
+    pub system: String,
+    /// The code value.
+    pub code: String,
+    /// Optional human-readable display text.
+    pub display: Option<String>,
+}
+
+impl ExpandedCode {
+    /// Formats the code as `system|code` if a system is present, or just `code`.
+    pub fn as_token(&self) -> String {
+        if self.system.is_empty() {
+            self.code.clone()
+        } else {
+            format!("{}|{}", self.system, self.code)
+        }
+    }
+}
+
+/// Construction options for [`TerminologyClient`].
+#[derive(Debug, Clone)]
+pub struct ClientOptions {
+    /// Request timeout. `None` means no timeout (reqwest default).
+    pub timeout: Option<Duration>,
+    /// TCP connect timeout.
+    pub connect_timeout: Option<Duration>,
+    /// Bypass HTTP(S)_PROXY. Search uses this so an internal HTS fails fast.
+    pub no_proxy: bool,
+    /// Truncate non-success response bodies to this many chars. `None` keeps all.
+    pub truncate_error_body: Option<usize>,
+}
+
+impl ClientOptions {
+    /// REST search `:in` / `:below` / `:above` — fail fast, skip proxy.
+    pub fn rest_search() -> Self {
+        Self {
+            timeout: Some(Duration::from_secs(10)),
+            connect_timeout: Some(Duration::from_secs(2)),
+            no_proxy: true,
+            truncate_error_body: Some(512),
+        }
+    }
+
+    /// FHIRPath `%terminologies` — 30s unless the caller overrides `timeout`.
+    pub fn fhirpath() -> Self {
+        Self {
+            timeout: Some(Duration::from_secs(30)),
+            connect_timeout: None,
+            no_proxy: false,
+            truncate_error_body: None,
+        }
+    }
+
+    /// Binding `$validate-code` (write path / `$validate`).
+    pub fn validation(timeout: Duration) -> Self {
+        Self {
+            timeout: Some(timeout),
+            connect_timeout: None,
+            no_proxy: false,
+            truncate_error_body: None,
+        }
+    }
+
+    /// UI ValueSet picker — sub-3s UX timeout.
+    pub fn ui_expand() -> Self {
+        Self {
+            timeout: Some(Duration::from_millis(2500)),
+            connect_timeout: None,
+            no_proxy: false,
+            truncate_error_body: None,
+        }
+    }
+}
+
+/// Async HTTP client for FHIR terminology operations.
+#[derive(Clone)]
+pub struct TerminologyClient {
+    http: Client,
+    base_url: String,
+    truncate_error_body: Option<usize>,
+}
+
+impl TerminologyClient {
+    /// Build a client targeting `base_url` (trailing slash is stripped).
+    pub fn new(base_url: impl Into<String>, options: ClientOptions) -> Self {
+        let mut builder = Client::builder();
+        if let Some(timeout) = options.timeout {
+            builder = builder.timeout(timeout);
+        }
+        if let Some(connect) = options.connect_timeout {
+            builder = builder.connect_timeout(connect);
+        }
+        if options.no_proxy {
+            builder = builder.no_proxy();
+        }
+        let http = builder.build().expect("terminology HTTP client");
+        Self::with_http(http, base_url, options.truncate_error_body)
+    }
+
+    /// These terminology operations only read data, including those sent as POST.
+    /// Retry transient gateway/service failures, but preserve transport, parsing and
+    /// other HTTP errors. Each attempt retains the configured HTTP client timeout.
+    async fn send_with_retry(
+        &self,
+        request: impl Fn() -> RequestBuilder,
+    ) -> Result<Response, TerminologyError> {
+        let mut delays = GATEWAY_RETRY_DELAYS.into_iter();
+        loop {
+            let response = request()
+                .send()
+                .await
+                .map_err(|e| TerminologyError::Network(transport_error_text(e)))?;
+            // Cloudflare uses HTTP 530 for tunnel failures, including error 1033
+            // when no healthy cloudflared instance can receive the request.
+            if !matches!(response.status().as_u16(), 502 | 503 | 504 | 530) {
+                return Ok(response);
+            }
+            let Some(delay) = delays.next() else {
+                return Ok(response);
+            };
+            drop(response);
+            tokio::time::sleep(delay).await;
+        }
+    }
+
+    /// Wrap an existing reqwest client (tests, custom auth).
+    pub fn with_http(
+        http: Client,
+        base_url: impl Into<String>,
+        truncate_error_body: Option<usize>,
+    ) -> Self {
+        Self {
+            http,
+            base_url: base_url.into().trim_end_matches('/').to_string(),
+            truncate_error_body,
+        }
+    }
+
+    /// Configured terminology-server root (no trailing slash).
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
+    /// `POST {path}` with a FHIR Parameters (or other JSON) body.
+    pub async fn post_json(&self, path: &str, body: &Value) -> Result<Value, TerminologyError> {
+        let url = format!("{}{path}", self.base_url);
+        let response = self
+            .send_with_retry(|| {
+                self.http
+                    .post(&url)
+                    .json(body)
+                    .header("Content-Type", FHIR_JSON)
+                    .header("Accept", FHIR_JSON)
+            })
+            .await?;
+        self.read_json(response).await
+    }
+
+    /// `GET {path}` with query pairs.
+    pub async fn get_query(
+        &self,
+        path: &str,
+        query: &[(&str, &str)],
+    ) -> Result<Value, TerminologyError> {
+        let url = format!("{}{path}", self.base_url);
+        let response = self
+            .send_with_retry(|| self.http.get(&url).query(query).header("Accept", FHIR_JSON))
+            .await?;
+        self.read_json(response).await
+    }
+
+    async fn post_json_optional(
+        &self,
+        path: &str,
+        body: &Value,
+    ) -> Result<Option<Value>, TerminologyError> {
+        let url = format!("{}{path}", self.base_url);
+        let response = self
+            .send_with_retry(|| {
+                self.http
+                    .post(&url)
+                    .json(body)
+                    .header("Content-Type", FHIR_JSON)
+                    .header("Accept", FHIR_JSON)
+            })
+            .await?;
+        self.read_json_optional(response).await
+    }
+
+    async fn get_query_optional(
+        &self,
+        path: &str,
+        query: &[(&str, &str)],
+    ) -> Result<Option<Value>, TerminologyError> {
+        let url = format!("{}{path}", self.base_url);
+        let response = self
+            .send_with_retry(|| self.http.get(&url).query(query).header("Accept", FHIR_JSON))
+            .await?;
+        self.read_json_optional(response).await
+    }
+
+    /// `POST /ValueSet/$expand` by canonical URL. Cached process-wide for [`EXPAND_TTL`].
+    ///
+    /// Follows `expansion.total` / page size so `:in` search sees every code, not
+    /// the first HTS page.
+    pub async fn expand_value_set(
+        &self,
+        value_set_url: &str,
+    ) -> Result<Vec<ExpandedCode>, TerminologyError> {
+        let key = format!("post|{}|{value_set_url}", self.base_url);
+        if let Some(hit) = cache_get(expand_cache(), &key, EXPAND_TTL) {
+            return Ok(hit);
+        }
+        let codes = self
+            .expand_all_pages(vec![json!({ "name": "url", "valueUri": value_set_url })])
+            .await?;
+        expand_cache().insert(key, (codes.clone(), Instant::now()));
+        Ok(codes)
+    }
+
+    /// Inline compose `$expand` for `:below` (`is-a`) / `:above` (`generalizes`).
+    pub async fn expand_subsumption(
+        &self,
+        system: &str,
+        code: &str,
+        op: &str,
+    ) -> Result<Vec<ExpandedCode>, TerminologyError> {
+        self.expand_all_pages(vec![json!({
+            "name": "valueSet",
+            "resource": {
+                "resourceType": "ValueSet",
+                "compose": {
+                    "include": [{
+                        "system": system,
+                        "filter": [{ "property": "concept", "op": op, "value": code }]
+                    }]
+                }
+            }
+        })])
+        .await
+    }
+
+    async fn expand_all_pages(
+        &self,
+        extra_params: Vec<Value>,
+    ) -> Result<Vec<ExpandedCode>, TerminologyError> {
+        let mut all = Vec::new();
+        let mut offset: i64 = 0;
+        loop {
+            let mut parameter = extra_params.clone();
+            parameter.push(json!({ "name": "count", "valueInteger": EXPAND_PAGE_SIZE }));
+            parameter.push(json!({ "name": "offset", "valueInteger": offset }));
+            let body = json!({
+                "resourceType": "Parameters",
+                "parameter": parameter
+            });
+            let value = self.post_json("/ValueSet/$expand", &body).await?;
+            let page = extract_expansion_codes(&value)?;
+            let total = expansion_total(&value);
+            let page_len = page.len();
+            all.extend(page);
+            if !should_fetch_next_expand_page(page_len, all.len(), total, EXPAND_PAGE_SIZE as usize)
+            {
+                break;
+            }
+            offset = offset.saturating_add(page_len as i64);
+            if all.len() >= EXPAND_COLLECT_CAP {
+                break;
+            }
+        }
+        Ok(all)
+    }
+
+    /// `GET /ValueSet/$expand`.
+    pub async fn expand_get(
+        &self,
+        value_set_url: &str,
+        extra: &[(&str, &str)],
+    ) -> Result<Value, TerminologyError> {
+        let mut query: Vec<(&str, &str)> = vec![("url", value_set_url)];
+        query.extend_from_slice(extra);
+        self.get_query("/ValueSet/$expand", &query).await
+    }
+
+    /// One page of `POST /ValueSet/$expand` as the raw expanded ValueSet.
+    ///
+    /// `Ok(None)` when the server answers `404` (it knows no value set at
+    /// `value_set_url`). Used by SQL-on-FHIR terminology relations (#1824).
+    pub async fn expand_value_set_page(
+        &self,
+        value_set_url: &str,
+        offset: usize,
+        count: usize,
+    ) -> Result<Option<Value>, TerminologyError> {
+        let body = json!({
+            "resourceType": "Parameters",
+            "parameter": [
+                {"name": "url", "valueUri": value_set_url},
+                {"name": "offset", "valueInteger": offset},
+                {"name": "count", "valueInteger": count}
+            ]
+        });
+        self.post_json_optional("/ValueSet/$expand", &body).await
+    }
+
+    /// `GET /ConceptMap?url=` (and optional `|version`) — first ConceptMap in
+    /// the search Bundle, or `Ok(None)` on 404 / empty.
+    pub async fn find_concept_map(
+        &self,
+        canonical: &str,
+    ) -> Result<Option<Value>, TerminologyError> {
+        let (url, version) = match canonical.split_once('|') {
+            Some((url, version)) => (url, Some(version)),
+            None => (canonical, None),
+        };
+        let mut query = vec![("url", url)];
+        if let Some(version) = version {
+            query.push(("version", version));
+        }
+        let Some(bundle) = self.get_query_optional("/ConceptMap", &query).await? else {
+            return Ok(None);
+        };
+        Ok(bundle
+            .get("entry")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|entry| entry.get("resource"))
+            .find(|r| r.get("resourceType").and_then(Value::as_str) == Some("ConceptMap"))
+            .cloned())
+    }
+
+    /// `POST /ValueSet/$validate-code`, returning the Parameters `result` boolean.
+    ///
+    /// Cached process-wide under `cache_key` for [`VALIDATE_TTL`].
+    pub async fn validate_code_bool(
+        &self,
+        cache_key: &str,
+        body: &Value,
+    ) -> Result<bool, TerminologyError> {
+        if let Some(hit) = cache_get(validate_cache(), cache_key, VALIDATE_TTL) {
+            return Ok(hit);
+        }
+        let value = self.post_json("/ValueSet/$validate-code", body).await?;
+        let verdict = parameters_result_bool(&value)?;
+        validate_cache().insert(cache_key.to_string(), (verdict, Instant::now()));
+        Ok(verdict)
+    }
+
+    async fn read_json(&self, response: reqwest::Response) -> Result<Value, TerminologyError> {
+        if !response.status().is_success() {
+            let status = response.status().as_u16();
+            let mut body = response.text().await.unwrap_or_default();
+            if let Some(max) = self.truncate_error_body {
+                body = body.chars().take(max).collect();
+            }
+            return Err(TerminologyError::ServerError { status, body });
+        }
+        response
+            .json()
+            .await
+            .map_err(|e| TerminologyError::Parse(transport_error_text(e)))
+    }
+
+    async fn read_json_optional(
+        &self,
+        response: reqwest::Response,
+    ) -> Result<Option<Value>, TerminologyError> {
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        self.read_json(response).await.map(Some)
+    }
+}
+
+/// Pull `ExpandedCode` rows from a ValueSet `expansion.contains` array.
+pub fn extract_expansion_codes(value: &Value) -> Result<Vec<ExpandedCode>, TerminologyError> {
+    let contains = value
+        .pointer("/expansion/contains")
+        .and_then(|c| c.as_array())
+        .ok_or_else(|| {
+            TerminologyError::Parse(
+                "ValueSet expansion response is missing /expansion/contains".to_string(),
+            )
+        })?;
+
+    let mut codes = Vec::with_capacity(contains.len());
+    for entry in contains {
+        let code = entry
+            .get("code")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if code.is_empty() {
+            continue;
+        }
+        let system = entry
+            .get("system")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let display = entry
+            .get("display")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        codes.push(ExpandedCode {
+            system,
+            code,
+            display,
+        });
+    }
+    Ok(codes)
+}
+
+/// `expansion.total` when the server reports how many codes exist across pages.
+pub fn expansion_total(value: &Value) -> Option<usize> {
+    value.pointer("/expansion/total").and_then(|v| {
+        v.as_u64()
+            .map(|n| n as usize)
+            .or_else(|| v.as_i64().and_then(|n| usize::try_from(n).ok()))
+    })
+}
+
+/// Whether another `$expand` page is needed after collecting `collected` codes.
+pub fn should_fetch_next_expand_page(
+    page_len: usize,
+    collected: usize,
+    total: Option<usize>,
+    page_size: usize,
+) -> bool {
+    if page_len == 0 {
+        return false;
+    }
+    if let Some(total) = total {
+        return collected < total;
+    }
+    page_len >= page_size
+}
+
+/// `Parameters.parameter[name=result].valueBoolean`.
+pub fn parameters_result_bool(body: &Value) -> Result<bool, TerminologyError> {
+    body.get("parameter")
+        .and_then(Value::as_array)
+        .and_then(|params| {
+            params
+                .iter()
+                .find(|p| p.get("name").and_then(Value::as_str) == Some("result"))
+        })
+        .and_then(|p| p.get("valueBoolean"))
+        .and_then(Value::as_bool)
+        .ok_or_else(|| TerminologyError::Parse("no boolean 'result' parameter in response".into()))
+}
+
+fn expand_cache() -> &'static DashMap<String, (Vec<ExpandedCode>, Instant)> {
+    static CACHE: OnceLock<DashMap<String, (Vec<ExpandedCode>, Instant)>> = OnceLock::new();
+    CACHE.get_or_init(DashMap::new)
+}
+
+fn validate_cache() -> &'static DashMap<String, (bool, Instant)> {
+    static CACHE: OnceLock<DashMap<String, (bool, Instant)>> = OnceLock::new();
+    CACHE.get_or_init(DashMap::new)
+}
+
+fn cache_get<T: Clone>(
+    cache: &DashMap<String, (T, Instant)>,
+    key: &str,
+    ttl: Duration,
+) -> Option<T> {
+    let entry = cache.get(key)?;
+    let (value, at) = entry.clone();
+    if at.elapsed() < ttl {
+        Some(value)
+    } else {
+        drop(entry);
+        cache.remove(key);
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_two_codes() {
+        let response = json!({
+            "resourceType": "ValueSet",
+            "expansion": {
+                "total": 2,
+                "contains": [
+                    {"system": "http://example.org/cs", "code": "A", "display": "Alpha"},
+                    {"system": "http://example.org/cs", "code": "B", "display": "Beta"}
+                ]
+            }
+        });
+        let codes = extract_expansion_codes(&response).unwrap();
+        assert_eq!(codes.len(), 2);
+        assert_eq!(codes[0].code, "A");
+        assert_eq!(codes[0].display.as_deref(), Some("Alpha"));
+        assert_eq!(codes[1].code, "B");
+    }
+
+    #[test]
+    fn extract_empty_expansion() {
+        let response = json!({
+            "resourceType": "ValueSet",
+            "expansion": { "total": 0, "contains": [] }
+        });
+        assert!(extract_expansion_codes(&response).unwrap().is_empty());
+    }
+
+    #[test]
+    fn extract_missing_expansion() {
+        let response = json!({"resourceType": "ValueSet"});
+        assert!(matches!(
+            extract_expansion_codes(&response),
+            Err(TerminologyError::Parse(_))
+        ));
+    }
+
+    #[test]
+    fn extract_skips_empty_codes() {
+        let response = json!({
+            "expansion": {
+                "contains": [
+                    {"system": "http://example.org/cs", "code": ""},
+                    {"system": "http://example.org/cs", "code": "X"}
+                ]
+            }
+        });
+        let codes = extract_expansion_codes(&response).unwrap();
+        assert_eq!(codes.len(), 1);
+        assert_eq!(codes[0].code, "X");
+    }
+
+    #[test]
+    fn as_token_with_and_without_system() {
+        let with = ExpandedCode {
+            system: "http://snomed.info/sct".into(),
+            code: "73211009".into(),
+            display: None,
+        };
+        assert_eq!(with.as_token(), "http://snomed.info/sct|73211009");
+        let bare = ExpandedCode {
+            system: String::new(),
+            code: "active".into(),
+            display: None,
+        };
+        assert_eq!(bare.as_token(), "active");
+    }
+
+    #[test]
+    fn client_trims_trailing_slash() {
+        let client = TerminologyClient::new("http://localhost:9091/", ClientOptions::rest_search());
+        assert_eq!(client.base_url(), "http://localhost:9091");
+    }
+
+    #[tokio::test]
+    async fn network_error_omits_the_url_query() {
+        let client = TerminologyClient::new(
+            "http://127.0.0.1:1?token=QUERY-SECRET",
+            ClientOptions::rest_search(),
+        );
+        let err = client
+            .expand_value_set("http://hl7.org/fhir/ValueSet/administrative-gender")
+            .await
+            .expect_err("nothing listens on port 1");
+        let message = err.to_string();
+        assert!(matches!(err, TerminologyError::Network(_)), "{message}");
+        assert!(!message.contains("SECRET"), "query leaked: {message}");
+        assert!(message.contains("127.0.0.1:1"), "{message}");
+    }
+
+    #[test]
+    fn expansion_total_reads_integer() {
+        let body = json!({ "expansion": { "total": 546, "contains": [] } });
+        assert_eq!(expansion_total(&body), Some(546));
+        assert_eq!(expansion_total(&json!({"expansion": {}})), None);
+    }
+
+    #[test]
+    fn next_expand_page_follows_total_not_page_size() {
+        assert!(!should_fetch_next_expand_page(16, 16, Some(16), 10_000));
+        assert!(should_fetch_next_expand_page(16, 16, Some(546), 10_000));
+        assert!(!should_fetch_next_expand_page(0, 0, Some(546), 10_000));
+        assert!(should_fetch_next_expand_page(10_000, 10_000, None, 10_000));
+        assert!(!should_fetch_next_expand_page(8, 8, None, 10_000));
+    }
+
+    #[test]
+    fn parameters_result_bool_reads_result() {
+        let body = json!({
+            "resourceType": "Parameters",
+            "parameter": [
+                { "name": "result", "valueBoolean": true },
+                { "name": "message", "valueString": "ok" }
+            ]
+        });
+        assert!(parameters_result_bool(&body).unwrap());
+    }
+}

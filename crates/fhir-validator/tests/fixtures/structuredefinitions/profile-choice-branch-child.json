@@ -1,0 +1,72 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "example-devicerequest",
+  "url": "http://example.org/fhir/StructureDefinition/example-devicerequest",
+  "name": "ExampleDeviceRequest",
+  "type": "DeviceRequest",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/DeviceRequest",
+  "kind": "resource",
+  "derivation": "constraint",
+  "snapshot": {
+    "element": [
+      {
+        "id": "DeviceRequest",
+        "path": "DeviceRequest"
+      },
+      {
+        "id": "DeviceRequest.code[x]",
+        "path": "DeviceRequest.code[x]",
+        "min": 1,
+        "max": "1",
+        "base": { "path": "DeviceRequest.code[x]", "min": 1, "max": "1" },
+        "slicing": {
+          "discriminator": [{ "type": "type", "path": "$this" }],
+          "ordered": false,
+          "rules": "closed"
+        },
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": ["http://hl7.org/fhir/StructureDefinition/Device"]
+          },
+          { "code": "CodeableConcept" }
+        ]
+      },
+      {
+        "id": "DeviceRequest.code[x]:codeCodeableConcept",
+        "path": "DeviceRequest.code[x]",
+        "sliceName": "codeCodeableConcept",
+        "min": 0,
+        "max": "1",
+        "type": [{ "code": "CodeableConcept" }]
+      },
+      {
+        "id": "DeviceRequest.code[x]:codeCodeableConcept.extension",
+        "path": "DeviceRequest.code[x].extension",
+        "min": 0,
+        "max": "*",
+        "base": { "path": "Element.extension", "min": 0, "max": "*" },
+        "slicing": {
+          "discriminator": [{ "type": "value", "path": "url" }],
+          "rules": "open"
+        },
+        "type": [{ "code": "Extension" }]
+      },
+      {
+        "id": "DeviceRequest.code[x]:codeCodeableConcept.extension:codeOptions",
+        "path": "DeviceRequest.code[x].extension",
+        "sliceName": "codeOptions",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "http://example.org/fhir/StructureDefinition/code-options"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

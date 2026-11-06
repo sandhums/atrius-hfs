@@ -745,7 +745,7 @@ helios-rest = { version = "0.1", features = ["R4", "sqlite"] }
 
 The server supports FHIR [batch](https://hl7.org/fhir/http.html#batch) and [transaction](https://hl7.org/fhir/http.html#transaction) bundles via `POST /`.
 
-> **Backend Support:** Transaction bundles require a backend with ACID transaction support. SQLite fully supports transactions. Some backends (Cassandra, Elasticsearch, S3) only support batch bundles. See the persistence crate documentation for the full capability matrix.
+> **Backend Support:** Transaction bundles require a backend with ACID transaction support. SQLite fully supports transactions. Some backends (Elasticsearch, S3) only support batch bundles. See the persistence crate documentation for the full capability matrix.
 
 ### Transaction (Atomic)
 
@@ -809,8 +809,9 @@ version — so a lowercase `"post"` is invalid instance data and is refused with
 A `PATCH` entry's `resource` is a FHIRPath Patch `Parameters` resource in every
 version, or, from R5, a `Binary` carrying a JSON Patch
 (`contentType: application/json-patch+json`). A `Binary` patch in an R4/R4B
-bundle is `501 not-supported`. A Bundle has no encoding for JSON Merge Patch.
-The patched resource goes through the same write-path validation as a `PUT`.
+bundle is `501 not-supported`. This fork also accepts a JSON Patch array and a
+JSON Merge Patch object. The patched resource goes through the same write-path
+validation as a `PUT`.
 
 ### Per-entry outcomes
 
@@ -836,8 +837,9 @@ search entry and the same search at `GET [base]/[type]?…`.
 | target not found | 404 | `not-found` |
 | search entry failed (`_query`, `:not-in`, …) | per class | `invalid`, `not-supported`, … |
 | `HEAD` | 405 | `not-supported` |
-| `ifMatch` precondition failed | 412 | `conflict` |
+| `ifMatch` / `ifNoneMatch` precondition failed | 412 | `conflict` |
 | write validation failed | 422 | the validator's own issues |
+| `PATCH` is applied in-bundle (JSON Patch / merge); missing target | 404 | `not-found` |
 | `Binary` JSON Patch in an R4/R4B bundle | 501 | `not-supported` |
 | storage error | per class | `deleted`, `conflict`, `multiple-matches`, `transient`, `timeout`, `exception`, … |
 
@@ -854,8 +856,14 @@ and an unusable value does not apply.
 - `ifMatch` — **supported.** ETag for optimistic locking on `PUT`, `PATCH` **and
   `DELETE`** entries, in both `batch` and `transaction` bundles. Parsed as the comma-separated
   list RFC 9110 §13.1.1 defines: satisfied when any supplied entity-tag matches.
-- `ifNoneMatch` — **parsed and ignored.** `parse_bundle_entry` populates
-  `BundleEntry.if_none_match`; no handler or backend reads it.
+- `ifNoneMatch` — **supported** on `PUT` entries, in both `batch` and
+  `transaction` bundles. `If-None-Match: *` is create-if-absent: the entry
+  succeeds when the resource does not exist (`201`) and answers `412` when it
+  does, rolling back a transaction. The write is `create`, not
+  `create_or_update`: a concurrent insert that wins the race is the same
+  `412`, not an overwrite. A list is the RFC 9110 inverse of `ifMatch`.
+  Parsed as the comma-separated list RFC 9110 §13.1.2 defines.
+  Standalone `PUT [type]/[id]` honours the same `If-None-Match` header.
 - `ifNoneExist` — **supported** on `POST` entries, in both `batch` and
   `transaction` bundles, on every backend that implements `ConditionalStorage`
   (SQLite, PostgreSQL, MongoDB; on S3 only `_id` and `identifier` criteria, by
@@ -870,11 +878,12 @@ and an unusable value does not apply.
   bundle fails at that entry rather than creating a duplicate.
 
 Conditional interactions expressed in the entry URL (`PUT [type]?[criteria]`,
-`DELETE [type]?[criteria]`, `PATCH [type]?[criteria]`):
+`PATCH [type]?[criteria]`, `DELETE [type]?[criteria]`):
 
 - In a `batch`, they are **resolved** with the status mapping the resource
   endpoints use. `PUT`: one match updates (`200`, `location` = `[type]/[id]`), no
-  match creates (`201`), several matches `412`. `DELETE`: deleted or no match
+  match creates (`201`), several matches `412`. `PATCH`: one match applies
+  (`200`), no match `404`, several matches `412`. `DELETE`: deleted or no match
   `204`, several matches `412` (`/metadata` elects `conditionalDelete: "single"`).
   `PATCH`: one match is patched (`200`), no match `404`, several matches `412`.
   The criteria are percent-decoded like a request URL's query, with repeated
@@ -953,7 +962,7 @@ The server supports standard FHIR HTTP headers:
 | `Accept` | Content negotiation |
 | `Content-Type` | Request body format |
 | `ETag` / `If-Match` | Optimistic locking on `PUT`, `PATCH` and `DELETE` |
-| `If-None-Match` | Conditional read |
+| `If-None-Match` | Conditional read; on `PUT`, create-if-absent (`*`) |
 | `If-None-Exist` | Conditional create |
 | `If-Modified-Since` | Conditional read by date |
 | `Prefer` | Response preference |

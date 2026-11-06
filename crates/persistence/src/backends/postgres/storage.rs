@@ -24,7 +24,7 @@ use crate::core::transaction::{
 use crate::core::{
     ConditionalCreateResult, ConditionalDeleteResult, ConditionalStorage, ConditionalUpdateResult,
     PurgableStorage, ResourceStorage, SearchProvider, VersionedStorage, bundle_if_match_gate,
-    if_match_field_satisfied, normalize_etag,
+    bundle_if_none_match_gate, if_match_field_satisfied, normalize_etag,
 };
 use crate::error::TransactionError;
 use crate::error::{
@@ -1116,6 +1116,15 @@ impl ResourceStorage for PostgresBackend {
         ))
     }
 
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        let source = std::env::var("HFS_BASE_URL").unwrap_or_else(|_| "hfs".to_string());
+        Some(std::sync::Arc::new(
+            crate::backends::postgres::PostgresSubscriptionOutbox::new(self.pool(), source),
+        ))
+    }
+
     async fn create(
         &self,
         tenant: &TenantContext,
@@ -1217,7 +1226,21 @@ impl ResourceStorage for PostgresBackend {
                 IndexWrite::Fresh,
                 &resource,
             )
-            .await
+            .await?;
+
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                &transaction,
+                tenant.tenant_id(),
+                fhir_version,
+                resource_type,
+                &id,
+                version_id,
+                crate::core::OutboxEventType::Create,
+                Some(resource.clone()),
+                None,
+            )
+            .await?;
+            Ok(())
         }
         .await;
         match write_result {
@@ -1441,6 +1464,7 @@ impl ResourceStorage for PostgresBackend {
         // lock, the resource/history write, and the search/FTS index writes.
         // `SearchParameter` takes the exclusive tenant gate; every other type
         // takes the shared gate plus its own resource key.
+        let previous_resource = current.content().clone();
         let transaction = client
             .transaction()
             .await
@@ -1525,7 +1549,21 @@ impl ResourceStorage for PostgresBackend {
                 IndexWrite::Replace,
                 &resource,
             )
-            .await
+            .await?;
+
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                &transaction,
+                tenant.tenant_id(),
+                current.fhir_version(),
+                resource_type,
+                id,
+                &new_version_str,
+                crate::core::OutboxEventType::Update,
+                Some(resource.clone()),
+                Some(previous_resource),
+            )
+            .await?;
+            Ok(())
         }
         .await;
         match write_result {
@@ -2458,6 +2496,35 @@ impl PostgresBackend {
                 .await
                 .map_err(|e| internal_error(format!("Failed to delete FTS index: {e}")))?;
             }
+            if crate::core::subscription_outbox::subscription_outbox_writes_enabled() {
+                let row = transaction
+                    .query_one(
+                        "SELECT version_id, fhir_version, data FROM resources
+                         WHERE tenant_id = $1 AND resource_type = $2 AND id = $3",
+                        &[&tenant_id, &resource_type, &id],
+                    )
+                    .await
+                    .map_err(|e| {
+                        internal_error(format!("Failed to read deleted resource for outbox: {e}"))
+                    })?;
+                let new_version_str: String = row.get(0);
+                let fhir_version_str: String = row.get(1);
+                let previous_resource: Value = row.get(2);
+                let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+                    .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+                super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                    &transaction,
+                    tenant.tenant_id(),
+                    fhir_version,
+                    resource_type,
+                    id,
+                    &new_version_str,
+                    crate::core::OutboxEventType::Delete,
+                    None,
+                    Some(previous_resource),
+                )
+                .await?;
+            }
             Ok(())
         }
         .await;
@@ -2588,6 +2655,19 @@ impl PostgresBackend {
                 now,
                 IndexWrite::Replace,
                 &resource,
+            )
+            .await?;
+
+            super::subscription_outbox::PostgresSubscriptionOutbox::maybe_enqueue_on_client(
+                &transaction,
+                tenant.tenant_id(),
+                FhirVersion::from_storage(&fhir_version_str).unwrap_or_else(helios_fhir::FhirVersion::default_enabled),
+                resource_type,
+                id,
+                &new_version_str,
+                crate::core::OutboxEventType::Create,
+                Some(resource.clone()),
+                None,
             )
             .await?;
             Ok((new_version_str, fhir_version_str))
@@ -4847,6 +4927,16 @@ impl ConditionalStorage for PostgresBackend {
         self.find_matching_resources(tenant, resource_type, search_params)
             .await
     }
+
+    async fn conditional_matches(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        search_params: &str,
+    ) -> StorageResult<Vec<crate::types::StoredResource>> {
+        self.find_matching_resources(tenant, resource_type, search_params)
+            .await
+    }
 }
 
 impl PostgresBackend {
@@ -5405,6 +5495,12 @@ impl PostgresBackend {
                 // silently creating.
                 if let Some(failure) = bundle_if_match_gate(
                     entry.if_match.as_deref(),
+                    existing.as_ref().map(|r| r.version_id()),
+                ) {
+                    return Ok(failure);
+                }
+                if let Some(failure) = bundle_if_none_match_gate(
+                    entry.if_none_match.as_deref(),
                     existing.as_ref().map(|r| r.version_id()),
                 ) {
                     return Ok(failure);

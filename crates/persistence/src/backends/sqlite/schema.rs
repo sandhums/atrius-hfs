@@ -1,17 +1,114 @@
 //! SQLite schema definitions and migrations.
 
-use rusqlite::{Connection, Transaction, TransactionBehavior};
+use std::collections::HashSet;
+
+use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior};
 use serde_json::Value;
 
 use crate::core::bulk_submit_legacy::{
     LegacyArtifactMetadata, LegacyFile, LegacyManifest, LegacyPublicationAction,
     classify_legacy_publications,
 };
+use crate::core::schema_ledger::{
+    BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, OUTBOX_STEP_INDEX, classify_numbering,
+    implied_applied_indices,
+};
 use crate::error::StorageResult;
 
-/// Current schema version.
-pub const SCHEMA_VERSION: i32 = 47;
+/// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
+pub const SCHEMA_VERSION: i32 = 50;
 
+pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
+
+/// Ordered named steps. Index [`OUTBOX_STEP_INDEX`] must stay `subscription_outbox`.
+///
+/// Helios `#947`/`#967` (drop `idx_search_resource`, late partial indexes,
+/// `resource_fts_map`) and Helios `#959`/`#953` (`idx_resources_live_type`,
+/// manifest `phase`/`files_*`) sit *before* Helios `#882`/`#961` (manifest
+/// publication, export `types_*`), Helios v28 (partial `idx_search_string_folded`),
+/// Helios v29 (`idx_search_token_display` drop, `#945`), Helios v30
+/// (`bulk_manifests.index_pending`, `#1125`), Helios v31 (`search_index.resource_key`,
+/// `#945`), Helios v32 (`bulk_manifest_file_progress` / `skipped_entries`, `#1127`),
+/// Helios v33 (`bulk_export_jobs.attempts`, `#1041`), Helios v34
+/// (`secondary_sync_failures`, `#1334`), and
+/// [`OUTBOX_DEAD_LETTER_STEP`]. An upstream-numbered SQLite DB at
+/// Helios v25 maps onto fork indices 16..=24 (through phase). Helios v27 maps
+/// through types (26). Helios v28 maps through the partial folded index (27)
+/// and still runs the token-display drop, index_pending, resource_key,
+/// file-progress, attempts, secondary_sync, and `dead_at`. Helios v29 maps through the drop (28)
+/// and still runs the later six. Helios v30 maps through index_pending (29)
+/// and still runs resource_key, file-progress, attempts, secondary_sync, and `dead_at`. Helios
+/// v31 maps through resource_key (30) and still runs file-progress, attempts,
+/// secondary_sync, and `dead_at`. Helios v32 maps through file-progress (31) and still runs
+/// attempts, secondary_sync, and `dead_at`. Helios v33 maps through attempts (32) and still
+/// runs secondary_sync and `dead_at`. Helios v34 maps through secondary_sync (33)
+/// and still runs Helios v35 `search_index_date_range` (`#1391`), Helios v36
+/// `login_sessions` (`#1481`), Helios v37 `bulk_manifest_file_progress_completed`
+/// (`#1610`), and `dead_at`. Helios v35 maps through the date range (34) and
+/// still runs login sessions, the completed flag, and `dead_at`. Helios v36
+/// maps through login sessions (35) and still runs the completed flag and
+/// `dead_at`. Helios v37 maps through the completed flag (36) and still runs
+/// `search_index_composite_slot` and `dead_at`. Helios v38 maps through
+/// `search_index_composite_slot` (index 37) and still runs
+/// `search_index_date_start` and `dead_at`. Helios v39 maps through
+/// `search_index_date_start` (index 38, `#1506`) and still runs
+/// `history_updated_index`, `sof_terminology_tables`, and `dead_at`. Helios v40
+/// maps through `history_updated_index` (index 39, `#2107`) and still runs
+/// terminology and `dead_at`. Helios v41 maps through `sof_terminology_tables`
+/// (index 40, `#1824`) and still runs Helios v42–v46 search-index steps and `dead_at`.
+const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
+    ("search_index_enhanced_columns", migrate_v1_to_v2),
+    ("resource_fts", migrate_v2_to_v3),
+    ("token_display_identifier_type", migrate_v3_to_v4),
+    ("fts_triggers", migrate_v4_to_v5),
+    ("bulk_export_submit_tables", migrate_v5_to_v6),
+    ("fhir_version", migrate_v6_to_v7),
+    ("bulk_export_leases", migrate_v7_to_v8),
+    ("bulk_submit_worker", migrate_v8_to_v9),
+    ("reference_display_ucum_folded_string", migrate_v9_to_v10),
+    ("contained_search", migrate_v10_to_v11),
+    ("bulk_submit_async_schema", migrate_v11_to_v12),
+    ("user_settings", migrate_v12_to_v13),
+    ("tenant_registry", migrate_v13_to_v14),
+    ("resource_fts_orphan_sweep", migrate_v14_to_v15),
+    ("bulk_entry_results_file_url", migrate_v15_to_v16),
+    (OUTBOX_STEP, migrate_v16_to_v17),
+    ("bulk_provider_submissions", migrate_v17_to_v18),
+    ("bulk_manifests_byte_progress", migrate_v18_to_v19),
+    ("resources_reindex_keyset", migrate_v19_to_v20),
+    ("search_index_partial_family_indexes", migrate_v20_to_v21),
+    ("search_index_drop_resource_prefix", migrate_v21_to_v22),
+    ("search_index_partial_late_indexes", migrate_v22_to_v23),
+    ("resource_fts_map", migrate_v23_to_v24),
+    ("resources_live_type_index", migrate_v24_to_v25),
+    ("bulk_manifests_phase_progress", migrate_v25_to_v26),
+    ("bulk_submit_manifest_publication", migrate_publication),
+    ("bulk_export_types_progress", migrate_export_types_progress),
+    ("search_index_partial_folded", migrate_v27_to_v28),
+    ("search_index_drop_token_display", migrate_v28_to_v29),
+    ("bulk_manifests_index_pending", migrate_v29_to_v30),
+    ("search_index_resource_key", migrate_v30_to_v31),
+    ("bulk_manifest_file_progress", migrate_v31_to_v32),
+    ("bulk_export_jobs_attempts", migrate_v32_to_v33),
+    ("secondary_sync_failures", migrate_v33_to_v34),
+    ("search_index_date_range", migrate_v34_to_v35),
+    ("login_sessions", migrate_v35_to_v36),
+    ("bulk_manifest_file_progress_completed", migrate_v36_to_v37),
+    ("search_index_composite_slot", migrate_v37_to_v38),
+    ("search_index_date_start", migrate_v38_to_v39),
+    ("history_updated_index", migrate_v39_to_v40),
+    ("sof_terminology_tables", migrate_v40_to_v41),
+    ("search_index_covering_value_indexes", migrate_v41_to_v42),
+    ("search_index_v42_noop", migrate_v42_to_v43),
+    ("search_index_v43_noop", migrate_v43_to_v44),
+    ("search_index_drop_prefix_indexes", migrate_v44_to_v45),
+    ("search_index_token_code_first", migrate_v45_to_v46),
+    ("bulk_submissions_updated_at", migrate_v46_to_v47),
+    ("search_index_value_reference_target", migrate_v47_to_v48),
+    (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
+];
+
+const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
 /// The `search_index` value indexes. `idx_search_token`, `idx_search_quantity`
 /// and `idx_search_composite_cov` end in (or carry) `resource_key`, so the
 /// `rowid IN (SELECT resource_key FROM search_index ...)` membership
@@ -32,7 +129,7 @@ pub const SCHEMA_VERSION: i32 = 47;
 ///
 /// Keep each entry's SQL byte-for-byte what the migration ladder creates,
 /// normalised to one line, so the self-heal on startup and the ladder agree.
-pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 17] = [
+pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 18] = [
     (
         "idx_search_string",
         "CREATE INDEX IF NOT EXISTS idx_search_string ON search_index(tenant_id, resource_type, param_name, value_string) WHERE value_string IS NOT NULL",
@@ -64,6 +161,10 @@ pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 17] = [
     (
         "idx_search_reference",
         "CREATE INDEX IF NOT EXISTS idx_search_reference ON search_index(tenant_id, resource_type, param_name, value_reference) WHERE value_reference IS NOT NULL",
+    ),
+    (
+        "idx_search_reference_target",
+        "CREATE INDEX IF NOT EXISTS idx_search_reference_target ON search_index(tenant_id, resource_type, param_name, value_reference_target) WHERE value_reference_target IS NOT NULL",
     ),
     (
         "idx_search_uri",
@@ -185,37 +286,77 @@ pub(crate) fn drop_search_value_indexes(conn: &Connection) -> StorageResult<()> 
 
 /// Initialize the database schema.
 ///
+/// Dispatch consults `schema_migrations` by step name. The integer
+/// `schema_version` is stamped at the tip for operators and used only to
+/// bootstrap the ledger on databases that predate it.
+///
 /// A database that records a newer `schema_version` than [`SCHEMA_VERSION`] is
-/// refused before anything is written: no migration, no
-/// `ensure_tenants_table`, and no `ensure_search_value_indexes`, which can drop
-/// and rebuild covering indexes a newer build defined differently. The refusal
-/// is [`require_supported_schema_version`] (#2365). The recorded version is
-/// never lowered either, see [`set_schema_version`].
+/// refused before anything is written ([#2365]).
 pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
-    // Read the recorded version; refuse one newer than this build before any
-    // step below runs (#2365).
+    debug_assert_eq!(SQLITE_STEPS.len() as i32 + 1, SCHEMA_VERSION);
+    debug_assert_eq!(SQLITE_STEPS[OUTBOX_STEP_INDEX].0, OUTBOX_STEP);
+
     let current_version = require_supported_schema_version(conn)?;
+    ensure_schema_flavour_column(conn)?;
+    ensure_schema_migrations_table(conn)?;
+
+    let flavour = get_schema_flavour(conn)?;
+    let outbox_exists = table_exists(conn, "subscription_outbox")?;
+    let mut applied = load_applied_steps(conn)?;
+
+    if applied.is_empty() && current_version > 0 {
+        backfill_legacy_integer(
+            conn,
+            current_version,
+            flavour.as_deref(),
+            outbox_exists,
+            &mut applied,
+        )?;
+    }
 
     if current_version == 0 {
-        // 0 means an empty `schema_version` table, i.e. a fresh database
-        // (`get_schema_version` errors on every other read failure and on a
-        // stored value below 1): create
-        // the base schema then run all migrations
         create_schema_v1(conn)?;
         set_schema_version(conn, 1)?;
-        // Run migrations from v1 to latest
-        migrate_schema(conn, 1, false)?;
-    } else if current_version < SCHEMA_VERSION {
-        // An existing database: on a large one a step that builds an index
-        // over `search_index` runs for minutes before the server listens,
-        // so say so (#1961).
-        tracing::info!(
-            from = current_version,
-            to = SCHEMA_VERSION,
-            "Migrating the SQLite schema; on a large database this can take minutes"
-        );
-        let started = std::time::Instant::now();
-        migrate_schema(conn, current_version, true)?;
+        record_step(conn, BASE_STEP)?;
+        applied.insert(BASE_STEP.to_string());
+    } else if !applied.contains(BASE_STEP) {
+        record_step(conn, BASE_STEP)?;
+        applied.insert(BASE_STEP.to_string());
+    }
+
+    // #1961: an existing database can spend minutes building an index before
+    // the server listens. A fresh database stays quiet.
+    let mut migration_started: Option<std::time::Instant> = None;
+    for &(name, migrate) in SQLITE_STEPS {
+        let present = if name == OUTBOX_STEP {
+            table_exists(conn, "subscription_outbox")?
+        } else {
+            true
+        };
+        if applied.contains(name) && present {
+            continue;
+        }
+        if current_version > 0 && migration_started.is_none() {
+            tracing::info!(
+                from = current_version,
+                to = SCHEMA_VERSION,
+                "Migrating the SQLite schema; on a large database this can take minutes"
+            );
+            migration_started = Some(std::time::Instant::now());
+        }
+        let step_started = std::time::Instant::now();
+        migrate(conn)?;
+        record_step(conn, name)?;
+        applied.insert(name.to_string());
+        if current_version > 0 {
+            tracing::info!(
+                to = SCHEMA_VERSION,
+                elapsed_ms = step_started.elapsed().as_millis() as u64,
+                "SQLite schema migration step applied"
+            );
+        }
+    }
+    if let Some(started) = migration_started {
         tracing::info!(
             from = current_version,
             to = SCHEMA_VERSION,
@@ -242,6 +383,9 @@ pub fn initialize_schema(conn: &Connection) -> StorageResult<()> {
         );
     }
 
+    set_schema_version(conn, SCHEMA_VERSION)?;
+    stamp_schema_flavour(conn)?;
+
     Ok(())
 }
 
@@ -261,27 +405,189 @@ fn ensure_tenants_table(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// Idempotently ensures the durable subscription outbox exists.
+///
+/// Body of the v16 → v17 migration, and a startup self-heal so an
+/// upstream-numbered database (which skipped that step) still gets the table.
+fn ensure_subscription_outbox(conn: &Connection) -> StorageResult<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS subscription_outbox (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL UNIQUE,
+            tenant_id TEXT NOT NULL,
+            fhir_version TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            version_id TEXT NOT NULL DEFAULT '',
+            event_type TEXT NOT NULL,
+            resource TEXT,
+            previous_resource TEXT,
+            envelope TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            available_at TEXT NOT NULL,
+            processed_at TEXT,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            last_error TEXT,
+            locked_by TEXT,
+            locked_until TEXT,
+            dead_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
+            ON subscription_outbox (tenant_id, id)
+            WHERE processed_at IS NOT NULL;",
+    )
+    .map_err(|e| migration_err(format!("ensure subscription_outbox: {e}")))?;
+    ensure_outbox_dead_letter(conn)
+}
+
+/// Adds `dead_at` and rebuilds the claim index so exhausted rows stay unclaimed.
+fn ensure_outbox_dead_letter(conn: &Connection) -> StorageResult<()> {
+    if table_exists(conn, "subscription_outbox")?
+        && !table_has_column(conn, "subscription_outbox", "dead_at")?
+    {
+        conn.execute(
+            "ALTER TABLE subscription_outbox ADD COLUMN dead_at TEXT",
+            [],
+        )
+        .map_err(|e| migration_err(format!("add subscription_outbox.dead_at: {e}")))?;
+    }
+    conn.execute("DROP INDEX IF EXISTS idx_subscription_outbox_claim", [])
+        .map_err(|e| migration_err(format!("drop outbox claim index: {e}")))?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+         ON subscription_outbox (available_at, id)
+         WHERE processed_at IS NULL AND dead_at IS NULL",
+        [],
+    )
+    .map_err(|e| migration_err(format!("create outbox claim index: {e}")))?;
+    Ok(())
+}
+
+/// SQLite has no `ADD COLUMN IF NOT EXISTS`.
+fn ensure_schema_flavour_column(conn: &Connection) -> StorageResult<()> {
+    let columns: Vec<String> = {
+        let mut stmt = conn
+            .prepare("PRAGMA table_info(schema_version)")
+            .map_err(|e| migration_err(format!("pragma schema_version: {e}")))?;
+        stmt.query_map([], |row| row.get::<_, String>(1))
+            .map_err(|e| migration_err(format!("pragma schema_version rows: {e}")))?
+            .filter_map(|r| r.ok())
+            .collect()
+    };
+    if !columns.iter().any(|c| c == "flavour") {
+        conn.execute("ALTER TABLE schema_version ADD COLUMN flavour TEXT", [])
+            .map_err(|e| migration_err(format!("add schema_version.flavour: {e}")))?;
+    }
+    Ok(())
+}
+
+fn stamp_schema_flavour(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "UPDATE schema_version SET flavour = ?1 WHERE flavour IS NULL",
+        [SCHEMA_FLAVOUR],
+    )
+    .map_err(|e| migration_err(format!("stamp schema_version.flavour: {e}")))?;
+    Ok(())
+}
+
+fn get_schema_flavour(conn: &Connection) -> StorageResult<Option<String>> {
+    let flavour: Option<Option<String>> = conn
+        .query_row("SELECT flavour FROM schema_version LIMIT 1", [], |row| {
+            row.get(0)
+        })
+        .optional()
+        .map_err(|e| migration_err(format!("read schema_version.flavour: {e}")))?;
+    Ok(flavour.flatten())
+}
+
+fn ensure_schema_migrations_table(conn: &Connection) -> StorageResult<()> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (
+            name TEXT PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        [],
+    )
+    .map_err(|e| migration_err(format!("create schema_migrations: {e}")))?;
+    Ok(())
+}
+
+fn load_applied_steps(conn: &Connection) -> StorageResult<HashSet<String>> {
+    let mut stmt = conn
+        .prepare("SELECT name FROM schema_migrations")
+        .map_err(|e| migration_err(format!("select schema_migrations: {e}")))?;
+    let names = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| migration_err(format!("schema_migrations rows: {e}")))?
+        .filter_map(|r| r.ok())
+        .collect();
+    Ok(names)
+}
+
+fn record_step(conn: &Connection, name: &str) -> StorageResult<()> {
+    conn.execute(
+        "INSERT OR IGNORE INTO schema_migrations (name) VALUES (?1)",
+        [name],
+    )
+    .map_err(|e| migration_err(format!("record schema step {name}: {e}")))?;
+    Ok(())
+}
+
+fn table_exists(conn: &Connection, name: &str) -> StorageResult<bool> {
+    let n: i32 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+            [name],
+            |row| row.get(0),
+        )
+        .map_err(|e| migration_err(format!("probe table {name}: {e}")))?;
+    Ok(n > 0)
+}
+
+fn table_has_column(conn: &Connection, table: &str, column: &str) -> StorageResult<bool> {
+    let mut stmt = conn
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(|e| migration_err(format!("pragma {table}: {e}")))?;
+    let cols = stmt
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|e| migration_err(format!("pragma {table} rows: {e}")))?;
+    Ok(cols.filter_map(|r| r.ok()).any(|c| c == column))
+}
+
+fn backfill_legacy_integer(
+    conn: &Connection,
+    recorded_version: i32,
+    flavour: Option<&str>,
+    outbox_exists: bool,
+    applied: &mut HashSet<String>,
+) -> StorageResult<()> {
+    let numbering = classify_numbering(flavour, recorded_version, SCHEMA_VERSION, outbox_exists);
+    tracing::info!(
+        ?numbering,
+        recorded_version,
+        outbox_exists,
+        "backfilling schema_migrations from legacy integer"
+    );
+    if recorded_version >= 1 {
+        record_step(conn, BASE_STEP)?;
+        applied.insert(BASE_STEP.to_string());
+    }
+    for i in implied_applied_indices(recorded_version, numbering, SQLITE_STEPS.len()) {
+        let name = SQLITE_STEPS[i].0;
+        if name == OUTBOX_STEP && !outbox_exists {
+            continue;
+        }
+        record_step(conn, name)?;
+        applied.insert(name.to_string());
+    }
+    Ok(())
+}
+
 /// Get the current schema version.
 ///
-/// Returns 0 only when `schema_version` holds no row, which is a fresh
-/// database. Every other failure is an error: `SQLITE_BUSY`/`SQLITE_LOCKED`,
-/// an I/O error, a stored value that does not read as an `i32` (TEXT, NULL,
-/// REAL, or out of range), or a stored value below 1. Nothing writes a value
-/// below 1 (the first stamp is 1, see [`initialize_schema`]), and 0 would send
-/// an existing database down the fresh-schema path just as a failed read
-/// would. A transient or corrupt read must never do that (#2366).
-///
-/// Any stored integer from 1 up, including one above [`SCHEMA_VERSION`], is
-/// returned as is; [`require_supported_schema_version`] refuses one above
-/// [`SCHEMA_VERSION`] (#2365).
-///
-/// The table normally holds one row, but the old DELETE + INSERT write could
-/// leave several after interleaved starts. The read is then the highest row
-/// (`ORDER BY version DESC`), so a newer value is never hidden behind a lower
-/// row in rowid order. SQLite sorts TEXT above INTEGER, so a TEXT row is the one
-/// picked and still errors; NULL sorts lowest.
+/// The table normally holds one row, but legacy writes could leave several.
+/// The read is the highest row (`ORDER BY version DESC`) ([#2365]).
 fn get_schema_version(conn: &Connection) -> StorageResult<i32> {
-    // Create version table if it doesn't exist
     conn.execute(
         "CREATE TABLE IF NOT EXISTS schema_version (
             version INTEGER NOT NULL
@@ -296,14 +602,11 @@ fn get_schema_version(conn: &Connection) -> StorageResult<i32> {
         })
     })?;
 
-    // The highest row, not an arbitrary one: the newer-schema refusal relies on
-    // it when a legacy table holds more than one row (#2365).
     match conn.query_row(
         "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1",
         [],
         |row| row.get::<_, i32>(0),
     ) {
-        // A stored 0 or negative value is not a fresh database either.
         Ok(version) if version < 1 => Err(crate::error::StorageError::Backend(
             crate::error::BackendError::Internal {
                 backend_name: "sqlite".to_string(),
@@ -316,7 +619,6 @@ fn get_schema_version(conn: &Connection) -> StorageResult<i32> {
             },
         )),
         Ok(version) => Ok(version),
-        // An empty table is a fresh database; nothing else may read as 0.
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(0),
         Err(e) => Err(crate::error::StorageError::Backend(
             crate::error::BackendError::Internal {
@@ -332,12 +634,6 @@ fn get_schema_version(conn: &Connection) -> StorageResult<i32> {
     }
 }
 
-/// Read the recorded schema version, failing before anything is written when it
-/// is newer than [`SCHEMA_VERSION`] (#2365).
-///
-/// An older build must neither re-stamp nor reshape a database that a newer
-/// HFS has upgraded. Otherwise returns the recorded version (0 for a fresh
-/// database, see [`get_schema_version`]).
 fn require_supported_schema_version(conn: &Connection) -> StorageResult<i32> {
     let recorded = get_schema_version(conn)?;
     if recorded > SCHEMA_VERSION {
@@ -350,11 +646,6 @@ fn require_supported_schema_version(conn: &Connection) -> StorageResult<i32> {
     Ok(recorded)
 }
 
-/// The startup error for a database whose recorded schema version is above
-/// `build`, the version this build supports.
-///
-/// `Internal`, like every other schema-init failure, and worded as on MongoDB
-/// (#2352) and PostgreSQL (#2367).
 fn newer_schema_error(
     database_name: &str,
     recorded: i32,
@@ -372,8 +663,6 @@ fn newer_schema_error(
     })
 }
 
-/// The main database's file path for messages, or `:memory:` for an in-memory
-/// or temporary database (rusqlite returns `Some("")` for those).
 fn database_name(conn: &Connection) -> String {
     match conn.path() {
         Some(path) if !path.is_empty() => path.to_string(),
@@ -381,24 +670,7 @@ fn database_name(conn: &Connection) -> String {
     }
 }
 
-/// Record `version` without ever lowering the stored value or leaving the table
-/// empty (#2365).
-///
-/// Two statements, each of which leaves a row in place, so a crash between them
-/// cannot make the next start read the database as new (the old DELETE +
-/// INSERT pair could):
-///
-/// 1. raise every stored row below `version`; an equal or higher stored value
-///    is left alone, so a lower write (an older build, or the slower of two
-///    concurrent starts) is a no-op;
-/// 2. insert `version` only into an empty table, the first stamp of a fresh
-///    database.
-///
-/// Neither adds a row to a non-empty table. A fresh table ends with one row; a
-/// legacy table that holds several (see [`get_schema_version`]) keeps all of
-/// them, each raised to at least `version`.
-/// Plain statements (no BEGIN or SAVEPOINT), so they also work inside a
-/// caller's transaction.
+/// Record `version` without ever lowering the stored value or leaving the table empty ([#2365]).
 fn set_schema_version(conn: &Connection, version: i32) -> StorageResult<()> {
     conn.execute(
         "UPDATE schema_version SET version = ?1 WHERE version < ?1",
@@ -612,83 +884,6 @@ fn create_fts_table(conn: &Connection) -> StorageResult<()> {
             source: None,
         })
     })?;
-
-    Ok(())
-}
-
-/// Run schema migrations from current version to latest.
-fn migrate_schema(conn: &Connection, from_version: i32, log_steps: bool) -> StorageResult<()> {
-    let mut version = from_version;
-
-    while version < SCHEMA_VERSION {
-        let step_started = std::time::Instant::now();
-        match version {
-            1 => migrate_v1_to_v2(conn)?,
-            2 => migrate_v2_to_v3(conn)?,
-            3 => migrate_v3_to_v4(conn)?,
-            4 => migrate_v4_to_v5(conn)?,
-            5 => migrate_v5_to_v6(conn)?,
-            6 => migrate_v6_to_v7(conn)?,
-            7 => migrate_v7_to_v8(conn)?,
-            8 => migrate_v8_to_v9(conn)?,
-            9 => migrate_v9_to_v10(conn)?,
-            10 => migrate_v10_to_v11(conn)?,
-            11 => migrate_v11_to_v12(conn)?,
-            12 => migrate_v12_to_v13(conn)?,
-            13 => migrate_v13_to_v14(conn)?,
-            14 => migrate_v14_to_v15(conn)?,
-            15 => migrate_v15_to_v16(conn)?,
-            16 => migrate_v16_to_v17(conn)?,
-            17 => migrate_v17_to_v18(conn)?,
-            18 => migrate_v18_to_v19(conn)?,
-            19 => migrate_v19_to_v20(conn)?,
-            20 => migrate_v20_to_v21(conn)?,
-            21 => migrate_v21_to_v22(conn)?,
-            22 => migrate_v22_to_v23(conn)?,
-            23 => migrate_v23_to_v24(conn)?,
-            24 => migrate_v24_to_v25(conn)?,
-            25 => migrate_v25_to_v26(conn)?,
-            26 => migrate_v26_to_v27(conn)?,
-            27 => migrate_v27_to_v28(conn)?,
-            28 => migrate_v28_to_v29(conn)?,
-            29 => migrate_v29_to_v30(conn)?,
-            30 => migrate_v30_to_v31(conn)?,
-            31 => migrate_v31_to_v32(conn)?,
-            32 => migrate_v32_to_v33(conn)?,
-            33 => migrate_v33_to_v34(conn)?,
-            34 => migrate_v34_to_v35(conn)?,
-            35 => migrate_v35_to_v36(conn)?,
-            36 => migrate_v36_to_v37(conn)?,
-            37 => migrate_v37_to_v38(conn)?,
-            38 => migrate_v38_to_v39(conn)?,
-            39 => migrate_v39_to_v40(conn)?,
-            40 => migrate_v40_to_v41(conn)?,
-            41 => migrate_v41_to_v42(conn)?,
-            42 => migrate_v42_to_v43(conn)?,
-            43 => migrate_v43_to_v44(conn)?,
-            44 => migrate_v44_to_v45(conn)?,
-            45 => migrate_v45_to_v46(conn)?,
-            46 => migrate_v46_to_v47(conn)?,
-            _ => {
-                return Err(crate::error::StorageError::Backend(
-                    crate::error::BackendError::Internal {
-                        backend_name: "sqlite".to_string(),
-                        message: format!("Unknown schema version: {}", version),
-                        source: None,
-                    },
-                ));
-            }
-        }
-        version += 1;
-        set_schema_version(conn, version)?;
-        if log_steps {
-            tracing::info!(
-                to = version,
-                elapsed_ms = step_started.elapsed().as_millis() as u64,
-                "SQLite schema migration step applied"
-            );
-        }
-    }
 
     Ok(())
 }
@@ -2106,38 +2301,7 @@ fn migrate_v13_to_v14(conn: &Connection) -> StorageResult<()> {
 /// FTS5 virtual table admits no auxiliary index) and probes `resources` by
 /// primary key.
 fn migrate_v14_to_v15(conn: &Connection) -> StorageResult<()> {
-    // FTS5 is optional at compile time; a database built without it has no
-    // table to sweep.
-    let fts_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='resource_fts'",
-            [],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-    if !fts_exists {
-        return Ok(());
-    }
-
-    let swept = conn
-        .execute(
-            "DELETE FROM resource_fts
-              WHERE NOT EXISTS (
-                  SELECT 1 FROM resources r
-                   WHERE r.tenant_id     = resource_fts.tenant_id
-                     AND r.resource_type = resource_fts.resource_type
-                     AND r.id            = resource_fts.resource_id)",
-            [],
-        )
-        .map_err(|e| migration_err(format!("v15 resource_fts orphan sweep: {e}")))?;
-
-    if swept > 0 {
-        tracing::info!(
-            orphaned_fts_rows = swept,
-            "Swept full-text rows left behind by pre-v15 purges (issue #386)"
-        );
-    }
-    Ok(())
+    sweep_orphaned_resource_fts(conn)
 }
 
 /// v15 -> v16 migration: `bulk_entry_results` gains `file_url` in its primary
@@ -2175,8 +2339,58 @@ fn migrate_v15_to_v16(conn: &Connection) -> StorageResult<()> {
     .map_err(|e| migration_err(format!("migrate bulk_entry_results to v16: {e}")))
 }
 
-/// v37 -> v38: persist unfolded composite component ordinals. Existing rows
-/// remain NULL because their positions cannot be inferred from physical order.
+/// v16 -> v17: durable subscription event outbox.
+///
+/// Numbering mirrors postgres (outbox is v17 there too). Databases that already
+/// applied the Atrius-only "v15 = outbox" migration keep the table via
+/// `IF NOT EXISTS` and still receive the upstream #386 FTS orphan sweep here,
+/// because they never ran the Helios v14→v15 sweep under that version number.
+fn migrate_v16_to_v17(conn: &Connection) -> StorageResult<()> {
+    ensure_subscription_outbox(conn)?;
+    sweep_orphaned_resource_fts(conn)?;
+    Ok(())
+}
+
+/// Idempotent `resource_fts` orphan sweep (issue #386). Shared by v14→v15 and
+/// by v16→v17 so Atrius DBs that stamped outbox as v15 still get cleaned.
+fn sweep_orphaned_resource_fts(conn: &Connection) -> StorageResult<()> {
+    // FTS5 is optional at compile time; a database built without it has no
+    // table to sweep.
+    let fts_exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='resource_fts'",
+            [],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+    if !fts_exists {
+        return Ok(());
+    }
+
+    let swept = conn
+        .execute(
+            "DELETE FROM resource_fts
+              WHERE NOT EXISTS (
+                  SELECT 1 FROM resources r
+                   WHERE r.tenant_id     = resource_fts.tenant_id
+                     AND r.resource_type = resource_fts.resource_type
+                     AND r.id            = resource_fts.resource_id)",
+            [],
+        )
+        .map_err(|e| migration_err(format!("resource_fts orphan sweep: {e}")))?;
+
+    if swept > 0 {
+        tracing::info!(
+            orphaned_fts_rows = swept,
+            "Swept full-text rows left behind by pre-v15 purges (issue #386)"
+        );
+    }
+    Ok(())
+}
+
+/// Helios v37 -> v38: persist unfolded composite component ordinals. Existing
+/// rows stay NULL; their positions cannot be inferred from physical order.
+/// Does not stamp an integer version — the named ledger records the step.
 fn migrate_v37_to_v38(conn: &Connection) -> StorageResult<()> {
     if !table_columns(conn, "search_index")?
         .iter()
@@ -2186,13 +2400,13 @@ fn migrate_v37_to_v38(conn: &Connection) -> StorageResult<()> {
             "ALTER TABLE search_index ADD COLUMN composite_slot INTEGER",
             [],
         )
-        .map_err(|e| migration_err(format!("v38 add composite_slot: {e}")))?;
+        .map_err(|e| migration_err(format!("composite_slot add column: {e}")))?;
     }
     for (name, sql) in SEARCH_VALUE_INDEXES {
         if name == "idx_search_composite_legacy" || name == "idx_search_contained_composite_legacy"
         {
             conn.execute(sql, [])
-                .map_err(|e| migration_err(format!("v38 create {name}: {e}")))?;
+                .map_err(|e| migration_err(format!("composite_slot create {name}: {e}")))?;
         }
     }
     Ok(())
@@ -2548,6 +2762,82 @@ fn migrate_v46_to_v47(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
+/// Migrate from schema version 47 to 48: adds `search_index.value_reference_target`,
+/// the `Type/id` of a reference stored as an absolute http(s) URL (NULL for a
+/// relative one), so `subject=Patient/p1` and `_revinclude` also match
+/// `http://host/fhir/Patient/p1` (and `.../_history/2`). The value comes from
+/// [`crate::types::absolute_reference_target`], the same function the writer
+/// uses. The backfill runs in rowid batches of one transaction each and only
+/// visits absolute rows still without a target; the partial index is built
+/// afterwards over final data.
+fn migrate_v47_to_v48(conn: &Connection) -> StorageResult<()> {
+    if !table_columns(conn, "search_index")?
+        .iter()
+        .any(|column| column == "value_reference_target")
+    {
+        conn.execute(
+            "ALTER TABLE search_index ADD COLUMN value_reference_target TEXT",
+            [],
+        )
+        .map_err(|e| migration_err(format!("v48 add value_reference_target: {e}")))?;
+    }
+
+    const BATCH: i64 = 10_000;
+    let mut after = 0_i64;
+    loop {
+        let tx = conn
+            .unchecked_transaction()
+            .map_err(|e| migration_err(format!("v48 begin backfill batch: {e}")))?;
+        let rows: Vec<(i64, String)> = {
+            let mut select = tx
+                .prepare_cached(
+                    "SELECT rowid, value_reference FROM search_index
+                      WHERE rowid > ?1 AND value_reference_target IS NULL
+                        AND (value_reference LIKE 'http://%' OR value_reference LIKE 'https://%')
+                      ORDER BY rowid LIMIT ?2",
+                )
+                .map_err(|e| migration_err(format!("v48 read reference rows: {e}")))?;
+            let rows = select
+                .query_map(rusqlite::params![after, BATCH], |row| {
+                    Ok((row.get(0)?, row.get(1)?))
+                })
+                .map_err(|e| migration_err(format!("v48 read reference rows: {e}")))?;
+            rows.collect::<Result<_, _>>()
+                .map_err(|e| migration_err(format!("v48 read reference rows: {e}")))?
+        };
+        let Some(&(last, _)) = rows.last() else {
+            break;
+        };
+        after = last;
+        {
+            let mut update = tx
+                .prepare_cached(
+                    "UPDATE search_index SET value_reference_target = ?2 WHERE rowid = ?1",
+                )
+                .map_err(|e| migration_err(format!("v48 backfill value_reference_target: {e}")))?;
+            for (rowid, value) in rows {
+                if let Some(target) = crate::types::absolute_reference_target(&value) {
+                    update
+                        .execute(rusqlite::params![rowid, target])
+                        .map_err(|e| {
+                            migration_err(format!("v48 backfill value_reference_target: {e}"))
+                        })?;
+                }
+            }
+        }
+        tx.commit()
+            .map_err(|e| migration_err(format!("v48 commit backfill batch: {e}")))?;
+    }
+
+    for (name, sql) in SEARCH_VALUE_INDEXES {
+        if name == "idx_search_reference_target" {
+            conn.execute(sql, [])
+                .map_err(|e| migration_err(format!("v48 create {name}: {e}")))?;
+        }
+    }
+    Ok(())
+}
+
 fn migration_err(message: String) -> crate::error::StorageError {
     crate::error::StorageError::Backend(crate::error::BackendError::Internal {
         backend_name: "sqlite".to_string(),
@@ -2556,14 +2846,12 @@ fn migration_err(message: String) -> crate::error::StorageError {
     })
 }
 
-/// Migrate from schema version 16 to version 17.
+/// v17 -> v18: provider-side Bulk Submit store (#772).
 ///
-/// Adds the `bulk_provider_submissions` table backing the provider-side Bulk
-/// Submit store (#772): the submissions the Bulk Import workspace sends,
-/// previously misfiled in the per-user `user_settings` document. One opaque
-/// JSON document per (tenant, submission), whole-document writes under a
-/// monotonic `version` for optimistic locking.
-fn migrate_v16_to_v17(conn: &Connection) -> StorageResult<()> {
+/// Helios numbered this v16→v17. Atrius v17 is the subscription outbox, so the
+/// provider table lands as v18. `IF NOT EXISTS` is safe if a Helios-main
+/// database already applied the table under version 17.
+fn migrate_v17_to_v18(conn: &Connection) -> StorageResult<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS bulk_provider_submissions (
             tenant_id  TEXT NOT NULL,
@@ -2579,10 +2867,10 @@ fn migrate_v16_to_v17(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
-/// Migrate from schema version 17 to version 18: byte-level ingest
-/// progress on manifests, so the status endpoint can report a real
-/// percentage while a file streams in.
-fn migrate_v17_to_v18(conn: &Connection) -> StorageResult<()> {
+/// v18 → v19: byte-level ingest progress on manifests (Helios numbered this
+/// v17→v18), so the status endpoint can report a real percentage while a file
+/// streams in.
+fn migrate_v18_to_v19(conn: &Connection) -> StorageResult<()> {
     // The columns already exist when the table was created fresh at v18 — guard
     // with PRAGMA table_info since SQLite has no `ADD COLUMN IF NOT EXISTS`.
     let manifest_columns: Vec<String> = {
@@ -2615,13 +2903,14 @@ fn migrate_v17_to_v18(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
-/// v19: keyset-pagination index for reindex page fetches.
+/// v19 → v20: keyset-pagination index for reindex page fetches (Helios
+/// numbered this v18→v19).
 ///
 /// fetch_resources_page orders by (last_updated, id) within a
 /// (tenant_id, resource_type) — with no covering index every page pays a
 /// sort of the whole type, which turns a 5.7M-row Observation reindex
 /// quadratic (#903).
-fn migrate_v18_to_v19(conn: &Connection) -> StorageResult<()> {
+fn migrate_v19_to_v20(conn: &Connection) -> StorageResult<()> {
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_resources_reindex          ON resources(tenant_id, resource_type, last_updated, id)",
         [],
@@ -2630,9 +2919,8 @@ fn migrate_v18_to_v19(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
-/// Migrate from schema version 19 to version 20.
-///
-/// Rebuilds the nine per-family `search_index` indexes as partial indexes.
+/// v20 → v21: rebuild the nine per-family `search_index` indexes as partial
+/// indexes (Helios numbered this v19→v20).
 /// Every index row populates exactly one value-column family for its
 /// parameter type, but each INSERT maintained all fifteen secondary indexes —
 /// NULL columns included, so a token row still paid the date, number,
@@ -2645,7 +2933,7 @@ fn migrate_v18_to_v19(conn: &Connection) -> StorageResult<()> {
 /// value column (`value_date >= ?`, `value_token_code = ?`), which implies
 /// the index's `IS NOT NULL` (or OR-of-columns) predicate. `:missing` never
 /// scans value columns for NULL — it resolves from entry presence.
-fn migrate_v19_to_v20(conn: &Connection) -> StorageResult<()> {
+fn migrate_v20_to_v21(conn: &Connection) -> StorageResult<()> {
     let statements = [
         "DROP INDEX IF EXISTS idx_search_string",
         "CREATE INDEX idx_search_string ON search_index(tenant_id, resource_type, param_name, value_string) WHERE value_string IS NOT NULL",
@@ -2673,27 +2961,18 @@ fn migrate_v19_to_v20(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
-/// Migrate from schema version 20 to version 21.
+/// v21 → v22: drop `idx_search_resource` (Helios #947, their v20→v21).
 ///
-/// Drops `idx_search_resource`. It indexed
-/// `(tenant_id, resource_type, resource_id)` — a strict leftmost prefix of
-/// `idx_search_composite`'s `(tenant_id, resource_type, resource_id,
-/// param_name, composite_group)`, which every SQLite query planner will use
-/// for the same lookups. It therefore answered no query the composite index
-/// could not, while every row written to `search_index` (about 14 per
-/// ingested resource) paid a second b-tree insertion to maintain it.
-///
-/// Measured on a 86,453-resource bulk-submit ingest of the Synthea manifest
-/// (1.18M index rows): 1,946 -> 2,106 resources/s (+8%), with the
-/// `search_index` INSERT phase falling from 0.249 ms to 0.225 ms per resource
-/// and the database 85 MB smaller (#947).
-fn migrate_v20_to_v21(conn: &Connection) -> StorageResult<()> {
+/// It indexed `(tenant_id, resource_type, resource_id)` — a strict leftmost
+/// prefix of `idx_search_composite`. Every search_index row paid a second
+/// b-tree insertion for lookups the composite index already covers.
+fn migrate_v21_to_v22(conn: &Connection) -> StorageResult<()> {
     conn.execute("DROP INDEX IF EXISTS idx_search_resource", [])
-        .map_err(|e| migration_err(format!("v21 drop idx_search_resource: {e}")))?;
+        .map_err(|e| migration_err(format!("v22 drop idx_search_resource: {e}")))?;
     Ok(())
 }
 
-/// Migrate from schema version 21 to version 22.
+/// v22 → v23: late partial indexes (Helios #947, their v21→v22).
 ///
 /// Rebuilds the last three `search_index` indexes that were still *full*
 /// indexes over a column almost every row leaves NULL, as partial indexes
@@ -2733,7 +3012,7 @@ fn migrate_v20_to_v21(conn: &Connection) -> StorageResult<()> {
 /// composite, delete-by-resource) is byte-identical before and after this
 /// migration. Ingest of the same manifest went 2,238 -> 2,543 resources/s
 /// (+14%) with the database 124 MB (11%) smaller.
-fn migrate_v21_to_v22(conn: &Connection) -> StorageResult<()> {
+fn migrate_v22_to_v23(conn: &Connection) -> StorageResult<()> {
     let statements = [
         "DROP INDEX IF EXISTS idx_search_reference_display",
         "CREATE INDEX idx_search_reference_display
@@ -2755,7 +3034,7 @@ fn migrate_v21_to_v22(conn: &Connection) -> StorageResult<()> {
     Ok(())
 }
 
-/// Migrate from schema version 22 to version 23.
+/// v23 → v24: `resource_fts_map` (Helios #967, their v22→v23).
 ///
 /// Adds `resource_fts_map`, which records the `rowid` FTS5 assigned to each
 /// resource's `resource_fts` row, and backfills it from the rows already there
@@ -2780,7 +3059,7 @@ fn migrate_v21_to_v22(conn: &Connection) -> StorageResult<()> {
 /// FTS5 does index `rowid`, so with the mapping the delete becomes a b-tree
 /// lookup. The backfill is one scan of the FTS table — the cost of a single
 /// delete under the old scheme.
-fn migrate_v22_to_v23(conn: &Connection) -> StorageResult<()> {
+fn migrate_v23_to_v24(conn: &Connection) -> StorageResult<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS resource_fts_map (
             tenant_id TEXT NOT NULL,
@@ -2791,7 +3070,7 @@ fn migrate_v22_to_v23(conn: &Connection) -> StorageResult<()> {
         ) WITHOUT ROWID",
         [],
     )
-    .map_err(|e| migration_err(format!("v23 create resource_fts_map: {e}")))?;
+    .map_err(|e| migration_err(format!("v24 create resource_fts_map: {e}")))?;
 
     // The FTS table is optional: a build without FTS5 never created it, and
     // there is then nothing to map.
@@ -2810,12 +3089,13 @@ fn migrate_v22_to_v23(conn: &Connection) -> StorageResult<()> {
              SELECT tenant_id, resource_type, resource_id, rowid FROM resource_fts",
             [],
         )
-        .map_err(|e| migration_err(format!("v23 backfill resource_fts_map: {e}")))?;
+        .map_err(|e| migration_err(format!("v24 backfill resource_fts_map: {e}")))?;
     }
     Ok(())
 }
 
-/// Migrate from schema version 23 to version 24.
+/// v24 → v25: covering index for live-resource dashboard counts (Helios #959,
+/// their v23→v24).
 ///
 /// Adds `idx_resources_live_type` on
 /// `(tenant_id, is_deleted, resource_type)`, the covering index for the
@@ -2857,18 +3137,17 @@ fn migrate_v22_to_v23(conn: &Connection) -> StorageResult<()> {
 /// noticeable amount of time (and transient disk for the sort) before the
 /// server begins serving. It is a one-off cost — subsequent startups find the
 /// index already there and skip this migration entirely.
-fn migrate_v23_to_v24(conn: &Connection) -> StorageResult<()> {
+fn migrate_v24_to_v25(conn: &Connection) -> StorageResult<()> {
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_resources_live_type
          ON resources(tenant_id, is_deleted, resource_type)",
         [],
     )
-    .map_err(|e| migration_err(format!("v24 create idx_resources_live_type: {e}")))?;
+    .map_err(|e| migration_err(format!("v25 create idx_resources_live_type: {e}")))?;
     Ok(())
 }
 
-/// Migrate from schema version 24 to version 25: the coarse pre-ingest phase
-/// on manifests (#953).
+/// v25 → v26: coarse pre-ingest phase on manifests (Helios #953, their v24→v25).
 ///
 /// `ManifestStatus::Processing` covers a worker's whole run, so the window
 /// before the first NDJSON byte lands — fetching the remote Bulk Export
@@ -2878,7 +3157,7 @@ fn migrate_v23_to_v24(conn: &Connection) -> StorageResult<()> {
 /// last reported (NULL before any worker claims it, and for databases
 /// migrated from earlier versions); `files_done`/`files_total` are that
 /// phase's file counters.
-fn migrate_v24_to_v25(conn: &Connection) -> StorageResult<()> {
+fn migrate_v25_to_v26(conn: &Connection) -> StorageResult<()> {
     // SQLite has no `ADD COLUMN IF NOT EXISTS` and a duplicate column is a hard
     // error, so gate each ALTER on PRAGMA table_info the way the earlier
     // bulk-submit migrations do. A fresh database reaches this migration too
@@ -2951,10 +3230,10 @@ fn add_column_if_missing(
 /// The upgrade classifies every legacy row without deleting it, then adds two
 /// partial unique indexes so future SQLite publication can distinguish `None`
 /// from `Some("")` resource types.
-fn migrate_v25_to_v26(conn: &Connection) -> StorageResult<()> {
+fn migrate_publication(conn: &Connection) -> StorageResult<()> {
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)
         .map_err(|e| migration_err(format!("begin v26 migration: {e}")))?;
-    let result = migrate_v25_to_v26_in_transaction(&tx);
+    let result = migrate_publication_in_transaction(&tx);
 
     match result {
         Ok(()) => tx
@@ -2964,7 +3243,7 @@ fn migrate_v25_to_v26(conn: &Connection) -> StorageResult<()> {
     }
 }
 
-fn migrate_v25_to_v26_in_transaction(tx: &Connection) -> StorageResult<()> {
+fn migrate_publication_in_transaction(tx: &Connection) -> StorageResult<()> {
     let manifest_columns = table_columns(tx, "bulk_manifests")?;
     let file_columns = table_columns(tx, "bulk_submit_files")?;
     if manifest_columns.is_empty() || file_columns.is_empty() {
@@ -3211,7 +3490,7 @@ fn create_publication_partial_indexes(conn: &Connection) -> StorageResult<()> {
 /// writing. `types_done`/`types_total` accompany it so the poll can also show
 /// how far through the type list the worker is — both are `0` on a job the
 /// worker has not yet started.
-fn migrate_v26_to_v27(conn: &Connection) -> StorageResult<()> {
+fn migrate_export_types_progress(conn: &Connection) -> StorageResult<()> {
     let job_columns: Vec<String> = {
         let mut stmt = conn
             .prepare("PRAGMA table_info(bulk_export_jobs)")
@@ -3240,6 +3519,11 @@ fn migrate_v26_to_v27(conn: &Connection) -> StorageResult<()> {
         }
     }
     Ok(())
+}
+
+/// Named tip step: tombstone exhausted subscription outbox claims (`dead_at`).
+fn migrate_v26_to_v27(conn: &Connection) -> StorageResult<()> {
+    ensure_outbox_dead_letter(conn)
 }
 
 /// Drop all tables (for testing).
@@ -3536,6 +3820,34 @@ mod tests {
         .unwrap()
     }
 
+    fn applied_steps(conn: &Connection) -> HashSet<String> {
+        load_applied_steps(conn).unwrap()
+    }
+
+    /// Un-record migrate steps that complete at a version after `from`, so
+    /// named dispatch re-runs them. The integer stamp alone is not enough.
+    fn unrecord_steps_completing_after(conn: &Connection, from: i32) {
+        for (i, (name, _)) in SQLITE_STEPS.iter().enumerate() {
+            let completes_at = i as i32 + 2;
+            if completes_at > from {
+                conn.execute("DELETE FROM schema_migrations WHERE name = ?1", [name])
+                    .unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn test_sqlite_steps_align_with_schema_version() {
+        assert_eq!(SQLITE_STEPS.len() as i32 + 1, SCHEMA_VERSION);
+        assert_eq!(SQLITE_STEPS[OUTBOX_STEP_INDEX].0, OUTBOX_STEP);
+        let unique: HashSet<&str> = SQLITE_STEPS.iter().map(|(n, _)| *n).collect();
+        assert_eq!(
+            unique.len(),
+            SQLITE_STEPS.len(),
+            "step names must be unique"
+        );
+    }
+
     #[test]
     fn test_schema_initialization() {
         let conn = Connection::open_in_memory().unwrap();
@@ -3556,6 +3868,11 @@ mod tests {
         assert!(tables.contains(&"schema_version".to_string()));
         // The tenant registry (schema v14) is created on a fresh init.
         assert!(tables.contains(&"tenants".to_string()));
+        assert!(tables.contains(&"schema_migrations".to_string()));
+        let applied = applied_steps(&conn);
+        assert!(applied.contains(BASE_STEP));
+        assert!(applied.contains(OUTBOX_STEP));
+        assert_eq!(applied.len(), SQLITE_STEPS.len() + 1);
     }
 
     #[test]
@@ -3636,618 +3953,86 @@ mod tests {
 
         let version = get_schema_version(&conn).unwrap();
         assert_eq!(version, SCHEMA_VERSION);
-    }
 
-    /// Every schema object (`type`, `name`, `tbl_name`, `sql`), sorted, so two
-    /// snapshots compare equal only when the schema is byte-for-byte the same.
-    /// `sql` is NULL for autoindexes, hence the `Option`.
-    fn schema_objects(conn: &Connection) -> Vec<(String, String, String, Option<String>)> {
-        let mut stmt = conn
-            .prepare("SELECT type, name, tbl_name, sql FROM sqlite_master ORDER BY type, name")
-            .unwrap();
-        stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, Option<String>>(3)?,
-            ))
-        })
-        .unwrap()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap()
-    }
-
-    /// Names of the tables in the database, sorted.
-    fn table_names(conn: &Connection) -> Vec<String> {
-        let mut stmt = conn
-            .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-            .unwrap();
-        stmt.query_map([], |row| row.get::<_, String>(0))
-            .unwrap()
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap()
-    }
-
-    /// The number of rows in `schema_version` and the SQL literal of the first
-    /// stored value (`quote()`), so a TEXT, NULL, REAL or INTEGER value
-    /// compares as one string.
-    fn stored_version(conn: &Connection) -> (i64, String) {
-        conn.query_row(
-            "SELECT COUNT(*), (SELECT quote(version) FROM schema_version LIMIT 1) \
-             FROM schema_version",
-            [],
-            |row| {
-                Ok((
-                    row.get::<_, i64>(0)?,
-                    row.get::<_, Option<String>>(1)?
-                        .unwrap_or_else(|| "<no row>".to_string()),
-                ))
-            },
-        )
-        .unwrap()
-    }
-
-    /// The old unconditional version write (`DELETE` + `INSERT`), for fixtures
-    /// that rewind a database to re-run migrations. `set_schema_version` never
-    /// lowers the stored value (#2365), so a rewind through it would silently do
-    /// nothing and the migration under test would never run.
-    fn force_schema_version(conn: &Connection, version: i32) -> StorageResult<()> {
-        conn.execute("DELETE FROM schema_version", [])
-            .map_err(|e| {
-                crate::error::StorageError::Backend(crate::error::BackendError::Internal {
-                    backend_name: "sqlite".to_string(),
-                    message: format!("Failed to clear schema_version: {}", e),
-                    source: None,
-                })
-            })?;
-
-        conn.execute(
-            "INSERT INTO schema_version (version) VALUES (?1)",
-            [version],
-        )
-        .map_err(|e| {
-            crate::error::StorageError::Backend(crate::error::BackendError::Internal {
-                backend_name: "sqlite".to_string(),
-                message: format!("Failed to set schema_version: {}", e),
-                source: None,
-            })
-        })?;
-
-        Ok(())
-    }
-
-    /// Asserts `err` is the `BackendError::Internal` that `get_schema_version`
-    /// raises for a failed read, carrying a `rusqlite::Error` that is not
-    /// `QueryReturnedNoRows` (the one error that means a fresh database), and
-    /// that `expect` accepts that `rusqlite::Error`. Returns the message.
-    fn assert_schema_version_read_error(
-        err: crate::error::StorageError,
-        expect: impl FnOnce(&rusqlite::Error) -> bool,
-    ) -> String {
-        match err {
-            crate::error::StorageError::Backend(crate::error::BackendError::Internal {
-                backend_name,
-                message,
-                source,
-            }) => {
-                assert_eq!(backend_name, "sqlite");
-                assert!(
-                    message.contains("schema_version"),
-                    "message should name the table: {message}"
-                );
-                let source = source
-                    .as_deref()
-                    .and_then(|s| s.downcast_ref::<rusqlite::Error>())
-                    .expect("the rusqlite error should be kept as the source");
-                assert!(
-                    !matches!(source, rusqlite::Error::QueryReturnedNoRows),
-                    "QueryReturnedNoRows means a fresh database, not a read error"
-                );
-                assert!(expect(source), "unexpected rusqlite error: {source:?}");
-                message
-            }
-            other => panic!("expected BackendError::Internal, got {other:?}"),
-        }
-    }
-
-    /// The one case that may still read as version 0: the table exists and has
-    /// no row (`QueryReturnedNoRows`), which is what a fresh database is.
-    #[test]
-    fn get_schema_version_reads_an_empty_table_as_zero() {
-        let conn = Connection::open_in_memory().unwrap();
-
-        assert_eq!(get_schema_version(&conn).unwrap(), 0);
-
-        assert_eq!(table_names(&conn), vec!["schema_version".to_string()]);
-        let rows: i64 = conn
-            .query_row("SELECT COUNT(*) FROM schema_version", [], |row| row.get(0))
-            .unwrap();
-        assert_eq!(rows, 0);
-    }
-
-    /// #2366: a `schema_version` row that cannot be read as an `i32` must fail
-    /// `initialize_schema`, not read as version 0 and run the fresh-schema path
-    /// (`create_schema_v1`, `set_schema_version(1)`, the whole migration ladder)
-    /// over whatever is in the database.
-    #[test]
-    fn initialize_schema_refuses_an_unreadable_schema_version() {
-        type Expect = fn(&rusqlite::Error) -> bool;
-        let invalid_type: Expect = |e| matches!(e, rusqlite::Error::InvalidColumnType(..));
-        let out_of_range: Expect = |e| matches!(e, rusqlite::Error::IntegralValueOutOfRange(..));
-
-        // (label, setup, expected `quote(version)`, expected rusqlite error)
-        let cases: [(&str, &str, &str, Expect); 4] = [
-            (
-                "TEXT",
-                "CREATE TABLE schema_version (version INTEGER NOT NULL);
-                 INSERT INTO schema_version VALUES ('abc')",
-                "'abc'",
-                invalid_type,
-            ),
-            (
-                // Nullable, so it is created before init: the
-                // `CREATE TABLE IF NOT EXISTS` in `get_schema_version` is then
-                // a no-op and does not impose `NOT NULL`.
-                "NULL",
-                "CREATE TABLE schema_version (version INTEGER);
-                 INSERT INTO schema_version VALUES (NULL)",
-                "NULL",
-                invalid_type,
-            ),
-            (
-                // Not 47.0: INTEGER affinity would store that as the integer 47.
-                "REAL",
-                "CREATE TABLE schema_version (version INTEGER NOT NULL);
-                 INSERT INTO schema_version VALUES (47.5)",
-                "47.5",
-                invalid_type,
-            ),
-            (
-                "out of i32 range",
-                "CREATE TABLE schema_version (version INTEGER NOT NULL);
-                 INSERT INTO schema_version VALUES (4294967296)",
-                "4294967296",
-                out_of_range,
-            ),
-        ];
-
-        for (label, setup, quoted, expect) in cases {
-            let conn = Connection::open_in_memory().unwrap();
-            conn.execute_batch(setup).unwrap();
-
-            let err = initialize_schema(&conn).expect_err(&format!(
-                "{label}: initialize_schema must refuse the database"
-            ));
-            assert_schema_version_read_error(err, expect);
-
-            // The fresh-schema path did not run: no resources, history, search
-            // index, tenants or FTS tables were created ...
-            assert_eq!(
-                table_names(&conn),
-                vec!["schema_version".to_string()],
-                "{label}: no table may be created"
-            );
-            // ... and `set_schema_version(conn, 1)` did not rewrite the row.
-            assert_eq!(
-                stored_version(&conn),
-                (1, quoted.to_string()),
-                "{label}: the stored version must be left alone"
-            );
-            // Reading it directly fails the same way.
-            assert!(
-                get_schema_version(&conn).is_err(),
-                "{label}: get_schema_version must be an error"
-            );
-        }
-    }
-
-    /// The real #2366 scenario: a fully migrated database whose version row
-    /// then reads badly must not be re-initialized, re-migrated or re-stamped.
-    #[test]
-    fn initialize_schema_refuses_an_unreadable_version_on_an_existing_database() {
-        let conn = Connection::open_in_memory().unwrap();
-        initialize_schema(&conn).unwrap();
-        let before = schema_objects(&conn);
-
-        // INTEGER affinity cannot convert 'abc', so it is stored as TEXT.
-        conn.execute("UPDATE schema_version SET version = 'abc'", [])
-            .unwrap();
-
-        let err = initialize_schema(&conn).expect_err("an unreadable version must fail startup");
-        assert_schema_version_read_error(err, |e| {
-            matches!(e, rusqlite::Error::InvalidColumnType(..))
-        });
-
-        assert_eq!(
-            schema_objects(&conn),
-            before,
-            "the schema must not be touched (no ladder replay)"
-        );
-        assert_eq!(
-            stored_version(&conn),
-            (1, "'abc'".to_string()),
-            "the version must not be rewritten to 1 or {SCHEMA_VERSION}"
-        );
-    }
-
-    /// A stored 0 or negative version is not a fresh database: no code ever
-    /// writes one (the first stamp is 1), and reading it as 0 would run the
-    /// fresh-schema path over whatever the database holds. It is the same
-    /// refusal as an unreadable value, with no rusqlite error behind it.
-    #[test]
-    fn initialize_schema_refuses_a_stored_schema_version_below_one() {
-        for stored in [0_i32, -1] {
-            // A fully migrated database, then its version row is overwritten.
-            let conn = Connection::open_in_memory().unwrap();
-            initialize_schema(&conn).unwrap();
-            let before = schema_objects(&conn);
-            conn.execute("UPDATE schema_version SET version = ?1", [stored])
-                .unwrap();
-
-            let err = initialize_schema(&conn)
-                .expect_err(&format!("{stored}: initialize_schema must refuse it"));
-            match err {
-                crate::error::StorageError::Backend(crate::error::BackendError::Internal {
-                    backend_name,
-                    message,
-                    source,
-                }) => {
-                    assert_eq!(backend_name, "sqlite");
-                    assert!(
-                        message.contains("schema_version") && message.contains("below 1"),
-                        "{stored}: message should name the table and the rule: {message}"
-                    );
-                    assert!(
-                        message.contains(&format!("holds {stored},")),
-                        "{stored}: message should give the stored value: {message}"
-                    );
-                    assert!(
-                        message.contains("refusing to initialize"),
-                        "{stored}: message should say startup refused: {message}"
-                    );
-                    assert!(source.is_none(), "{stored}: there is no source error");
-                }
-                other => panic!("{stored}: expected BackendError::Internal, got {other:?}"),
-            }
-
-            // Not a fresh-database run, not a ladder replay, no re-stamp.
-            assert_eq!(
-                schema_objects(&conn),
-                before,
-                "{stored}: the schema must not be touched"
-            );
-            assert_eq!(
-                stored_version(&conn),
-                (1, stored.to_string()),
-                "{stored}: the stored version must be left alone"
-            );
-            assert!(
-                get_schema_version(&conn).is_err(),
-                "{stored}: get_schema_version must be an error"
-            );
-        }
-
-        // The same on a database that only has the `schema_version` row and
-        // nothing else: the fresh path (`create_schema_v1`) must not run.
-        for stored in [0_i32, -1] {
-            let conn = Connection::open_in_memory().unwrap();
-            conn.execute_batch(&format!(
-                "CREATE TABLE schema_version (version INTEGER NOT NULL);
-                 INSERT INTO schema_version VALUES ({stored})"
-            ))
-            .unwrap();
-
-            initialize_schema(&conn).expect_err("a stored version below 1 must fail startup");
-
-            assert_eq!(
-                table_names(&conn),
-                vec!["schema_version".to_string()],
-                "{stored}: no table may be created"
-            );
-            assert_eq!(stored_version(&conn), (1, stored.to_string()));
-        }
-    }
-
-    /// A read error that is not a type error: the `schema_version` table has
-    /// no `version` column, so `SELECT version` fails to prepare. A busy, locked
-    /// or I/O error cannot be forced deterministically here (the preceding
-    /// `CREATE TABLE IF NOT EXISTS` would hit the same lock first, and WAL
-    /// readers do not get `SQLITE_BUSY`), but it takes the same match arm.
-    #[test]
-    fn initialize_schema_refuses_a_schema_version_table_without_a_version_column() {
-        let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(
-            "CREATE TABLE schema_version (v INTEGER NOT NULL);
-             INSERT INTO schema_version VALUES (47)",
-        )
-        .unwrap();
-
-        let err = initialize_schema(&conn).expect_err("a failed read must fail startup");
-        let message = assert_schema_version_read_error(err, |e| {
-            matches!(
-                e,
-                rusqlite::Error::SqliteFailure(..) | rusqlite::Error::SqlInputError { .. }
+        let table_exists = |name: &str| -> i32 {
+            conn.query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                [name],
+                |row| row.get(0),
             )
-        });
-        assert!(
-            message.contains("no such column"),
-            "the rusqlite error should be in the message: {message}"
-        );
-
-        assert_eq!(table_names(&conn), vec!["schema_version".to_string()]);
-        let row: (i64, i64) = conn
-            .query_row("SELECT COUNT(*), v FROM schema_version", [], |row| {
-                Ok((row.get(0)?, row.get(1)?))
-            })
-            .unwrap();
-        assert_eq!(row, (1, 47), "the row must be left alone");
-    }
-
-    /// A database already at `SCHEMA_VERSION` is initialized again without any
-    /// change to its schema or its stored version.
-    #[test]
-    fn initialize_schema_leaves_a_current_database_unchanged() {
-        let conn = Connection::open_in_memory().unwrap();
-        initialize_schema(&conn).unwrap();
-        let before = schema_objects(&conn);
-
-        initialize_schema(&conn).unwrap();
-
-        assert_eq!(schema_objects(&conn), before);
-        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
-        assert_eq!(stored_version(&conn), (1, SCHEMA_VERSION.to_string()));
-    }
-
-    /// Asserts `err` is the `BackendError::Internal` that
-    /// `newer_schema_error` builds, with no source error, and returns its
-    /// message.
-    fn newer_schema_message(err: crate::error::StorageError) -> String {
-        match err {
-            crate::error::StorageError::Backend(crate::error::BackendError::Internal {
-                backend_name,
-                message,
-                source,
-            }) => {
-                assert_eq!(backend_name, "sqlite");
-                assert!(source.is_none(), "there is no source error");
-                message
-            }
-            other => panic!("expected BackendError::Internal, got {other:?}"),
-        }
-    }
-
-    /// #2365: a database that records a newer `schema_version` than this build
-    /// is refused before anything is written. The refused steps are the ones
-    /// that would change a database a newer HFS upgraded: the version row, the
-    /// tenant registry self-heal, and the search-index self-heal, which drops
-    /// and rebuilds a covering index whose shape differs from this build's.
-    #[test]
-    fn initialize_schema_refuses_a_newer_schema_version() {
-        for newer in [SCHEMA_VERSION + 1, i32::MAX] {
-            let conn = Connection::open_in_memory().unwrap();
-            initialize_schema(&conn).unwrap();
-            // One probe per step that must not run: `ensure_tenants_table`
-            // would recreate `tenants`, `ensure_search_value_indexes` would
-            // recreate `idx_search_string`, and would drop and rebuild
-            // `idx_search_token` in its pre-v46 non-covering shape.
-            conn.execute_batch(
-                "DROP TABLE tenants;
-                 DROP INDEX idx_search_string;
-                 DROP INDEX idx_search_token;
-                 CREATE INDEX idx_search_token ON search_index(tenant_id, resource_type, param_name, value_token_system, value_token_code) WHERE value_token_system IS NOT NULL OR value_token_code IS NOT NULL;",
-            )
-            .unwrap();
-            conn.execute("UPDATE schema_version SET version = ?1", [newer])
-                .unwrap();
-            let before = schema_objects(&conn);
-
-            for attempt in 1..=2 {
-                let err = initialize_schema(&conn).expect_err(&format!(
-                    "{newer}, attempt {attempt}: a newer database must be refused"
-                ));
-                let message = newer_schema_message(err);
-                for expected in [
-                    "SQLite database ':memory:'".to_string(),
-                    format!("has schema_version {newer}"),
-                    format!("newer than the {SCHEMA_VERSION} this HFS build supports"),
-                    "written by a newer HFS".to_string(),
-                    "The schema was not changed".to_string(),
-                ] {
-                    assert!(
-                        message.contains(&expected),
-                        "{newer}: message should contain {expected:?}: {message}"
-                    );
-                }
-
-                // No migration, no tenants table, no index created, dropped or
-                // reshaped ...
-                assert_eq!(
-                    schema_objects(&conn),
-                    before,
-                    "{newer}, attempt {attempt}: the schema must not be touched"
-                );
-                // ... and the recorded version is neither lowered nor rewritten.
-                assert_eq!(
-                    stored_version(&conn),
-                    (1, newer.to_string()),
-                    "{newer}, attempt {attempt}: the stored version must be left alone"
-                );
-            }
-
-            // Positive control: the probes are sensitive. Once the version is
-            // one this build supports, the same startup does repair them.
-            force_schema_version(&conn, SCHEMA_VERSION).unwrap();
-            initialize_schema(&conn).unwrap();
-            assert_ne!(
-                schema_objects(&conn),
-                before,
-                "{newer}: the probes are inert"
-            );
-            assert!(table_names(&conn).contains(&"tenants".to_string()));
-            let sql_of = |name: &str| -> Option<String> {
-                conn.query_row(
-                    "SELECT sql FROM sqlite_master WHERE type='index' AND name=?1",
-                    [name],
-                    |r| r.get(0),
-                )
-                .optional()
-                .unwrap()
-            };
-            assert!(sql_of("idx_search_string").is_some());
-            let canonical = SEARCH_VALUE_INDEXES
-                .iter()
-                .find(|(name, _)| *name == "idx_search_token")
-                .map(|(_, sql)| normalise_index_sql(sql))
-                .unwrap();
-            assert_eq!(
-                normalise_index_sql(&sql_of("idx_search_token").unwrap()),
-                canonical
-            );
-        }
-
-        // A database that holds only a `schema_version` row: nothing is created
-        // beside it (before #2365 `ensure_tenants_table` made `tenants` here).
-        let newer = SCHEMA_VERSION + 1;
-        let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(&format!(
-            "CREATE TABLE schema_version (version INTEGER NOT NULL);
-             INSERT INTO schema_version VALUES ({newer})"
-        ))
-        .unwrap();
-
-        let err = initialize_schema(&conn).expect_err("a newer database must be refused");
-        let message = newer_schema_message(err);
-        assert!(
-            message.contains(&format!("has schema_version {newer}")),
-            "{message}"
-        );
-        assert_eq!(table_names(&conn), vec!["schema_version".to_string()]);
-        assert_eq!(stored_version(&conn), (1, newer.to_string()));
-    }
-
-    /// #2365: a legacy `schema_version` table can hold more than one row (the
-    /// old DELETE + INSERT write left several after interleaved starts). The
-    /// newer-schema refusal must look at the highest row, not at whichever row
-    /// comes first in rowid order, or a newer database behind a lower row would
-    /// pass the check and have its startup steps run on it.
-    #[test]
-    fn initialize_schema_refuses_a_newer_schema_version_behind_a_lower_row() {
-        let newer = SCHEMA_VERSION + 1;
-        let conn = Connection::open_in_memory().unwrap();
-        initialize_schema(&conn).unwrap();
-        // The same probe as `initialize_schema_refuses_a_newer_schema_version`:
-        // `ensure_tenants_table` would recreate `tenants` if it ran.
-        conn.execute_batch("DROP TABLE tenants").unwrap();
-        // The lower row is inserted first, so rowid order is `[SCHEMA_VERSION,
-        // SCHEMA_VERSION + 1]` and a read without an ORDER BY returns the lower.
-        conn.execute_batch(&format!(
-            "DELETE FROM schema_version;
-             INSERT INTO schema_version VALUES ({SCHEMA_VERSION});
-             INSERT INTO schema_version VALUES ({newer})"
-        ))
-        .unwrap();
-        let all_rows = |conn: &Connection| -> Vec<String> {
-            conn.prepare("SELECT quote(version) FROM schema_version ORDER BY rowid")
-                .unwrap()
-                .query_map([], |row| row.get::<_, String>(0))
-                .unwrap()
-                .collect::<Result<_, _>>()
-                .unwrap()
+            .unwrap()
         };
-        let rows = vec![SCHEMA_VERSION.to_string(), newer.to_string()];
         assert_eq!(
-            all_rows(&conn),
-            rows,
-            "the fixture holds the lower row first in rowid order"
+            table_exists("subscription_outbox"),
+            1,
+            "v17 must create the Atrius subscription outbox"
         );
-        let before = schema_objects(&conn);
-
-        for attempt in 1..=2 {
-            let err = initialize_schema(&conn).expect_err(&format!(
-                "attempt {attempt}: a newer database behind a lower row must be refused"
-            ));
-            let message = newer_schema_message(err);
-            assert!(
-                message.contains(&format!("has schema_version {newer}")),
-                "attempt {attempt}: {message}"
-            );
-            assert_eq!(
-                schema_objects(&conn),
-                before,
-                "attempt {attempt}: the schema must not be touched"
-            );
-            assert_eq!(
-                all_rows(&conn),
-                rows,
-                "attempt {attempt}: both rows must be left alone"
-            );
-        }
-    }
-
-    /// #2365: the version write never lowers the stored value and never adds a
-    /// row to a non-empty table.
-    #[test]
-    fn set_schema_version_never_lowers_and_never_adds_a_row() {
-        // (a) The first stamp of a fresh database goes into the empty table.
-        let conn = Connection::open_in_memory().unwrap();
-        assert_eq!(get_schema_version(&conn).unwrap(), 0);
-        set_schema_version(&conn, 1).unwrap();
-        assert_eq!(stored_version(&conn), (1, "1".to_string()));
-
-        // (b) On an initialized database a lower or equal value is a no-op, and
-        // a higher one raises the single row.
-        let conn = Connection::open_in_memory().unwrap();
-        initialize_schema(&conn).unwrap();
-        let current = (1, SCHEMA_VERSION.to_string());
-        set_schema_version(&conn, 10).unwrap();
-        assert_eq!(stored_version(&conn), current);
-        set_schema_version(&conn, SCHEMA_VERSION).unwrap();
-        assert_eq!(stored_version(&conn), current);
-        set_schema_version(&conn, SCHEMA_VERSION + 1).unwrap();
-        assert_eq!(stored_version(&conn), (1, (SCHEMA_VERSION + 1).to_string()));
-        set_schema_version(&conn, SCHEMA_VERSION).unwrap();
-        assert_eq!(stored_version(&conn), (1, (SCHEMA_VERSION + 1).to_string()));
-
-        // (c) A legacy table with two rows (two interleaved old-binary starts,
-        // or a manual edit): every lower row is raised and no row is added.
-        let conn = Connection::open_in_memory().unwrap();
-        assert_eq!(get_schema_version(&conn).unwrap(), 0);
-        conn.execute_batch(
-            "INSERT INTO schema_version VALUES (3); INSERT INTO schema_version VALUES (5)",
-        )
-        .unwrap();
-        set_schema_version(&conn, 4).unwrap();
-        let mut versions: Vec<i32> = conn
-            .prepare("SELECT version FROM schema_version ORDER BY version")
-            .unwrap()
-            .query_map([], |row| row.get(0))
-            .unwrap()
-            .collect::<Result<_, _>>()
-            .unwrap();
-        versions.sort_unstable();
-        assert_eq!(versions, vec![4, 5]);
-    }
-
-    /// The startup error names the database and both versions, and its whole
-    /// text is pinned: it is worded as on MongoDB (#2352) and PostgreSQL
-    /// (#2367).
-    #[test]
-    fn newer_schema_error_names_the_database_and_both_versions() {
-        let err = newer_schema_error("/data/fhir.db", 48, 47);
-        let rendered = err.to_string();
-        let message = newer_schema_message(err);
-
         assert_eq!(
-            message,
-            "SQLite database '/data/fhir.db' has schema_version 48, newer than the 47 this \
-             HFS build supports: the database was written by a newer HFS. The schema was not \
-             changed; run an HFS release that supports schema version 48 or later."
+            table_exists("bulk_provider_submissions"),
+            1,
+            "v18 must create Helios bulk_provider_submissions"
+        );
+        let flavour: Option<String> = conn
+            .query_row("SELECT flavour FROM schema_version LIMIT 1", [], |row| {
+                row.get(0)
+            })
+            .ok();
+        assert_eq!(
+            flavour.as_deref(),
+            Some(SCHEMA_FLAVOUR),
+            "startup must stamp fork provenance"
+        );
+        let has_bytes = conn
+            .prepare("PRAGMA table_info(bulk_manifests)")
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(1))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .any(|c| c == "bytes_processed");
+        assert!(has_bytes, "v19 must add bulk_manifests.bytes_processed");
+        let applied = applied_steps(&conn);
+        assert!(applied.contains(OUTBOX_STEP));
+        assert!(applied.contains("bulk_provider_submissions"));
+        assert!(applied.contains("bulk_manifests_byte_progress"));
+        assert!(applied.contains("resources_reindex_keyset"));
+        assert!(applied.contains("search_index_partial_family_indexes"));
+        assert!(applied.contains("search_index_drop_resource_prefix"));
+        assert!(applied.contains("search_index_partial_late_indexes"));
+        assert!(applied.contains("resource_fts_map"));
+        assert!(applied.contains("search_index_partial_folded"));
+        assert!(applied.contains("search_index_drop_token_display"));
+        assert!(applied.contains("bulk_manifests_index_pending"));
+        assert!(applied.contains("search_index_resource_key"));
+        assert!(applied.contains("bulk_manifest_file_progress"));
+        assert!(applied.contains("bulk_export_jobs_attempts"));
+        assert!(applied.contains("secondary_sync_failures"));
+        assert!(applied.contains(OUTBOX_DEAD_LETTER_STEP));
+        assert!(
+            table_has_column(&conn, "bulk_export_jobs", "attempts").unwrap(),
+            "v33 must add bulk_export_jobs.attempts"
+        );
+        assert_eq!(
+            table_exists("secondary_sync_failures"),
+            1,
+            "v34 must create secondary_sync_failures"
         );
         assert!(
-            rendered.contains(&message),
-            "the Display text should carry the message: {rendered}"
+            table_has_column(&conn, "subscription_outbox", "dead_at").unwrap(),
+            "v36 must add subscription_outbox.dead_at"
         );
+        assert_eq!(
+            table_exists("resource_fts_map"),
+            1,
+            "v24 must create resource_fts_map"
+        );
+        let has_reindex: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_resources_reindex'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(has_reindex, 1, "v20 must create idx_resources_reindex");
     }
 
     /// v41 -> v42: the old-shape quantity/token indexes are rebuilt with
@@ -4265,7 +4050,7 @@ mod tests {
              CREATE INDEX idx_search_token ON search_index(tenant_id, resource_type, param_name, value_token_system, value_token_code) WHERE value_token_system IS NOT NULL OR value_token_code IS NOT NULL;",
         )
         .unwrap();
-        force_schema_version(&conn, 41).unwrap();
+        set_schema_version(&conn, 41).unwrap();
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         let sql_of = |name: &str| -> String {
@@ -4312,7 +4097,8 @@ mod tests {
         initialize_schema(&conn).unwrap();
         conn.execute("DROP INDEX idx_bulk_submissions_updated_at", [])
             .unwrap();
-        force_schema_version(&conn, 46).unwrap();
+        unrecord_steps_completing_after(&conn, 46);
+        set_schema_version(&conn, 47).unwrap();
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         let count = |c: &Connection| -> i64 {
@@ -4327,6 +4113,66 @@ mod tests {
         // A replay is a no-op.
         migrate_v46_to_v47(&conn).unwrap();
         assert_eq!(count(&conn), 1);
+    }
+
+    /// v47 -> v48 adds `value_reference_target`, backfills it for absolute
+    /// http(s) references only (stripping `_history`), indexes it, and a
+    /// replay is a no-op.
+    #[test]
+    fn migrate_v47_to_v48_backfills_absolute_reference_targets() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = OFF").unwrap();
+        conn.execute("DROP INDEX idx_search_reference_target", [])
+            .unwrap();
+        conn.execute(
+            "ALTER TABLE search_index DROP COLUMN value_reference_target",
+            [],
+        )
+        .unwrap();
+        for (i, reference) in [
+            "Patient/rel",
+            "http://example.org/fhir/Patient/p1",
+            "https://h/r4/Patient/p2/_history/2",
+        ]
+        .iter()
+        .enumerate()
+        {
+            conn.execute(
+                "INSERT INTO search_index (tenant_id, resource_type, resource_id, param_name, value_reference)
+                 VALUES ('t', 'Observation', ?1, 'subject', ?2)",
+                rusqlite::params![format!("o{i}"), reference],
+            )
+            .unwrap();
+        }
+        force_schema_version(&conn, 47).unwrap();
+        initialize_schema(&conn).unwrap();
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        let targets = |c: &Connection| -> Vec<Option<String>> {
+            c.prepare("SELECT value_reference_target FROM search_index ORDER BY resource_id")
+                .unwrap()
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .map(|r| r.unwrap())
+                .collect()
+        };
+        let expected = vec![
+            None,
+            Some("Patient/p1".to_string()),
+            Some("Patient/p2".to_string()),
+        ];
+        assert_eq!(targets(&conn), expected);
+        let index_count: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE type='index' AND name='idx_search_reference_target'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(index_count, 1);
+        // A replay is a no-op.
+        migrate_v47_to_v48(&conn).unwrap();
+        assert_eq!(targets(&conn), expected);
     }
 
     /// v45 -> v46 drops the two extra code-first indexes of the earlier
@@ -4347,7 +4193,8 @@ mod tests {
              CREATE INDEX idx_search_token_code ON search_index(tenant_id, resource_type, param_name, value_token_code, value_token_system, resource_key) WHERE value_token_code IS NOT NULL;",
         )
         .unwrap();
-        force_schema_version(&conn, 45).unwrap();
+        unrecord_steps_completing_after(&conn, 45);
+        set_schema_version(&conn, 45).unwrap();
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         let exists = |name: &str| -> bool {
@@ -4473,7 +4320,8 @@ mod tests {
              CREATE INDEX idx_history_resource ON resource_history(tenant_id, resource_type, id);",
         )
         .unwrap();
-        force_schema_version(&conn, 44).unwrap();
+        unrecord_steps_completing_after(&conn, 44);
+        set_schema_version(&conn, 44).unwrap();
         initialize_schema(&conn).unwrap();
         assert!(!exists("idx_resources_type") && !exists("idx_history_resource"));
         // Other shapes under the same names survive.
@@ -4588,7 +4436,11 @@ mod tests {
              VALUES ('t', 'Observation', 'old', 'pair', 7, 'A');",
         )
         .unwrap();
-        force_schema_version(&conn, 37).unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = 'search_index_composite_slot'",
+            [],
+        )
+        .unwrap();
         initialize_schema(&conn).unwrap();
         let row: (i64, String, Option<i64>) = conn.query_row(
             "SELECT composite_group, value_token_code, composite_slot FROM search_index WHERE resource_id = 'old'",
@@ -4795,7 +4647,12 @@ mod tests {
         assert!(!logs_contain("Migrating the SQLite schema"));
         assert!(!logs_contain("SQLite schema migration step applied"));
 
-        force_schema_version(&conn, SCHEMA_VERSION - 1).unwrap();
+        set_schema_version(&conn, SCHEMA_VERSION - 1).unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = ?1",
+            [OUTBOX_DEAD_LETTER_STEP],
+        )
+        .unwrap();
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         assert!(logs_contain("Migrating the SQLite schema"));
@@ -4839,11 +4696,12 @@ mod tests {
     /// `is_deleted`, so SQLite had to visit every matching table row just to
     /// test `is_deleted = 0` — ~30 s to render `/ui` over 6M resources.
     ///
-    /// The column order of the v24 index is the whole point, so it is asserted
-    /// exactly: `tenant_id` and `is_deleted` are equality-matched and form the
-    /// probed prefix, after which `resource_type` is already sorted within that
-    /// prefix and the `GROUP BY` needs no sort. Reordering the columns compiles
-    /// and passes every functional test while quietly restoring the 30 s load.
+    /// The column order of the live-type index is the whole point, so it is
+    /// asserted exactly: `tenant_id` and `is_deleted` are equality-matched and
+    /// form the probed prefix, after which `resource_type` is already sorted
+    /// within that prefix and the `GROUP BY` needs no sort. Reordering the
+    /// columns compiles and passes every functional test while quietly restoring
+    /// the 30 s load.
     #[test]
     fn resources_carries_the_live_type_covering_index_in_order() {
         let resources_index_set = |conn: &Connection| -> Vec<(String, Option<String>)> {
@@ -4907,42 +4765,48 @@ mod tests {
         initialize_schema(&upgraded).unwrap();
         assert_eq!(resources_index_set(&fresh), resources_index_set(&upgraded));
 
-        // A genuine v23-era database: everything current except the v24 index.
-        let v23 = Connection::open_in_memory().unwrap();
-        initialize_schema(&v23).unwrap();
-        v23.execute("DROP INDEX idx_resources_live_type", [])
+        // Named dispatch re-runs the step when it is un-recorded.
+        let existing = Connection::open_in_memory().unwrap();
+        initialize_schema(&existing).unwrap();
+        existing
+            .execute("DROP INDEX idx_resources_live_type", [])
             .unwrap();
-        force_schema_version(&v23, 23).unwrap();
-        assert!(!has_index(&v23, "idx_resources_live_type"));
+        existing
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'resources_live_type_index'",
+                [],
+            )
+            .unwrap();
+        assert!(!has_index(&existing, "idx_resources_live_type"));
 
-        // The same entry point the server uses on an existing database.
-        initialize_schema(&v23).unwrap();
-        assert_eq!(get_schema_version(&v23).unwrap(), SCHEMA_VERSION);
+        initialize_schema(&existing).unwrap();
+        assert_eq!(get_schema_version(&existing).unwrap(), SCHEMA_VERSION);
         assert!(
-            has_index(&v23, "idx_resources_live_type"),
-            "the v23 -> v24 migration must create idx_resources_live_type"
+            has_index(&existing, "idx_resources_live_type"),
+            "un-recording resources_live_type_index must recreate idx_resources_live_type"
         );
         assert_eq!(
-            index_columns(&v23, "idx_resources_live_type"),
+            index_columns(&existing, "idx_resources_live_type"),
             index_columns(&fresh, "idx_resources_live_type"),
             "the migrated index must match the one a fresh database creates"
         );
     }
 
-    /// #967: the v23 mapping must exist and be backfilled from whatever FTS
-    /// rows a pre-v23 database already had, or those rows could never be
-    /// deleted by rowid and would linger as stale `_text`/`_content` matches.
+    /// #967: the mapping must exist and be backfilled from whatever FTS rows a
+    /// pre-`resource_fts_map` database already had, or those rows could never
+    /// be deleted by rowid and would linger as stale `_text`/`_content`
+    /// matches. Named dispatch re-runs the step when it is un-recorded.
     #[test]
-    fn v23_backfills_the_fts_rowid_mapping_from_existing_rows() {
+    fn resource_fts_map_backfills_from_existing_rows() {
         let conn = Connection::open_in_memory().unwrap();
-        // A database at v22, with FTS content written the pre-v23 way.
-        create_schema_v1(&conn).unwrap();
-        let _ = get_schema_version(&conn).unwrap();
-        set_schema_version(&conn, 1).unwrap();
-        migrate_schema(&conn, 1, false).unwrap();
+        initialize_schema(&conn).unwrap();
         conn.execute("DROP TABLE IF EXISTS resource_fts_map", [])
             .unwrap();
-        force_schema_version(&conn, 22).unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = 'resource_fts_map'",
+            [],
+        )
+        .unwrap();
 
         let fts_exists: bool = conn
             .query_row(
@@ -5398,7 +5262,7 @@ mod tests {
             "submission-rollback",
             "manifest-rollback",
         );
-        force_schema_version(&conn, 25).unwrap();
+        set_schema_version(&conn, 25).unwrap();
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         assert_eq!(artifact_classification(&conn, output), classified);
@@ -5613,12 +5477,22 @@ mod tests {
 
     /// Replay migrations against an already current database, including a
     /// retry after the schema transaction committed before its version stamp.
+
+    /// Migrations must be re-runnable: a database already carrying the latest
+    /// columns can be replayed from any earlier recorded version (tests do this,
+    /// and so does a build that stamped a version before finishing its work).
+    /// SQLite has no `ADD COLUMN IF NOT EXISTS`, so every `ALTER TABLE ... ADD
+    /// COLUMN` step has to guard against the column already being there.
+    ///
+    /// Named dispatch keys off `schema_migrations`, so this un-records steps
+    /// that complete after `from` rather than relying on the integer stamp.
     #[test]
     fn test_migration_ladder_replays_on_a_current_database() {
         for from in 1..SCHEMA_VERSION {
             let conn = Connection::open_in_memory().unwrap();
             initialize_schema(&conn).unwrap();
-            force_schema_version(&conn, from).unwrap();
+            set_schema_version(&conn, from).unwrap();
+            unrecord_steps_completing_after(&conn, from);
             initialize_schema(&conn)
                 .unwrap_or_else(|e| panic!("replay from v{from} failed: {e:?}"));
             assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
@@ -5652,7 +5526,8 @@ mod tests {
             )
             .unwrap();
         }
-        force_schema_version(&conn, 34).unwrap();
+        set_schema_version(&conn, 34).unwrap();
+        unrecord_steps_completing_after(&conn, 34);
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
 
@@ -5691,10 +5566,11 @@ mod tests {
         initialize_schema(&conn).unwrap();
         conn.execute_batch(
             "DROP INDEX idx_history_updated;
-             CREATE INDEX idx_history_updated ON resource_history(tenant_id, last_updated);",
+             CREATE INDEX idx_history_updated ON resource_history(tenant_id, last_updated);
+             DELETE FROM schema_migrations WHERE name = 'history_updated_index';",
         )
         .unwrap();
-        force_schema_version(&conn, 39).unwrap();
+        set_schema_version(&conn, 39).unwrap();
         let shape = || -> String {
             conn.query_row(
                 "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_history_updated'",
@@ -5737,7 +5613,12 @@ mod tests {
             )
             .unwrap();
         }
-        force_schema_version(&conn, 38).unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = 'search_index_date_start'",
+            [],
+        )
+        .unwrap();
+        set_schema_version(&conn, 38).unwrap();
         conn
     }
 
@@ -5985,7 +5866,8 @@ mod tests {
         migrated
             .execute_batch("ALTER TABLE bulk_manifest_file_progress DROP COLUMN completed;")
             .unwrap();
-        force_schema_version(&migrated, 36).unwrap();
+        set_schema_version(&migrated, 36).unwrap();
+        unrecord_steps_completing_after(&migrated, 36);
         assert!(!has_completed(&migrated));
         initialize_schema(&migrated).unwrap();
         assert_eq!(get_schema_version(&migrated).unwrap(), SCHEMA_VERSION);
@@ -6017,7 +5899,8 @@ mod tests {
         migrated
             .execute_batch("DROP INDEX idx_login_sessions_expires; DROP TABLE login_sessions;")
             .unwrap();
-        force_schema_version(&migrated, 35).unwrap();
+        set_schema_version(&migrated, 35).unwrap();
+        unrecord_steps_completing_after(&migrated, 35);
         initialize_schema(&migrated).unwrap();
         assert_eq!(get_schema_version(&migrated).unwrap(), SCHEMA_VERSION);
         assert!(
@@ -6026,7 +5909,142 @@ mod tests {
                 .is_empty()
         );
     }
+    /// An upstream-numbered database at v18 never ran this fork's v16→v17
+    /// outbox step. Empty ledger + no flavour + no table is the real upgrade
+    /// path; named dispatch must create the table rather than boot with a
+    /// silent missing outbox.
+    #[test]
+    fn test_initialize_schema_heals_outbox_on_upstream_numbered_database() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP TABLE subscription_outbox", [])
+            .expect("drop outbox");
+        conn.execute("DELETE FROM schema_migrations", [])
+            .expect("empty ledger");
+        set_schema_version(&conn, 18).unwrap();
 
+        initialize_schema(&conn).unwrap();
+
+        let exists: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='subscription_outbox'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(exists, 1, "heal must create subscription_outbox");
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        let flavour: String = conn
+            .query_row("SELECT flavour FROM schema_version LIMIT 1", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(flavour, SCHEMA_FLAVOUR);
+        assert!(
+            applied_steps(&conn).contains(OUTBOX_STEP),
+            "ledger must record the outbox step after heal"
+        );
+    }
+
+    /// Integer already at the tip, but the named outbox step is missing from
+    /// the ledger (and the table is gone). Dispatch must consult names, not
+    /// skip because `version >= SCHEMA_VERSION`.
+    #[test]
+    fn test_named_ledger_dispatch_runs_unrecorded_outbox_at_tip() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP TABLE subscription_outbox", [])
+            .expect("drop outbox");
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = ?1",
+            [OUTBOX_STEP],
+        )
+        .expect("un-record outbox");
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+
+        initialize_schema(&conn).unwrap();
+
+        let exists: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='subscription_outbox'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            exists, 1,
+            "named dispatch must run the unrecorded outbox step"
+        );
+        assert!(applied_steps(&conn).contains(OUTBOX_STEP));
+    }
+
+    /// Already at the fork tip, but missing the table (dropped, or a version
+    /// stamp that skipped the outbox step). Heal must not depend on version <.
+    #[test]
+    fn test_initialize_schema_heals_outbox_when_already_at_tip() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute("DROP TABLE subscription_outbox", [])
+            .expect("drop outbox");
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+
+        initialize_schema(&conn).unwrap();
+
+        let exists: i32 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='subscription_outbox'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(exists, 1, "heal must create subscription_outbox at tip");
+        assert!(applied_steps(&conn).contains(OUTBOX_STEP));
+    }
+
+    /// A database that already has the outbox table (schema 21) must grow
+    /// `dead_at` when the named dead-letter step runs.
+    #[test]
+    fn test_dead_letter_step_adds_dead_at_on_existing_outbox() {
+        let conn = Connection::open_in_memory().unwrap();
+        initialize_schema(&conn).unwrap();
+        conn.execute_batch(
+            "DROP TABLE subscription_outbox;
+             CREATE TABLE subscription_outbox (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id TEXT NOT NULL UNIQUE,
+                tenant_id TEXT NOT NULL,
+                fhir_version TEXT NOT NULL,
+                resource_type TEXT NOT NULL,
+                resource_id TEXT NOT NULL,
+                version_id TEXT NOT NULL DEFAULT '',
+                event_type TEXT NOT NULL,
+                resource TEXT,
+                previous_resource TEXT,
+                envelope TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                available_at TEXT NOT NULL,
+                processed_at TEXT,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT,
+                locked_by TEXT,
+                locked_until TEXT
+             );",
+        )
+        .unwrap();
+        conn.execute(
+            "DELETE FROM schema_migrations WHERE name = ?1",
+            [OUTBOX_DEAD_LETTER_STEP],
+        )
+        .unwrap();
+        set_schema_version(&conn, 21).unwrap();
+        assert!(!table_has_column(&conn, "subscription_outbox", "dead_at").unwrap());
+
+        initialize_schema(&conn).unwrap();
+
+        assert!(table_has_column(&conn, "subscription_outbox", "dead_at").unwrap());
+        assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        assert!(applied_steps(&conn).contains(OUTBOX_DEAD_LETTER_STEP));
+    }
     /// #1127: the v32 file-progress table and skipped counter exist on a fresh
     /// database, and replaying the migration on one that has them is a no-op.
     #[test]

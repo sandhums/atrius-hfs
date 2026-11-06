@@ -94,40 +94,31 @@ pub fn access_polymorphic_element(
                 // Check if key starts with the first part and has a type suffix
                 if key.starts_with(first_part) && key.len() > first_part.len() {
                     // Extract the type suffix (need uppercase letter after base name)
-                    if let Some(c) = key.chars().nth(first_part.len()) {
-                        if c.is_uppercase()
-                            && crate::resource_type::is_valid_fhir_type_suffix(
-                                &key[first_part.len()..],
-                                &version,
-                            )
-                        {
-                            // This is a potential choice element with type suffix
-                            if let EvaluationResult::Object {
-                                map: inner_obj,
-                                type_info: _,
-                            } = value
-                            {
-                                // Try to resolve the rest of the path
-                                if let Some(result) =
-                                    access_polymorphic_element(inner_obj, rest, version)
-                                {
-                                    return Some(result);
-                                }
-                            }
-                        }
+                    if let Some(c) = key.chars().nth(first_part.len())
+                        && c.is_uppercase()
+                        && crate::resource_type::is_valid_fhir_type_suffix(
+                            &key[first_part.len()..],
+                            &version,
+                        )
+                        && let EvaluationResult::Object {
+                            map: inner_obj,
+                            type_info: _,
+                        } = value
+                        && let Some(result) = access_polymorphic_element(inner_obj, rest, version)
+                    {
+                        return Some(result);
                     }
                 }
             }
         } else {
             // Regular path (not a choice element)
-            if let Some(value) = obj.get(first_part) {
-                if let EvaluationResult::Object {
+            if let Some(value) = obj.get(first_part)
+                && let EvaluationResult::Object {
                     map: inner_obj,
                     type_info: _,
                 } = value
-                {
-                    return access_polymorphic_element(inner_obj, rest, version);
-                }
+            {
+                return access_polymorphic_element(inner_obj, rest, version);
             }
         }
 
@@ -542,10 +533,10 @@ pub fn is_choice_element_with_context(
         for base_name in choice_elements {
             if field_name.starts_with(base_name) && field_name.len() > base_name.len() {
                 // Check if the character after the base name is uppercase
-                if let Some(c) = field_name.chars().nth(base_name.len()) {
-                    if c.is_uppercase() {
-                        return true;
-                    }
+                if let Some(c) = field_name.chars().nth(base_name.len())
+                    && c.is_uppercase()
+                {
+                    return true;
                 }
             }
         }
@@ -749,20 +740,20 @@ pub fn apply_polymorphic_type_operation(
 
                 // Check if this resource is an Observation with a valueQuantity field
                 if let Some(EvaluationResult::String(resource_type, _, _)) = obj.get("resourceType")
+                    && resource_type == "Observation"
+                    && obj.contains_key("valueQuantity")
                 {
-                    if resource_type == "Observation" && obj.contains_key("valueQuantity") {
-                        return if op == "is" {
-                            Ok(EvaluationResult::boolean(true))
+                    return if op == "is" {
+                        Ok(EvaluationResult::boolean(true))
+                    } else {
+                        // op == "as"
+                        // Return the valueQuantity field
+                        if let Some(quantity) = obj.get("valueQuantity") {
+                            Ok(quantity.clone())
                         } else {
-                            // op == "as"
-                            // Return the valueQuantity field
-                            if let Some(quantity) = obj.get("valueQuantity") {
-                                Ok(quantity.clone())
-                            } else {
-                                Ok(EvaluationResult::Empty)
-                            }
-                        };
-                    }
+                            Ok(EvaluationResult::Empty)
+                        }
+                    };
                 }
             }
 
@@ -953,11 +944,10 @@ pub fn apply_polymorphic_type_operation(
                             // Check if the value field looks like a Quantity
                             if let Some(EvaluationResult::Object { map: value_obj, .. }) =
                                 obj.get("value")
+                                && value_obj.contains_key("value")
+                                && value_obj.contains_key("unit")
                             {
-                                if value_obj.contains_key("value") && value_obj.contains_key("unit")
-                                {
-                                    return Ok(EvaluationResult::boolean(true));
-                                }
+                                return Ok(EvaluationResult::boolean(true));
                             }
 
                             // Also check for valueQuantity
@@ -968,10 +958,10 @@ pub fn apply_polymorphic_type_operation(
 
                         // Try matching the value's type directly
                         // For native types mapped to FHIR primitive types
-                        if let Some(EvaluationResult::String(value_type, _, _)) = obj.get("type") {
-                            if value_type == type_name {
-                                return Ok(EvaluationResult::boolean(true));
-                            }
+                        if let Some(EvaluationResult::String(value_type, _, _)) = obj.get("type")
+                            && value_type == type_name
+                        {
+                            return Ok(EvaluationResult::boolean(true));
                         }
 
                         // No match found

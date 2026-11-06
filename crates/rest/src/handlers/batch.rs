@@ -24,7 +24,7 @@ use helios_persistence::core::{
     ConditionalPatchPreparation, ConditionalStorage, ConditionalUpdateResult, IncludeProvider,
     PatchCandidateValidator, ResourceStorage, RevincludeProvider, SearchProvider,
     SystemHistoryProvider, WriteKind, WriteNotice, apply_patch_for_version, bundle_if_match_gate,
-    decode_bundle_patch_resource,
+    bundle_if_none_match_gate, bundle_patch_format,
 };
 use helios_persistence::error::{
     ResourceError, StorageError, TooLargeForCacheCause, TransactionError,
@@ -837,20 +837,82 @@ where
     // Write-path validation: transactions are atomic, so any invalid write
     // entry rejects the whole bundle before anything executes.
     for (index, entry, _) in &indexed_entries {
-        if !matches!(entry.method, BundleMethod::Post | BundleMethod::Put) {
-            continue;
-        }
-        let Some(resource) = &entry.resource else {
-            continue;
-        };
-        let (resource_type, _) =
+        let (resource_type, id) =
             parse_request_url(&entry.url).map_err(|e| RestError::InvalidElementValue {
                 message: format!("Entry {}: {}", index, e),
             })?;
-        state
-            .validation()
-            .check_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
-            .await?;
+        match entry.method {
+            BundleMethod::Post | BundleMethod::Put => {
+                let Some(resource) = &entry.resource else {
+                    continue;
+                };
+                state
+                    .validation()
+                    .check_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
+                    .await?;
+            }
+            BundleMethod::Delete => {
+                // A type-level URL with criteria is a conditional delete, resolved
+                // inside the transaction (#859). Only an unconditional delete
+                // must name an instance.
+                if entry.criteria.is_some() {
+                    continue;
+                }
+                if id.is_empty() {
+                    return Err(RestError::BadRequest {
+                        message: format!(
+                            "Entry {index}: DELETE request.url must address an instance ('[type]/[id]')"
+                        ),
+                    });
+                }
+                if state
+                    .storage()
+                    .read(tenant.context(), &resource_type, &id)
+                    .await?
+                    .is_none()
+                {
+                    return Err(RestError::NotFound { resource_type, id });
+                }
+            }
+            BundleMethod::Patch => {
+                let Some(patch_doc) = &entry.resource else {
+                    return Err(RestError::BadRequest {
+                        message: format!("Entry {index}: PATCH entry missing resource"),
+                    });
+                };
+                if id.is_empty() {
+                    // Conditional patch: the match is resolved inside the
+                    // transaction, so there is no instance to pre-validate.
+                    if entry.criteria.is_some() {
+                        continue;
+                    }
+                    return Err(RestError::BadRequest {
+                        message: format!(
+                            "Entry {index}: PATCH request.url must address an instance ('[type]/[id]')"
+                        ),
+                    });
+                }
+                // POST+PATCH in the same transaction: the target may not exist
+                // yet. Validate only when it already does.
+                if let Some(existing) = state
+                    .storage()
+                    .read(tenant.context(), &resource_type, &id)
+                    .await?
+                {
+                    let patch = bundle_patch_format(patch_doc, fhir_version)?;
+                    let patched = apply_patch_for_version(
+                        existing.content(),
+                        &patch,
+                        existing.fhir_version(),
+                    )?;
+                    state
+                        .validation()
+                        .check_write(tenant.tenant_id(), fhir_version, &resource_type, &patched)
+                        .await?;
+                }
+            }
+            BundleMethod::Get => {}
+        }
     }
 
     // Sort by processing order: DELETE -> POST -> PUT/PATCH -> GET
@@ -1112,8 +1174,29 @@ async fn check_entry_if_match<S>(
 where
     S: ResourceStorage + Send + Sync,
 {
-    // Entries that send no precondition pay nothing — not even the read.
-    if_match?;
+    check_entry_entity_tag_preconditions(state, tenant, resource_type, id, if_match, None).await
+}
+
+/// Evaluates `ifMatch` and `ifNoneMatch` on a batch instance PUT (or
+/// `ifMatch` alone on DELETE) against the current representation.
+///
+/// `If-None-Match: *` is create-if-absent: it fails when the resource already
+/// exists so a replay cannot overwrite it. Entries that send neither header
+/// pay nothing — not even the read.
+async fn check_entry_entity_tag_preconditions<S>(
+    state: &AppState<S>,
+    tenant: &TenantExtractor,
+    resource_type: &str,
+    id: &str,
+    if_match: Option<&str>,
+    if_none_match: Option<&str>,
+) -> Option<BundleEntryResult>
+where
+    S: ResourceStorage + Send + Sync,
+{
+    if if_match.is_none() && if_none_match.is_none() {
+        return None;
+    }
 
     let current = match state
         .storage()
@@ -1122,13 +1205,18 @@ where
     {
         Ok(current) => current,
         // A deleted resource has no current representation, which is a failed
-        // precondition rather than a storage error — the same mapping
-        // `handlers::update` and the backends' own batch arms make.
+        // If-Match rather than a storage error — the same mapping
+        // `handlers::update` and the backends' own batch arms make. If-None-Match
+        // treats that absence as success (`*` is then satisfied).
         Err(StorageError::Resource(ResourceError::Gone { .. })) => None,
         Err(e) => return Some(entry_storage_failure(e)),
     };
 
-    bundle_if_match_gate(if_match, current.as_ref().map(|r| r.version_id()))
+    let version = current.as_ref().map(|r| r.version_id());
+    if let Some(failure) = bundle_if_match_gate(if_match, version) {
+        return Some(failure);
+    }
+    bundle_if_none_match_gate(if_none_match, version)
 }
 
 /// The notice kind a committed transaction write announces, or `None` when
@@ -1271,6 +1359,7 @@ where
         return entry_failure(missing_url(index));
     };
     let if_match = request.get("ifMatch").and_then(|v| v.as_str());
+    let if_none_match = request.get("ifNoneMatch").and_then(|v| v.as_str());
     let if_none_exist = request.get("ifNoneExist").and_then(|v| v.as_str());
 
     // Parse the URL to extract resource type and ID
@@ -1657,10 +1746,17 @@ where
             }
 
             // Ahead of validation, because every backend evaluates `ifMatch`
-            // first: a stale precondition carrying an invalid body is a 412,
-            // not a 422.
-            if let Some(failure) =
-                check_entry_if_match(state, tenant, &resource_type, &id, if_match).await
+            // and `ifNoneMatch` first: a stale precondition carrying an invalid
+            // body is a 412, not a 422.
+            if let Some(failure) = check_entry_entity_tag_preconditions(
+                state,
+                tenant,
+                &resource_type,
+                &id,
+                if_match,
+                if_none_match,
+            )
+            .await
             {
                 return failure;
             }
@@ -1846,7 +1942,7 @@ where
             message: "PATCH entry missing resource".to_string(),
         });
     };
-    let patch = match decode_bundle_patch_resource(document, fhir_version) {
+    let patch = match bundle_patch_format(document, fhir_version) {
         Ok(patch) => patch,
         Err(error) => return entry_failure(error.into()),
     };
@@ -5857,10 +5953,6 @@ mod tests {
             "resourceType": "Bundle",
             "type": "batch",
             "entry": [
-                {
-                    "request": { "method": "PATCH", "url": "Patient/p1" },
-                    "resource": { "resourceType": "Patient" }
-                },
                 { "request": { "method": "HEAD", "url": "Patient/p1" } },
                 {
                     "request": { "method": "post", "url": "Patient" },
@@ -5879,16 +5971,16 @@ mod tests {
         assert_eq!(
             statuses,
             vec![
-                "400 Bad Request",
                 "405 Method Not Allowed",
                 "400 Bad Request",
                 "400 Bad Request",
             ]
         );
-        // The four refusals were indistinguishable below the status line until
-        // #504 — every one carried `processing`. PATCH's resource is malformed,
-        // HEAD is a capability gap, a lowercase verb is unusable, and an absent
-        // method is a missing element.
+        // The three refusals were indistinguishable below the status line until
+        // #504 — every one carried `processing`. HEAD is a capability gap, a
+        // lowercase verb is an unusable value, and an absent method is a
+        // missing element. Bundle PATCH is implemented on this fork, so it is
+        // not a refusal here (Helios still answers 400 invalid).
         let codes: Vec<&str> = entries
             .iter()
             .map(|e| {
@@ -5897,7 +5989,7 @@ mod tests {
                     .unwrap()
             })
             .collect();
-        assert_eq!(codes, vec!["invalid", "not-supported", "value", "required"]);
+        assert_eq!(codes, vec!["not-supported", "value", "required"]);
         assert_eq!(state.storage().peak(), 0, "no entry may reach storage");
     }
 

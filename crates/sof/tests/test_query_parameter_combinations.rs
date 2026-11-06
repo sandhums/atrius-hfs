@@ -391,7 +391,7 @@ async fn test_valid_since_parameter_formats() {
 /// `source` is deliberately excluded: unlike when this test was written
 /// against the stub (which treated `source` as a no-op), production now
 /// really resolves it via `UniversalDataSource` (see
-/// `test_post_source_not_implemented`'s updated doc comment), so an
+/// `server_tests::test_post_source_fetch_error_returns_422`), so an
 /// arbitrary non-URL placeholder like `"primary-database"` is correctly
 /// rejected as an invalid source URL. `patient` / `group` also now require
 /// the referenced `Patient` / `Group` resources to be present among the

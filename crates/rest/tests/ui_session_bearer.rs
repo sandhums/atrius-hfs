@@ -29,16 +29,10 @@ struct StubProvider;
 impl AuthProvider for StubProvider {
     async fn authenticate(&self, authorization_header: &str) -> Result<Principal, AuthError> {
         if authorization_header == format!("Bearer {GOOD_TOKEN}") {
-            Ok(Principal {
-                subject: "demo-sub".to_string(),
-                issuer: "https://idp.example.com".to_string(),
-                tenant_id: None,
-                scopes: ScopeSet::parse("system/*.cruds"),
-                jti: None,
-                expires_at: chrono::Utc::now() + chrono::Duration::minutes(5),
-                custom_claims: serde_json::Map::new(),
-                ..Default::default()
-            })
+            Ok(
+                Principal::stub("demo-sub", ScopeSet::parse("system/*.cruds"))
+                    .with_issuer("https://idp.example.com"),
+            )
         } else {
             Err(AuthError::InvalidSignature)
         }

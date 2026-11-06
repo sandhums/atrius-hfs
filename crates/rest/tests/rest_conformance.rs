@@ -865,6 +865,131 @@ mod conditional_update {
 }
 
 // =============================================================================
+// PUT If-None-Match: * (create-if-absent)
+// =============================================================================
+
+mod put_if_none_match {
+    use super::*;
+
+    #[tokio::test]
+    async fn star_creates_when_the_resource_is_absent() {
+        let (server, _backend) = create_test_server().await;
+
+        let created = json!({
+            "resourceType": "Patient",
+            "id": "fresh",
+            "name": [{"family": "Created"}]
+        });
+
+        let response = server
+            .put("/Patient/fresh")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .add_header(IF_NONE_MATCH, HeaderValue::from_static("*"))
+            .json(&created)
+            .await;
+
+        response.assert_status(StatusCode::CREATED);
+
+        let read = server
+            .get("/Patient/fresh")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await;
+        let body: Value = read.json();
+        assert_eq!(body["name"][0]["family"], "Created");
+    }
+
+    #[tokio::test]
+    async fn star_is_412_when_the_resource_exists() {
+        let (server, backend) = create_test_server().await;
+        seed_patient(&backend, "patient-1", "Smith").await;
+
+        let overwritten = json!({
+            "resourceType": "Patient",
+            "id": "patient-1",
+            "name": [{"family": "Overwritten"}]
+        });
+
+        let response = server
+            .put("/Patient/patient-1")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .add_header(IF_NONE_MATCH, HeaderValue::from_static("*"))
+            .json(&overwritten)
+            .await;
+
+        response.assert_status(StatusCode::PRECONDITION_FAILED);
+
+        let read = server
+            .get("/Patient/patient-1")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await;
+        let body: Value = read.json();
+        assert_eq!(body["name"][0]["family"], "Smith");
+    }
+
+    /// A deleted resource has no current representation, so `*` is satisfied
+    /// and the PUT restores (FHIR update-after-delete). `create` would collide
+    /// with the tombstone; restore uses `create_or_update`.
+    #[tokio::test]
+    async fn star_restores_a_deleted_resource() {
+        let (server, _backend) = create_test_server().await;
+
+        let created = json!({
+            "resourceType": "Patient",
+            "id": "gone",
+            "name": [{"family": "Original"}]
+        });
+        server
+            .put("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .json(&created)
+            .await
+            .assert_status(StatusCode::CREATED);
+
+        server
+            .delete("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await
+            .assert_status(StatusCode::NO_CONTENT);
+
+        let restored = json!({
+            "resourceType": "Patient",
+            "id": "gone",
+            "name": [{"family": "Restored"}]
+        });
+        server
+            .put("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .add_header(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/fhir+json"),
+            )
+            .add_header(IF_NONE_MATCH, HeaderValue::from_static("*"))
+            .json(&restored)
+            .await
+            .assert_status(StatusCode::CREATED);
+
+        let read = server
+            .get("/Patient/gone")
+            .add_header(X_TENANT_ID, HeaderValue::from_static("test-tenant"))
+            .await;
+        let body: Value = read.json();
+        assert_eq!(body["name"][0]["family"], "Restored");
+    }
+}
+
+// =============================================================================
 // Conditional Delete Tests (If-Match on DELETE) — issue #312
 // =============================================================================
 

@@ -362,20 +362,12 @@ async fn read_optional_json_body(request: Request) -> RestResult<Option<serde_js
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Utc;
     use helios_auth::scope::ScopeSet;
 
     fn principal(scopes: &str) -> Principal {
-        Principal {
-            subject: "client-1".to_string(),
-            issuer: "https://idp.example.com".to_string(),
-            tenant_id: Some("t1".to_string()),
-            scopes: ScopeSet::parse(scopes),
-            jti: None,
-            expires_at: Utc::now() + chrono::Duration::hours(1),
-            custom_claims: serde_json::Map::new(),
-            ..Default::default()
-        }
+        Principal::stub("client-1", ScopeSet::parse(scopes))
+            .with_issuer("https://idp.example.com")
+            .with_tenant_id("t1")
     }
 
     /// Ordinary update scope must not authorize a full index rebuild.

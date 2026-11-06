@@ -6,8 +6,13 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 
+use helios_fhir::FhirVersion;
+use serde_json::Value;
+
 use crate::error::SubscriptionError;
 use crate::event::ResourceEventType;
+
+pub mod fhirpath_criteria;
 
 const FHIR_TYPES_SYSTEM: &str = "http://hl7.org/fhir/fhir-types";
 const SUBSCRIPTION_TOPIC_CODE: &str = "SubscriptionTopic";
@@ -142,12 +147,35 @@ impl InMemoryTopicRegistry {
     /// Evaluates which topics match a resource event.
     ///
     /// Checks the supplied tenant's topic triggers against the event's resource
-    /// type and interaction type.
+    /// type and interaction type. Criteria-bearing triggers do not match here;
+    /// callers that have the resource body use [`Self::matching_topics_with_resource`].
     pub fn matching_topics(
         &self,
         tenant_id: &str,
         resource_type: &str,
         event_type: ResourceEventType,
+    ) -> Vec<TopicMatch> {
+        self.matching_topics_with_resource(
+            tenant_id,
+            resource_type,
+            event_type,
+            None,
+            None,
+            FhirVersion::default(),
+        )
+    }
+
+    /// Like [`Self::matching_topics`], and also applies `fhirPathCriteria`
+    /// (`%previous` / `%current`) when the trigger carries one. A criteria
+    /// trigger with no current resource does not match.
+    pub fn matching_topics_with_resource(
+        &self,
+        tenant_id: &str,
+        resource_type: &str,
+        event_type: ResourceEventType,
+        resource: Option<&Value>,
+        previous_resource: Option<&Value>,
+        fhir_version: FhirVersion,
     ) -> Vec<TopicMatch> {
         let topics = self.topics.read().unwrap();
         let mut matches = Vec::new();
@@ -157,16 +185,30 @@ impl InMemoryTopicRegistry {
 
         for topic in catalog.values() {
             for trigger in &topic.resource_triggers {
-                if trigger.resource_type == resource_type
-                    && trigger.interactions.contains(&event_type)
+                if trigger.resource_type != resource_type
+                    || !trigger.interactions.contains(&event_type)
                 {
-                    matches.push(TopicMatch {
-                        topic_url: topic.canonical_url.clone(),
-                        focus_resource_type: trigger.resource_type.clone(),
-                    });
-                    // Only match once per topic even if multiple triggers match.
-                    break;
+                    continue;
                 }
+                if let Some(criteria) = trigger.fhirpath_criteria.as_deref() {
+                    let Some(current) = resource else {
+                        continue;
+                    };
+                    if !fhirpath_criteria::criteria_matches(
+                        criteria,
+                        current,
+                        previous_resource,
+                        fhir_version,
+                    ) {
+                        continue;
+                    }
+                }
+                matches.push(TopicMatch {
+                    topic_url: topic.canonical_url.clone(),
+                    focus_resource_type: trigger.resource_type.clone(),
+                });
+                // Only match once per topic even if multiple triggers match.
+                break;
             }
         }
 
@@ -840,6 +882,72 @@ mod tests {
 
         let matches = registry.matching_topics("t1", "Observation", ResourceEventType::Create);
         assert_eq!(matches.len(), 2);
+    }
+
+    #[cfg(feature = "R4")]
+    #[test]
+    fn test_fhirpath_criteria_filters_topic_match() {
+        let registry = InMemoryTopicRegistry::new();
+        registry.add_topic(
+            "t1",
+            TopicDefinition {
+                canonical_url: "http://example.org/topic/encounter-admit".to_string(),
+                title: Some("Admit".to_string()),
+                resource_triggers: vec![ResourceTrigger {
+                    resource_type: "Encounter".to_string(),
+                    interactions: vec![ResourceEventType::Create, ResourceEventType::Update],
+                    fhirpath_criteria: Some(
+                        "(%previous.empty() or %previous.status != 'in-progress') and status = 'in-progress'"
+                            .into(),
+                    ),
+                }],
+                can_filter_by: vec![],
+                notification_shape: vec![],
+            },
+        );
+
+        let admit = json!({
+            "resourceType": "Encounter",
+            "id": "e1",
+            "status": "in-progress",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" }
+        });
+        let planned = json!({
+            "resourceType": "Encounter",
+            "id": "e1",
+            "status": "planned",
+            "class": { "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "IMP" }
+        });
+
+        let matches = registry.matching_topics_with_resource(
+            "t1",
+            "Encounter",
+            ResourceEventType::Create,
+            Some(&admit),
+            None,
+            helios_fhir::FhirVersion::R4,
+        );
+        assert_eq!(matches.len(), 1);
+
+        let matches = registry.matching_topics_with_resource(
+            "t1",
+            "Encounter",
+            ResourceEventType::Update,
+            Some(&admit),
+            Some(&admit),
+            helios_fhir::FhirVersion::R4,
+        );
+        assert!(matches.is_empty());
+
+        let matches = registry.matching_topics_with_resource(
+            "t1",
+            "Encounter",
+            ResourceEventType::Update,
+            Some(&admit),
+            Some(&planned),
+            helios_fhir::FhirVersion::R4,
+        );
+        assert_eq!(matches.len(), 1);
     }
 
     #[test]

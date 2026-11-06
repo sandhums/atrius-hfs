@@ -110,7 +110,11 @@ async fn build_provider(jwks_url: &str) -> JwksBearerAuthProvider {
         .await
         .expect("JWKS fetch should succeed");
 
-    JwksBearerAuthProvider::new(jwks_cache, &config)
+    JwksBearerAuthProvider::new(
+        jwks_cache,
+        std::sync::Arc::new(helios_auth::NoOpJtiRevocation),
+        &config,
+    )
 }
 
 /// The same access token — same `jti` — must authenticate on every request.

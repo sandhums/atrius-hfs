@@ -82,30 +82,6 @@ impl SuggestionEngine {
             }
         }
 
-        // Chained search heavy workload
-        if workload.chained_search_ratio > 0.2 {
-            if !config
-                .backends
-                .iter()
-                .any(|b| b.kind == BackendKind::Neo4j && b.role == BackendRole::Graph)
-            {
-                suggestions.push(OptimizationSuggestion {
-                    priority: SuggestionPriority::Medium,
-                    category: SuggestionCategory::Performance,
-                    title: "Consider Neo4j for relationship-heavy queries".to_string(),
-                    description: format!(
-                        "Your workload has {:.0}% chained/relationship queries. \
-                         Neo4j excels at graph traversals.",
-                        workload.chained_search_ratio * 100.0
-                    ),
-                    estimated_improvement: Some("2-5x faster chained queries".to_string()),
-                    implementation: Some(
-                        "Add a secondary backend with role=Graph, kind=Neo4j".to_string(),
-                    ),
-                });
-            }
-        }
-
         // High write workload
         if workload.write_ratio > 0.5 {
             let primary = config
@@ -235,12 +211,7 @@ impl SuggestionEngine {
             let expensive_backends: Vec<_> = config
                 .backends
                 .iter()
-                .filter(|b| {
-                    matches!(
-                        b.kind,
-                        BackendKind::Elasticsearch | BackendKind::Neo4j | BackendKind::Postgres
-                    )
-                })
+                .filter(|b| matches!(b.kind, BackendKind::Elasticsearch | BackendKind::Postgres))
                 .collect();
 
             if !expensive_backends.is_empty() {
@@ -314,20 +285,6 @@ impl SuggestionEngine {
                     "Full-text search".to_string(),
                     "Analytics".to_string(),
                     "Log aggregation".to_string(),
-                ],
-            },
-        );
-
-        profiles.insert(
-            BackendKind::Neo4j,
-            BackendCostProfile {
-                setup_cost: 150.0,
-                monthly_cost: 300.0,
-                cost_per_query: 0.00002,
-                best_for: vec![
-                    "Graph queries".to_string(),
-                    "Relationship traversal".to_string(),
-                    "Chained search".to_string(),
                 ],
             },
         );

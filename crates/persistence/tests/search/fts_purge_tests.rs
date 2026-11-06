@@ -260,6 +260,20 @@ fn drop_fts_table(path: &Path) {
         .expect("drop resource_fts");
 }
 
+/// Simulate a pre-v15 database so `initialize_schema` re-runs the orphan sweep.
+///
+/// Dispatch keys off named `schema_migrations` rows; the integer stamp is only
+/// a bootstrap for an empty ledger. Rewinding `schema_version` alone leaves
+/// `resource_fts_orphan_sweep` marked applied and the DELETE never runs.
+fn rewind_schema_to_v14(conn: &rusqlite::Connection) {
+    conn.execute("DELETE FROM schema_migrations", [])
+        .expect("clear named ledger");
+    conn.execute("DELETE FROM schema_version", [])
+        .expect("clear version");
+    conn.execute("INSERT INTO schema_version (version) VALUES (14)", [])
+        .expect("set version 14");
+}
+
 /// The `v14 -> v15` migration sweeps orphans left by the pre-fix purge paths.
 ///
 /// The code fix only stops *new* orphans. Every database that has already served
@@ -269,8 +283,8 @@ fn drop_fts_table(path: &Path) {
 ///
 /// Reproduces that state directly — an FTS row whose `resources` row is gone,
 /// which is exactly what the old `purge` left behind — then reopens the database
-/// at the pre-migration version and asserts the orphan is swept while a live
-/// resource's row is untouched.
+/// at the pre-migration version (empty named ledger + integer 14) and asserts
+/// the orphan is swept while a live resource's row is untouched.
 #[tokio::test]
 async fn migration_sweeps_orphaned_fts_rows_from_existing_databases() {
     let (backend, _dir, path) = file_backend();
@@ -312,11 +326,7 @@ async fn migration_sweeps_orphaned_fts_rows_from_existing_databases() {
             "POSITIVE CONTROL: the simulated pre-fix purge must leave the orphan behind"
         );
 
-        // Wind the recorded schema version back so the migration ladder re-runs.
-        conn.execute("DELETE FROM schema_version", [])
-            .expect("clear version");
-        conn.execute("INSERT INTO schema_version (version) VALUES (14)", [])
-            .expect("set version 14");
+        rewind_schema_to_v14(&conn);
     }
 
     // Reopening runs migrate_v14_to_v15.
@@ -386,9 +396,7 @@ async fn migration_preserves_fts_rows_for_soft_deleted_resources() {
 
     {
         let conn = rusqlite::Connection::open(&path).expect("probe connection");
-        conn.execute("DELETE FROM schema_version", []).unwrap();
-        conn.execute("INSERT INTO schema_version (version) VALUES (14)", [])
-            .unwrap();
+        rewind_schema_to_v14(&conn);
     }
 
     let reopened = SqliteBackend::with_config(

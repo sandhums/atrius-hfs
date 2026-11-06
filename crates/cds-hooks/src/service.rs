@@ -80,6 +80,10 @@ pub enum CdsHooksError {
     #[error("invalid context: {0}")]
     InvalidContext(#[from] serde_json::Error),
 
+    /// Upstream clinical engine or dependency returned an error (HTTP 502 Bad Gateway).
+    #[error("bad gateway: {0}")]
+    BadGateway(String),
+
     /// An internal error occurred while processing the request.
     #[error("internal error: {0}")]
     InternalError(String),
@@ -91,6 +95,7 @@ impl CdsHooksError {
         match self {
             CdsHooksError::PreconditionFailed(_) => 412,
             CdsHooksError::InvalidContext(_) => 400,
+            CdsHooksError::BadGateway(_) => 502,
             CdsHooksError::InternalError(_) => 500,
         }
     }
@@ -268,6 +273,10 @@ mod tests {
         assert_eq!(
             CdsHooksError::InternalError("oops".to_string()).status_code(),
             500
+        );
+        assert_eq!(
+            CdsHooksError::BadGateway("upstream".to_string()).status_code(),
+            502
         );
     }
 

@@ -377,6 +377,11 @@ pub struct SubscriptionManager {
 
     /// Supported channel types.
     supported_channels: Vec<String>,
+
+    /// Last notification time per `(tenant, subscription)`, for heartbeat scheduling.
+    /// Not on [`ActiveSubscription`]: Helios snapshots are copied into queues, and
+    /// a side map stays current after those copies are made.
+    last_notification_at: DashMap<(String, String), chrono::DateTime<chrono::Utc>>,
 }
 
 impl SubscriptionManager {
@@ -389,6 +394,7 @@ impl SubscriptionManager {
             subscriptions: DashMap::new(),
             topic_registry,
             supported_channels,
+            last_notification_at: DashMap::new(),
         }
     }
 
@@ -548,13 +554,14 @@ impl SubscriptionManager {
             "Registered subscription"
         );
 
+        self.touch_last_notification(tenant_id, subscription_id);
         Ok(snapshot)
     }
 
     /// Removes a subscription from the in-memory index.
     pub fn deregister(&self, tenant_id: &str, subscription_id: &str) -> bool {
         let key = (tenant_id.to_string(), subscription_id.to_string());
-        let removed = match self.subscriptions.entry(key) {
+        let removed = match self.subscriptions.entry(key.clone()) {
             Entry::Occupied(entry) => {
                 entry.get().generation.invalidate();
                 entry.remove();
@@ -562,6 +569,9 @@ impl SubscriptionManager {
             }
             Entry::Vacant(_) => false,
         };
+        if removed {
+            self.last_notification_at.remove(&key);
+        }
         if removed {
             debug!(
                 tenant = tenant_id,
@@ -655,7 +665,39 @@ impl SubscriptionManager {
             .collect()
     }
 
-    #[cfg(test)]
+    /// Records that a notification (event, handshake, or heartbeat) was sent.
+    pub fn touch_last_notification(&self, tenant_id: &str, subscription_id: &str) {
+        self.last_notification_at.insert(
+            (tenant_id.to_string(), subscription_id.to_string()),
+            chrono::Utc::now(),
+        );
+    }
+
+    /// Active subscriptions whose `heartbeatPeriod` has elapsed since the last notification.
+    pub fn subscriptions_due_for_heartbeat(
+        &self,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Vec<ActiveSubscription> {
+        self.all_subscriptions()
+            .into_iter()
+            .filter(|sub| {
+                if sub.status != SubscriptionStatusCode::Active {
+                    return false;
+                }
+                let Some(period) = sub.channel.heartbeat_period else {
+                    return false;
+                };
+                let Some(last) = self
+                    .last_notification_at
+                    .get(&(sub.tenant_id.clone(), sub.id.clone()))
+                else {
+                    return false;
+                };
+                now >= *last + chrono::Duration::seconds(i64::from(period))
+            })
+            .collect()
+    }
+
     pub(crate) fn get_snapshot(
         &self,
         tenant_id: &str,

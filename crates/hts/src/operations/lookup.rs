@@ -60,10 +60,7 @@ use super::params::{
 fn build_lookup_cache_key(params: &[Value]) -> Option<String> {
     let mut frags: Vec<(String, String)> = Vec::with_capacity(params.len());
     for p in params {
-        let name = match p.get("name").and_then(|v| v.as_str()) {
-            Some(n) => n,
-            None => return None,
-        };
+        let name = p.get("name").and_then(|v| v.as_str())?;
         if p.get("resource").is_some() {
             return None;
         }
@@ -257,7 +254,7 @@ async fn process_lookup_inner<B: TerminologyBackend>(
     // and parsed the entire `resource_json` blob just to read `.language` —
     // the dominant cost on the LK01-04 hot path under 50-VU load. The
     // dedicated trait method runs ONE `json_extract` query and is memoised
-    // in a process-wide cache.
+    // on the backend instance, unless this request addressed one resource.
     let cs_language = if let Some(selected) = instance {
         selected.language.clone()
     } else {

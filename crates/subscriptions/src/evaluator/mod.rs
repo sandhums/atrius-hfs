@@ -43,7 +43,7 @@ impl EventEvaluator {
     /// Evaluates a resource event and returns all matching subscriptions.
     ///
     /// The flow is:
-    /// 1. Find the event tenant's topics whose triggers match its resource type + interaction.
+    /// 1. Find the event tenant's topics whose triggers match its resource type, interaction, and optional FHIRPath criteria.
     /// 2. For each matching topic, find all active subscriptions.
     /// 3. For each subscription, evaluate filter criteria against the resource.
     /// 4. Return subscriptions that pass all filters.
@@ -59,10 +59,13 @@ impl EventEvaluator {
 
     pub(crate) fn evaluate_snapshots(&self, event: &ResourceEvent) -> Vec<SnapshotMatch> {
         let mut results = Vec::new();
-        for topic_match in self.topic_registry.matching_topics(
+        for topic_match in self.topic_registry.matching_topics_with_resource(
             event.tenant_id.as_ref(),
             &event.resource_type,
             event.event_type,
+            event.resource.as_ref(),
+            event.previous_resource.as_ref(),
+            event.fhir_version,
         ) {
             for snapshot in self
                 .subscription_manager

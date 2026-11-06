@@ -1,5 +1,6 @@
 //! PostgreSQL schema definitions and migrations.
 
+use std::collections::HashSet;
 use std::time::Duration;
 
 use deadpool_postgres::GenericClient;
@@ -9,13 +10,118 @@ use super::search::REFERENCE_TARGET_ID_EXPR;
 use crate::core::bulk_submit_legacy::{
     LegacyFile, LegacyManifest, LegacyPublicationAction, classify_legacy_publications,
 };
+use crate::core::schema_ledger::{
+    BASE_STEP, OUTBOX_DEAD_LETTER_STEP, OUTBOX_STEP, OUTBOX_STEP_INDEX, classify_numbering,
+    implied_applied_indices,
+};
 use crate::error::{BackendError, StorageResult};
 
-/// Current schema version.
+/// Current schema version. Derived stamp: `PG_STEPS.len() + 1`.
+pub const SCHEMA_VERSION: i32 = 59;
+
+pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
+
+/// Ordered named steps. Index [`OUTBOX_STEP_INDEX`] must stay `subscription_outbox`.
+/// Dispatch consults these names; the integer is an operator stamp and a
+/// one-time bootstrap for databases that predate `schema_migrations`.
 ///
-/// A build refuses to start on a database that records a newer version, and
-/// never lowers the recorded one (#2367).
-pub const SCHEMA_VERSION: i32 = 54;
+/// Helios publication (their v37) and export `types_*` (their v38) sit
+/// immediately after autovacuum so an upstream-numbered Postgres DB at
+/// Helios v38 maps through types (index 37) and still runs Helios v39
+/// file-progress, Helios v40 `bulk_export_jobs.attempts` (`#1041`), Helios
+/// v41 `secondary_sync_failures` (`#1334`), Helios v42
+/// `idx_search_reference_target_id` (`#1414`), Helios v43
+/// `search_index_date_range` (`#1391`), Helios v44 `login_sessions`
+/// (`#1481`), Helios v45 `patient_export_references`, Helios v46
+/// `bulk_manifest_file_progress_completed` (`#1610`), then fork-only slot-2,
+/// phase, and `dead_at`. Helios v39 maps
+/// through file-progress (index 38) and still runs the later Helios steps,
+/// then slot-2, phase, and `dead_at`. Helios v42 maps through
+/// reference-target-id (index 41) and still runs the date range, login
+/// sessions, the patient-reference function, the completed flag, slot-2,
+/// phase, and `dead_at`. Helios v43 maps through the date
+/// range (index 42) and still runs login sessions, the patient-reference
+/// function, the completed flag, slot-2, phase, and
+/// `dead_at`. Helios v44 maps through login sessions (index 43) and still
+/// runs the patient-reference function, the completed flag, slot-2, phase,
+/// and `dead_at`. Helios v45 maps through the patient-reference function
+/// (index 44) and still runs the completed flag, slot-2, phase, and
+/// `dead_at`. Helios v46 maps through the completed flag (index 45) and still
+/// runs the reindex-id index, slot-2, phase, and `dead_at`. Helios v47 maps
+/// through `resources_reindex_id` (index 46, `#1767`) and still runs
+/// `search_index_composite_slot`, slot-2, phase, and `dead_at`. Helios v48
+/// maps through `search_index_composite_slot` (index 47) and still runs
+/// `resources_live_tenant`, slot-2, phase, and `dead_at`. Helios v49 maps
+/// through `resources_live_tenant` (index 48, `#1911`) and still runs
+/// `search_index_date_recent_end`, slot-2, phase, and `dead_at`. Helios v50
+/// maps through `search_index_date_recent_end` (index 49) and still runs
+/// `sof_terminology_tables`, slot-2, phase, and `dead_at`. Helios v51 maps
+/// through `sof_terminology_tables` (index 50, `#2185`) and still runs
+/// `bulk_manifests_added_at_index_pending` and
+/// `search_index_composite_partial_fast_path`, then slot-2, phase, and `dead_at`.
+const PG_STEPS: &[&str] = &[
+    "search_index_enhanced_columns",
+    "resource_fts",
+    "token_display_identifier_type",
+    "fts_triggers",
+    "bulk_export_submit_tables",
+    "fhir_version",
+    "bulk_export_leases",
+    "bulk_submit_worker",
+    "reference_display_ucum_folded_string",
+    "contained_search",
+    "bulk_submit_async_schema",
+    "user_settings",
+    "tenant_registry",
+    "search_performance_indexes",
+    "token_date_covering_indexes",
+    OUTBOX_STEP,
+    "bulk_provider_submissions",
+    "search_index_last_updated",
+    "search_index_partial_indexes",
+    "search_index_recent_first",
+    "token_index_includes_sort",
+    "token_code_recent_restored",
+    "search_index_drop_surrogate_pk",
+    "drop_fk_search_resource",
+    "token_index_payload_sort",
+    "resource_fts_drop_text",
+    "search_index_skip_unanswerable",
+    "composite_covering_sort",
+    "drop_unread_search_indexes",
+    "resource_fts_unique",
+    "token_family_rewrite",
+    "token_index_nuisance_fix",
+    "value_reference_base_form",
+    "string_search_seek",
+    "drop_unread_compress",
+    "search_index_autovacuum",
+    "bulk_submit_manifest_publication",
+    "bulk_export_types_progress",
+    "bulk_manifest_file_progress",
+    "bulk_export_jobs_attempts",
+    "secondary_sync_failures",
+    "search_index_reference_target_id",
+    "search_index_date_range",
+    "login_sessions",
+    "patient_export_references",
+    "bulk_manifest_file_progress_completed",
+    "resources_reindex_id",
+    "search_index_composite_slot",
+    "resources_live_tenant",
+    "search_index_date_recent_end",
+    "sof_terminology_tables",
+    "bulk_manifests_added_at_index_pending",
+    "search_index_composite_partial_fast_path",
+    "bulk_submissions_updated_at",
+    "search_index_value_reference_target",
+    "search_index_slot2_columns",
+    "bulk_manifests_phase_progress",
+    OUTBOX_DEAD_LETTER_STEP,
+];
+
+const _: () = assert!(PG_STEPS.len() + 1 == SCHEMA_VERSION as usize);
+const _: () = assert!(OUTBOX_STEP_INDEX < PG_STEPS.len());
 
 /// Advisory-lock key serializing schema migration across HFS instances sharing
 /// one database. Arbitrary but must stay stable across releases.
@@ -79,10 +185,6 @@ fn check_server_version(version_num: i32, version: &str) -> StorageResult<()> {
     )))
 }
 
-/// The startup error for a database whose recorded `schema_version` is above
-/// `build`, the newest version this build understands (#2367). `Internal` like
-/// every other schema-init failure, so `hfs` prints it and exits; worded like
-/// the MongoDB refusal (#2352).
 fn newer_schema_error(
     database_name: &str,
     recorded: i32,
@@ -95,10 +197,6 @@ fn newer_schema_error(
     ))
 }
 
-/// Fails, under the migration lock and before anything is changed, when the
-/// database records a schema version newer than [`SCHEMA_VERSION`] (#2367). A
-/// newer HFS has upgraded it, and this build must neither migrate it, relabel
-/// it, nor run the `ensure_*` steps that follow the migrations.
 async fn require_supported_schema_version(
     client: &deadpool_postgres::Client,
     recorded: i32,
@@ -106,7 +204,6 @@ async fn require_supported_schema_version(
     if recorded <= SCHEMA_VERSION {
         return Ok(());
     }
-    // Only the refusal needs the name, so a normal startup makes no extra round trip.
     let database: String = client
         .query_one("SELECT current_database()::text", &[])
         .await
@@ -116,6 +213,10 @@ async fn require_supported_schema_version(
 }
 
 /// Initialize the database schema.
+///
+/// Dispatch consults `schema_migrations` by step name. The integer
+/// `schema_version` is stamped at the tip for operators and used only to
+/// bootstrap the ledger on databases that predate it.
 ///
 /// Serialized across instances with a session-level advisory lock: several HFS
 /// processes routinely share one database (see `.github/workflows/cluster-smoke.yml`,
@@ -142,10 +243,7 @@ pub async fn initialize_schema(client: &mut deadpool_postgres::Client) -> Storag
 /// Audit-only PostgreSQL instances do not need this large index; search-offloaded
 /// ones do, because `$export` still reads compartments from PostgreSQL (#1663).
 /// The returned capability is true only for a verified usable index. A server
-/// older than PostgreSQL 14 is refused first ([`MIN_SERVER_VERSION_NUM`]). A
-/// database that records a newer schema_version than [`SCHEMA_VERSION`] is
-/// refused next, under the migration lock and before anything is changed, so
-/// neither the migrations nor the ensure steps below run on it (#2367).
+/// older than PostgreSQL 14 is refused first ([`MIN_SERVER_VERSION_NUM`]).
 pub async fn initialize_schema_with_patient_export_index(
     client: &mut deadpool_postgres::Client,
     build_patient_export_index: bool,
@@ -191,17 +289,54 @@ async fn acquire_migration_lock(client: &deadpool_postgres::Client) -> StorageRe
 }
 
 async fn run_migrations(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
+    debug_assert_eq!(PG_STEPS[OUTBOX_STEP_INDEX], OUTBOX_STEP);
+
     let current_version = get_schema_version(client).await?;
-    // Its error returns before the `ensure_*` steps the caller runs after this.
     require_supported_schema_version(client, current_version).await?;
+    ensure_schema_flavour_column(client).await?;
+    ensure_schema_migrations_table(client).await?;
+
+    let flavour = get_schema_flavour(client).await?;
+    let outbox_exists = table_exists(client, "subscription_outbox").await?;
+    let mut applied = load_applied_steps(client).await?;
+
+    if applied.is_empty() && current_version > 0 {
+        backfill_legacy_integer(
+            client,
+            current_version,
+            flavour.as_deref(),
+            outbox_exists,
+            &mut applied,
+        )
+        .await?;
+    }
 
     if current_version == 0 {
         create_schema_v1(client).await?;
         set_schema_version(client, 1).await?;
-        migrate_schema(client, 1).await?;
-    } else if current_version < SCHEMA_VERSION {
-        migrate_schema(client, current_version).await?;
+        record_step(client, BASE_STEP).await?;
+        applied.insert(BASE_STEP.to_string());
+    } else if !applied.contains(BASE_STEP) {
+        record_step(client, BASE_STEP).await?;
+        applied.insert(BASE_STEP.to_string());
     }
+
+    for &name in PG_STEPS {
+        let present = if name == OUTBOX_STEP {
+            table_exists(client, "subscription_outbox").await?
+        } else {
+            true
+        };
+        if applied.contains(name) && present {
+            continue;
+        }
+        run_pg_step(client, name).await?;
+        record_step(client, name).await?;
+        applied.insert(name.to_string());
+    }
+
+    set_schema_version(client, SCHEMA_VERSION).await?;
+    stamp_schema_flavour(client).await?;
 
     Ok(())
 }
@@ -218,7 +353,6 @@ async fn get_schema_version(client: &deadpool_postgres::Client) -> StorageResult
         .await
         .map_err(|e| pg_error(format!("Failed to create schema_version table: {}", e)))?;
 
-    // Highest row, not an arbitrary one: the newer-schema refusal relies on this value.
     let row = client
         .query_opt(
             "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1",
@@ -230,15 +364,252 @@ async fn get_schema_version(client: &deadpool_postgres::Client) -> StorageResult
     Ok(row.map(|r| r.get::<_, i32>(0)).unwrap_or(0))
 }
 
-/// Records `version` unless the table already records it or a newer one, so a
-/// write never lowers the recorded version (#2367).
+/// Idempotently ensures the durable subscription outbox exists.
 ///
-/// One statement, so a crash cannot leave the table empty. Rows below `version`
-/// are deleted and `version` inserted, which leaves one row as the earlier
-/// DELETE + INSERT pair did. The `NOT EXISTS` reads the statement's snapshot, so
-/// it still sees a row the CTE deletes; it therefore asks only for a row at
-/// `version` or above, which the CTE never deletes. A write that finds one is a
-/// no-op, not an error.
+/// Body of the v16 → v17 migration, and a startup self-heal so an
+/// upstream-numbered database (which skipped that step) still gets the table.
+async fn ensure_subscription_outbox(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    let stmts = [
+        "CREATE TABLE IF NOT EXISTS subscription_outbox (
+            id BIGSERIAL PRIMARY KEY,
+            event_id UUID NOT NULL UNIQUE,
+            tenant_id TEXT NOT NULL,
+            fhir_version TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            version_id TEXT NOT NULL DEFAULT '',
+            event_type TEXT NOT NULL,
+            resource JSONB,
+            previous_resource JSONB,
+            envelope JSONB NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            processed_at TIMESTAMPTZ,
+            attempts INT NOT NULL DEFAULT 0,
+            last_error TEXT,
+            locked_by TEXT,
+            locked_until TIMESTAMPTZ,
+            dead_at TIMESTAMPTZ
+        )",
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+         ON subscription_outbox (available_at, id)
+         WHERE processed_at IS NULL AND dead_at IS NULL",
+        "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_tenant_processed
+         ON subscription_outbox (tenant_id, id)
+         WHERE processed_at IS NOT NULL",
+    ];
+
+    for sql in stmts {
+        client
+            .execute(sql, &[])
+            .await
+            .map_err(|e| pg_error(format!("ensure subscription_outbox: {e}")))?;
+    }
+
+    Ok(())
+}
+
+/// Adds `dead_at` and rebuilds the claim index so exhausted rows stay unclaimed.
+async fn ensure_outbox_dead_letter(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    if !table_exists(client, "subscription_outbox").await? {
+        return Ok(());
+    }
+    client
+        .execute(
+            "ALTER TABLE subscription_outbox ADD COLUMN IF NOT EXISTS dead_at TIMESTAMPTZ",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("add subscription_outbox.dead_at: {e}")))?;
+    client
+        .execute("DROP INDEX IF EXISTS idx_subscription_outbox_claim", &[])
+        .await
+        .map_err(|e| pg_error(format!("drop outbox claim index: {e}")))?;
+    client
+        .execute(
+            "CREATE INDEX IF NOT EXISTS idx_subscription_outbox_claim
+             ON subscription_outbox (available_at, id)
+             WHERE processed_at IS NULL AND dead_at IS NULL",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("create outbox claim index: {e}")))?;
+    Ok(())
+}
+
+async fn ensure_schema_flavour_column(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    client
+        .execute(
+            "ALTER TABLE schema_version ADD COLUMN IF NOT EXISTS flavour TEXT",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("add schema_version.flavour: {e}")))?;
+    Ok(())
+}
+
+async fn stamp_schema_flavour(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    client
+        .execute(
+            "UPDATE schema_version SET flavour = $1 WHERE flavour IS NULL",
+            &[&SCHEMA_FLAVOUR],
+        )
+        .await
+        .map_err(|e| pg_error(format!("stamp schema_version.flavour: {e}")))?;
+    Ok(())
+}
+
+async fn get_schema_flavour(client: &deadpool_postgres::Client) -> StorageResult<Option<String>> {
+    let row = client
+        .query_opt("SELECT flavour FROM schema_version LIMIT 1", &[])
+        .await
+        .map_err(|e| pg_error(format!("read schema_version.flavour: {e}")))?;
+    Ok(row.and_then(|r| r.get::<_, Option<String>>(0)))
+}
+
+async fn ensure_schema_migrations_table(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    client
+        .execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations (
+                name TEXT PRIMARY KEY,
+                applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )",
+            &[],
+        )
+        .await
+        .map_err(|e| pg_error(format!("create schema_migrations: {e}")))?;
+    Ok(())
+}
+
+async fn load_applied_steps(client: &deadpool_postgres::Client) -> StorageResult<HashSet<String>> {
+    let rows = client
+        .query("SELECT name FROM schema_migrations", &[])
+        .await
+        .map_err(|e| pg_error(format!("select schema_migrations: {e}")))?;
+    Ok(rows.into_iter().map(|r| r.get::<_, String>(0)).collect())
+}
+
+async fn record_step(client: &deadpool_postgres::Client, name: &str) -> StorageResult<()> {
+    client
+        .execute(
+            "INSERT INTO schema_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING",
+            &[&name],
+        )
+        .await
+        .map_err(|e| pg_error(format!("record schema step {name}: {e}")))?;
+    Ok(())
+}
+
+async fn table_exists(client: &deadpool_postgres::Client, name: &str) -> StorageResult<bool> {
+    let row = client
+        .query_one(
+            "SELECT EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = $1
+            )",
+            &[&name],
+        )
+        .await
+        .map_err(|e| pg_error(format!("probe table {name}: {e}")))?;
+    Ok(row.get(0))
+}
+
+async fn backfill_legacy_integer(
+    client: &deadpool_postgres::Client,
+    recorded_version: i32,
+    flavour: Option<&str>,
+    outbox_exists: bool,
+    applied: &mut HashSet<String>,
+) -> StorageResult<()> {
+    let numbering = classify_numbering(flavour, recorded_version, SCHEMA_VERSION, outbox_exists);
+    tracing::info!(
+        ?numbering,
+        recorded_version,
+        outbox_exists,
+        "backfilling schema_migrations from legacy integer"
+    );
+    if recorded_version >= 1 {
+        record_step(client, BASE_STEP).await?;
+        applied.insert(BASE_STEP.to_string());
+    }
+    for i in implied_applied_indices(recorded_version, numbering, PG_STEPS.len()) {
+        let name = PG_STEPS[i];
+        if name == OUTBOX_STEP && !outbox_exists {
+            continue;
+        }
+        record_step(client, name).await?;
+        applied.insert(name.to_string());
+    }
+    Ok(())
+}
+
+/// Run one named step. Names must match [`PG_STEPS`]; async fn pointers cannot
+/// live in that table, so this match is the other half of the ledger.
+async fn run_pg_step(client: &mut deadpool_postgres::Client, name: &str) -> StorageResult<()> {
+    match name {
+        "search_index_enhanced_columns" => migrate_v1_to_v2(client).await,
+        "resource_fts" => migrate_v2_to_v3(client).await,
+        "token_display_identifier_type" => migrate_v3_to_v4(client).await,
+        "fts_triggers" => migrate_v4_to_v5(client).await,
+        "bulk_export_submit_tables" => migrate_v5_to_v6(client).await,
+        "fhir_version" => migrate_v6_to_v7(client).await,
+        "bulk_export_leases" => migrate_v7_to_v8(client).await,
+        "bulk_submit_worker" => migrate_v8_to_v9(client).await,
+        "reference_display_ucum_folded_string" => migrate_v9_to_v10(client).await,
+        "contained_search" => migrate_v10_to_v11(client).await,
+        "bulk_submit_async_schema" => migrate_v11_to_v12(client).await,
+        "user_settings" => migrate_v12_to_v13(client).await,
+        "tenant_registry" => migrate_v13_to_v14(client).await,
+        "search_performance_indexes" => migrate_v14_to_v15(client).await,
+        "token_date_covering_indexes" => migrate_v15_to_v16(client).await,
+        OUTBOX_STEP => migrate_v16_to_v17(client).await,
+        "bulk_provider_submissions" => migrate_v17_to_v18(client).await,
+        "search_index_last_updated" => migrate_v18_to_v19(client).await,
+        "search_index_partial_indexes" => migrate_v19_to_v20(client).await,
+        "search_index_recent_first" => migrate_v20_to_v21(client).await,
+        "token_index_includes_sort" => migrate_v21_to_v22(client).await,
+        "token_code_recent_restored" => migrate_v22_to_v23(client).await,
+        "search_index_drop_surrogate_pk" => migrate_v23_to_v24(client).await,
+        "drop_fk_search_resource" => migrate_v24_to_v25(client).await,
+        "token_index_payload_sort" => migrate_v25_to_v26(client).await,
+        "resource_fts_drop_text" => migrate_v26_to_v27(client).await,
+        "search_index_skip_unanswerable" => migrate_v27_to_v28(client).await,
+        "composite_covering_sort" => migrate_v28_to_v29(client).await,
+        "drop_unread_search_indexes" => migrate_v29_to_v30(client).await,
+        "resource_fts_unique" => migrate_v30_to_v31(client).await,
+        "token_family_rewrite" => migrate_v31_to_v32(client).await,
+        "token_index_nuisance_fix" => migrate_v32_to_v33(client).await,
+        "value_reference_base_form" => migrate_v33_to_v34(client).await,
+        "string_search_seek" => migrate_v34_to_v35(client).await,
+        "drop_unread_compress" => migrate_v35_to_v36(client).await,
+        "search_index_autovacuum" => migrate_v36_to_v37(client).await,
+        "bulk_submit_manifest_publication" => migrate_publication(client).await,
+        "bulk_export_types_progress" => migrate_export_types_progress(client).await,
+        "bulk_manifest_file_progress" => migrate_bulk_manifest_file_progress(client).await,
+        "bulk_export_jobs_attempts" => migrate_bulk_export_jobs_attempts(client).await,
+        "secondary_sync_failures" => migrate_v40_to_v41(client).await,
+        "search_index_reference_target_id" => migrate_v41_to_v42(client).await,
+        "search_index_date_range" => migrate_v42_to_v43(client).await,
+        "login_sessions" => migrate_v43_to_v44(client).await,
+        "patient_export_references" => migrate_v44_to_v45(client).await,
+        "bulk_manifest_file_progress_completed" => migrate_v45_to_v46(client).await,
+        "resources_reindex_id" => migrate_v46_to_v47(client).await,
+        "search_index_composite_slot" => migrate_v47_to_v48(client).await,
+        "resources_live_tenant" => migrate_v48_to_v49(client).await,
+        "search_index_date_recent_end" => migrate_v49_to_v50(client).await,
+        "sof_terminology_tables" => migrate_v50_to_v51(client).await,
+        "bulk_manifests_added_at_index_pending" => migrate_v51_to_v52(client).await,
+        "search_index_composite_partial_fast_path" => migrate_v52_to_v53(client).await,
+        "bulk_submissions_updated_at" => migrate_v53_to_v54(client).await,
+        "search_index_value_reference_target" => migrate_v54_to_v55(client).await,
+        "search_index_slot2_columns" => migrate_v37_to_v38(client).await,
+        "bulk_manifests_phase_progress" => migrate_v39_to_v40(client).await,
+        OUTBOX_DEAD_LETTER_STEP => migrate_v38_to_v39(client).await,
+        other => Err(pg_error(format!("unknown schema step {other}"))),
+    }
+}
+
+/// Records `version` unless the table already records it or a newer one ([#2367]).
 async fn set_schema_version<C>(client: &C, version: i32) -> StorageResult<()>
 where
     C: GenericClient + ?Sized,
@@ -333,11 +704,13 @@ async fn create_schema_v1(client: &deadpool_postgres::Client) -> StorageResult<(
                 -- Observation.code-value-concept), which would otherwise
                 -- collide. Slot 2 holds the second component of that type.
                 -- Max observed per family is 2, so one extra slot suffices.
+                -- The writer always binds these three columns. Tables created
+                -- before they were added here get them from migrate_v37_to_v38.
                 value_token_system_2 TEXT,
                 value_token_code_2 TEXT,
                 value_number_2 DOUBLE PRECISION
                 -- NOTE: there is deliberately no FOREIGN KEY to `resources`
-                -- here. See `migrate_v23_to_v24` — every path that removes a
+                -- here. See `migrate_v24_to_v25` — every path that removes a
                 -- resource row deletes this table's rows explicitly, and the
                 -- constraint charged one extra SELECT plus a FOR KEY SHARE lock
                 -- on the parent for every one of the ~39.5M index rows written.
@@ -424,7 +797,7 @@ async fn create_fts_tables(client: &deadpool_postgres::Client) -> StorageResult<
                 narrative_tsvector TSVECTOR,
                 content_tsvector TSVECTOR
                 -- NOTE: there is deliberately no FOREIGN KEY to `resources`
-                -- here. See `migrate_v27_to_v28`, and `migrate_v23_to_v24`
+                -- here. See `migrate_v28_to_v29`, and `migrate_v24_to_v25`
                 -- for the same decision on `search_index`: every path that
                 -- removes a resource row deletes this table's row explicitly,
                 -- and the constraint charged one extra SELECT plus a
@@ -469,131 +842,13 @@ async fn create_fts_tables(client: &deadpool_postgres::Client) -> StorageResult<
     // may be added back: the writer supplies them directly and leaves
     // `narrative_text` / `full_content` unbound, so a trigger reading those
     // columns would overwrite both vectors with the tsvector of an empty
-    // string. See `migrate_v25_to_v26`.
+    // string. See `migrate_v26_to_v27`.
     let _ = client
         .execute(
             "DROP TRIGGER IF EXISTS trg_update_fts_vectors ON resource_fts",
             &[],
         )
         .await;
-
-    Ok(())
-}
-
-/// Run schema migrations from current version to latest.
-async fn migrate_schema(
-    client: &mut deadpool_postgres::Client,
-    from_version: i32,
-) -> StorageResult<()> {
-    let mut version = from_version;
-
-    while version < SCHEMA_VERSION {
-        match version {
-            1 => migrate_v1_to_v2(client).await?,
-            2 => migrate_v2_to_v3(client).await?,
-            3 => migrate_v3_to_v4(client).await?,
-            4 => migrate_v4_to_v5(client).await?,
-            5 => migrate_v5_to_v6(client).await?,
-            6 => migrate_v6_to_v7(client).await?,
-            7 => migrate_v7_to_v8(client).await?,
-            8 => migrate_v8_to_v9(client).await?,
-            9 => migrate_v9_to_v10(client).await?,
-            10 => migrate_v10_to_v11(client).await?,
-            11 => migrate_v11_to_v12(client).await?,
-            12 => migrate_v12_to_v13(client).await?,
-            13 => migrate_v13_to_v14(client).await?,
-            14 => migrate_v14_to_v15(client).await?,
-            15 => migrate_v15_to_v16(client).await?,
-            16 => migrate_v16_to_v17(client).await?,
-            17 => migrate_v17_to_v18(client).await?,
-            18 => migrate_v18_to_v19(client).await?,
-            19 => migrate_v19_to_v20(client).await?,
-            20 => migrate_v20_to_v21(client).await?,
-            21 => migrate_v21_to_v22(client).await?,
-            22 => migrate_v22_to_v23(client).await?,
-            23 => migrate_v23_to_v24(client).await?,
-            24 => migrate_v24_to_v25(client).await?,
-            25 => migrate_v25_to_v26(client).await?,
-            26 => migrate_v26_to_v27(client).await?,
-            27 => migrate_v27_to_v28(client).await?,
-            28 => migrate_v28_to_v29(client).await?,
-            29 => migrate_v29_to_v30(client).await?,
-            30 => migrate_v30_to_v31(client).await?,
-            31 => migrate_v31_to_v32(client).await?,
-            32 => migrate_v32_to_v33(client).await?,
-            33 => migrate_v33_to_v34(client).await?,
-            34 => migrate_v34_to_v35(client).await?,
-            35 => migrate_v35_to_v36(client).await?,
-            36 => {
-                // The helper commits the v37 marker inside its transaction, so
-                // the common loop must not stamp the same version again.
-                migrate_v36_to_v37(client).await?;
-                version += 1;
-                continue;
-            }
-            37 => migrate_v37_to_v38(client).await?,
-            38 => migrate_v38_to_v39(client).await?,
-            39 => migrate_v39_to_v40(client).await?,
-            40 => migrate_v40_to_v41(client).await?,
-            41 => {
-                // The helper writes the v42 marker inside its own transaction,
-                // like v37, so the common loop must not stamp it again.
-                migrate_v41_to_v42(client).await?;
-                version += 1;
-                continue;
-            }
-            // Not transactional: the marker is stamped by the common loop only
-            // after every step (backfill, index builds, sweep) has finished.
-            42 => migrate_v42_to_v43(client).await?,
-            43 => {
-                // The helper writes the v44 marker inside its own transaction,
-                // like v42, so the common loop must not stamp it again.
-                migrate_v43_to_v44(client).await?;
-                version += 1;
-                continue;
-            }
-            44 => {
-                migrate_v44_to_v45(client).await?;
-                version += 1;
-                continue;
-            }
-            45 => migrate_v45_to_v46(client).await?,
-            46 => {
-                // The helper writes the v47 marker inside its own transaction,
-                // like v44, so the common loop must not stamp it again.
-                migrate_v46_to_v47(client).await?;
-                version += 1;
-                continue;
-            }
-            47 => {
-                migrate_v47_to_v48(client).await?;
-                version += 1;
-                continue;
-            }
-            48 => migrate_v48_to_v49(client).await?,
-            49 => migrate_v49_to_v50(client).await?,
-            50 => {
-                // Stamps the v51 marker inside its own transaction, like v48.
-                migrate_v50_to_v51(client).await?;
-                version += 1;
-                continue;
-            }
-            51 => {
-                // The helper writes the v52 marker inside its own transaction,
-                // like v48, so the common loop must not stamp it again.
-                migrate_v51_to_v52(client).await?;
-                version += 1;
-                continue;
-            }
-            52 => migrate_v52_to_v53(client).await?,
-            53 => migrate_v53_to_v54(client).await?,
-            _ => {
-                return Err(pg_error(format!("Unknown schema version: {}", version)));
-            }
-        }
-        version += 1;
-        set_schema_version(client, version).await?;
-    }
 
     Ok(())
 }
@@ -613,6 +868,215 @@ async fn migrate_v53_to_v54(client: &deadpool_postgres::Client) -> StorageResult
         .await
         .map_err(|e| pg_error(format!("Migration v53->v54 failed: {}", e)))?;
     Ok(())
+}
+
+/// Name of the v55 partial index on `value_reference_target`.
+const REFERENCE_TARGET_INDEX_NAME: &str = "idx_search_reference_target_v2";
+
+/// Heap blocks per committed batch of the v55 backfill.
+const REFERENCE_TARGET_BACKFILL_BLOCKS: u64 = 2_000;
+
+/// Rows per statement of the v55 final sweep.
+const REFERENCE_TARGET_SWEEP_ROWS: u64 = 10_000;
+
+/// SQL expression deriving `value_reference_target` from the text expression
+/// `value` (a column or a bound parameter), byte-for-byte equivalent to
+/// [`crate::types::absolute_reference_target`]: for an absolute `http(s)`
+/// reference `<base>/<Type>/<id>[/_history/<vid>][?query][#fragment]` it is
+/// `Type/id`, otherwise `NULL`.
+///
+/// Steps, in the order the Rust function takes them: drop the scheme, cut at the
+/// first `?` or `#`, cut at the first `/_history/`, then require a base segment
+/// (any text, possibly empty, before a `/`) followed by a `Type` that starts
+/// with an ASCII capital and continues alphanumeric, then an `id` of 1..=64
+/// `[A-Za-z0-9.-]`. The single capture group is `Type/id`.
+pub(crate) fn absolute_reference_target_sql(value: &str) -> String {
+    format!(
+        "(CASE WHEN {value} ~ '^https?://' THEN \
+         substring(split_part(substring(regexp_replace({value}, '^https?://', '') \
+         from '^[^?#]*'), '/_history/', 1) \
+         from '^.*/([A-Z][A-Za-z0-9]*/[A-Za-z0-9.-]{{1,64}})$') END)"
+    )
+}
+
+/// v54 -> v55: `value_reference_target`, the `Type/id` of a reference stored as
+/// an absolute `http(s)` URL (#2394).
+///
+/// `value_reference` keeps the reference as written, so `Patient?_id=p1&
+/// _revinclude=Provenance:target` and `subject=Patient/p1` never matched
+/// `http://example.org/fhir/Patient/p1`. The writer now also stores the `Type/id`
+/// in this column (the same value the MongoDB backend stores), and readers match
+/// `value_reference_target = <Type/id>` as a second arm `OR`ed next to the
+/// equality. A `UNION ALL` form was measured on 1.2M rows and was 145x slower for
+/// a patient with 100k referrers (the sublink hides the `last_updated` order, so
+/// the planner no longer stops early under `LIMIT`), so the `OR` stays. The
+/// column is `NULL` for relative references, so the partial index stays small.
+///
+/// Steps, each safe to repeat: add the column in a short transaction under a
+/// `lock_timeout`; backfill rows with an absolute `value_reference` in committed
+/// batches of heap blocks selected by `ctid` range; build the partial index
+/// `CONCURRENTLY` (an invalid leftover of an interrupted build is dropped
+/// first); sweep rows written meanwhile by an instance that was not yet
+/// upgraded. `statement_timeout` is disabled for the step and restored.
+async fn migrate_v54_to_v55(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
+    let failed = |what: &str, e: &dyn std::fmt::Display| {
+        pg_error(format!("Migration v54->v55 failed ({what}): {e}"))
+    };
+    let previous_timeout: String = client
+        .query_one("SELECT current_setting('statement_timeout')", &[])
+        .await
+        .map_err(|e| failed("read statement_timeout", &e))?
+        .get(0);
+    client
+        .batch_execute("SET statement_timeout = 0")
+        .await
+        .map_err(|e| failed("disable statement_timeout", &e))?;
+    let result = build_reference_target(client).await;
+    let restore = client
+        .execute(
+            "SELECT set_config('statement_timeout', $1, false)",
+            &[&previous_timeout],
+        )
+        .await;
+    result?;
+    restore.map_err(|e| failed("restore statement_timeout", &e))?;
+
+    // Best-effort, bounded like v43: the planner needs statistics on the new
+    // column (and its partial index) before the first reference search.
+    if let Err(e) =
+        analyze_search_index_with_timeout(client, post_migration_analyze_timeout()).await
+    {
+        tracing::warn!(
+            "Migration v54->v55: optional ANALYZE failed ({e}); the planner has no statistics on value_reference_target until autovacuum analyzes search_index"
+        );
+    }
+    Ok(())
+}
+
+async fn build_reference_target(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
+    let failed = |what: &str, e: &dyn std::fmt::Display| {
+        pg_error(format!("Migration v54->v55 failed ({what}): {e}"))
+    };
+
+    // 1. The column, behind a bounded lock wait, retried.
+    const ATTEMPTS: u32 = 60;
+    for attempt in 1..=ATTEMPTS {
+        let outcome: Result<(), tokio_postgres::Error> = async {
+            let tx = client.transaction().await?;
+            tx.batch_execute("SET LOCAL lock_timeout = '2s'").await?;
+            tx.batch_execute(
+                "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS value_reference_target TEXT",
+            )
+            .await?;
+            tx.commit().await
+        }
+        .await;
+        match outcome {
+            Ok(()) => break,
+            Err(e)
+                if e.code() == Some(&tokio_postgres::error::SqlState::LOCK_NOT_AVAILABLE)
+                    && attempt < ATTEMPTS =>
+            {
+                tracing::warn!(
+                    "Migration v54->v55: waiting for a lock on search_index, attempt {attempt}"
+                );
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+            Err(e) => return Err(failed("add column", &e)),
+        }
+    }
+
+    // 2. Backfill by block range.
+    let expr = absolute_reference_target_sql("value_reference");
+    let batch_sql = |first_block: u64, block_count: u64| {
+        format!(
+            "UPDATE search_index SET value_reference_target = {expr} \
+             WHERE value_reference ~ '^https?://' AND value_reference_target IS NULL \
+             AND {expr} IS NOT NULL \
+             AND ctid >= '({first_block},0)'::tid AND ctid < '({},0)'::tid",
+            first_block + block_count
+        )
+    };
+    let mut first_block = 0_u64;
+    loop {
+        let blocks: i64 = client
+            .query_one(
+                "SELECT pg_relation_size('search_index') / current_setting('block_size')::bigint",
+                &[],
+            )
+            .await
+            .map_err(|e| failed("table size", &e))?
+            .get(0);
+        if first_block >= blocks.max(0) as u64 {
+            break;
+        }
+        let sql = batch_sql(first_block, REFERENCE_TARGET_BACKFILL_BLOCKS);
+        client
+            .execute(sql.as_str(), &[])
+            .await
+            .map_err(|e| failed("backfill", &e))?;
+        first_block += REFERENCE_TARGET_BACKFILL_BLOCKS;
+    }
+
+    // 3. The index, built without blocking writers.
+    let invalid: Option<bool> = client
+        .query_opt(
+            "SELECT NOT (i.indisvalid AND i.indisready) FROM pg_index i \
+             JOIN pg_class c ON c.oid = i.indexrelid \
+             JOIN pg_namespace n ON n.oid = c.relnamespace \
+             WHERE n.nspname = current_schema() AND c.relname = $1",
+            &[&REFERENCE_TARGET_INDEX_NAME],
+        )
+        .await
+        .map_err(|e| failed("inspect index", &e))?
+        .map(|row| row.get(0));
+    if invalid == Some(true) {
+        client
+            .batch_execute(&format!(
+                "DROP INDEX CONCURRENTLY IF EXISTS {REFERENCE_TARGET_INDEX_NAME}"
+            ))
+            .await
+            .map_err(|e| failed("drop invalid index", &e))?;
+    }
+    if let Err(e) = client
+        .batch_execute(&format!(
+            "CREATE INDEX CONCURRENTLY IF NOT EXISTS {REFERENCE_TARGET_INDEX_NAME} \
+             ON search_index (tenant_id, resource_type, param_name, value_reference_target) \
+             WHERE value_reference_target IS NOT NULL"
+        ))
+        .await
+    {
+        if let Err(drop_error) = client
+            .batch_execute(&format!(
+                "DROP INDEX CONCURRENTLY IF EXISTS {REFERENCE_TARGET_INDEX_NAME}"
+            ))
+            .await
+        {
+            tracing::warn!(%drop_error, "Could not drop the invalid {REFERENCE_TARGET_INDEX_NAME}");
+        }
+        return Err(failed("create index", &e));
+    }
+
+    // 4. Rows written during the build by a not-yet-upgraded instance. The
+    // `expr IS NOT NULL` conjunct makes the loop terminate: an `http(s)` value
+    // that is not a FHIR reference never matches and is never selected.
+    let sweep = format!(
+        "UPDATE search_index SET value_reference_target = {expr} \
+         WHERE ctid = ANY (ARRAY( \
+             SELECT ctid FROM search_index \
+             WHERE value_reference ~ '^https?://' AND value_reference_target IS NULL \
+               AND {expr} IS NOT NULL \
+             LIMIT {REFERENCE_TARGET_SWEEP_ROWS}))"
+    );
+    loop {
+        let filled = client
+            .execute(sweep.as_str(), &[])
+            .await
+            .map_err(|e| failed("sweep", &e))?;
+        if filled == 0 {
+            return Ok(());
+        }
+    }
 }
 
 /// v1 -> v2: Add new columns for enhanced search.
@@ -996,9 +1460,7 @@ async fn migrate_v7_to_v8(client: &deadpool_postgres::Client) -> StorageResult<(
     Ok(())
 }
 
-/// Migrate from schema version 8 to version 9.
-///
-/// Adds the async Bulk Data Submit worker layer on top of the existing
+/// v8 -> v9: Add the async Bulk Data Submit worker layer on top of the existing
 /// synchronous bulk-submit ingestion tables (mirrors the SQLite v8->v9 migration).
 async fn migrate_v8_to_v9(client: &deadpool_postgres::Client) -> StorageResult<()> {
     add_bulk_submit_worker_schema(client, "Migration v8->v9").await
@@ -1198,11 +1660,17 @@ pub async fn read_index_layout(client: &deadpool_postgres::Client) -> IndexLayou
     }
 }
 
-/// v16 -> v17: Add the provider-side Bulk Submit store (#772) - the
-/// submissions the Bulk Import workspace sends, previously misfiled in the
-/// per-user user_settings document. One opaque JSONB document per
-/// (tenant, submission), whole-document writes under a monotonic version.
+/// v16 -> v17: durable subscription event outbox (transactional outbox foundation).
 async fn migrate_v16_to_v17(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    ensure_subscription_outbox(client).await
+}
+
+/// v17 -> v18: provider-side Bulk Submit store (#772).
+///
+/// Helios numbered this v16→v17. Atrius v17 is the subscription outbox, so the
+/// provider table lands as v18. `IF NOT EXISTS` is safe if a Helios-main
+/// database already applied the table under version 17.
+async fn migrate_v17_to_v18(client: &deadpool_postgres::Client) -> StorageResult<()> {
     client
         .execute(
             "CREATE TABLE IF NOT EXISTS bulk_provider_submissions (
@@ -1216,11 +1684,13 @@ async fn migrate_v16_to_v17(client: &deadpool_postgres::Client) -> StorageResult
             &[],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v16->v17 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?;
     Ok(())
 }
 
-/// v17 -> v18: denormalize the pagination sort key onto `search_index`.
+/// v18 -> v19: denormalize the pagination sort key onto `search_index`.
+///
+/// Helios numbered this v17→v18. Atrius v17/v18 are outbox + provider store.
 ///
 /// Every search ends `ORDER BY last_updated DESC, id ASC LIMIT n`, and that key
 /// lived only on `resources`. For a filter that matches many rows the planner
@@ -1241,14 +1711,14 @@ async fn migrate_v16_to_v17(client: &deadpool_postgres::Client) -> StorageResult
 /// before. A fresh database is marked `denormalized`. (Promoting a populated
 /// database, by re-extracting under `$reindex` and flipping the marker, is not
 /// implemented here.)
-async fn migrate_v17_to_v18(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v18_to_v19(client: &deadpool_postgres::Client) -> StorageResult<()> {
     client
         .execute(
             "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS last_updated TIMESTAMPTZ",
             &[],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v18->v19 failed: {}", e)))?;
 
     client
         .execute(
@@ -1256,14 +1726,14 @@ async fn migrate_v17_to_v18(client: &deadpool_postgres::Client) -> StorageResult
             &[],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v18->v19 failed: {}", e)))?;
 
     // A fresh database runs every migration in sequence against an empty table,
     // so emptiness here is exactly "no row predates the column".
     let populated = client
         .query_one("SELECT EXISTS (SELECT 1 FROM search_index LIMIT 1)", &[])
         .await
-        .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?
+        .map_err(|e| pg_error(format!("Migration v18->v19 failed: {}", e)))?
         .get::<_, bool>(0);
 
     let layout = if populated { "legacy" } else { "denormalized" };
@@ -1271,14 +1741,14 @@ async fn migrate_v17_to_v18(client: &deadpool_postgres::Client) -> StorageResult
     client
         .execute("DELETE FROM search_index_layout", &[])
         .await
-        .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v18->v19 failed: {}", e)))?;
     client
         .execute(
             "INSERT INTO search_index_layout (layout) VALUES ($1)",
             &[&layout],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v18->v19 failed: {}", e)))?;
 
     if populated {
         tracing::info!(
@@ -1323,13 +1793,13 @@ async fn migrate_v17_to_v18(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v17->v18 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v18->v19 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v22 -> v23: stop paying for a surrogate key and a composite index nobody
+/// v23 -> v24: stop paying for a surrogate key and a composite index nobody
 /// asks about on rows that have no composite.
 ///
 /// Search is now 1.6x off the best published server while import is 11.1x off,
@@ -1369,7 +1839,7 @@ async fn migrate_v17_to_v18(client: &deadpool_postgres::Client) -> StorageResult
 /// serves token-token composites that this benchmark never issues but real
 /// callers do. Same rule as `idx_search_string` in v19 — zero scans here means
 /// the benchmark misses the shape, not that nobody needs it.
-async fn migrate_v22_to_v23(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v23_to_v24(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         // Drops the PRIMARY KEY constraint, its 963 MB index, and the sequence
         // with it.
@@ -1384,13 +1854,13 @@ async fn migrate_v22_to_v23(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v22->v23 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v23->v24 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v24 -> v25: give `idx_search_token` the payload and the sort key that every
+/// v25 -> v26: give `idx_search_token` the payload and the sort key that every
 /// other token index already has, and make the folded-string pattern index
 /// reachable.
 ///
@@ -1535,7 +2005,7 @@ async fn migrate_v22_to_v23(client: &deadpool_postgres::Client) -> StorageResult
 /// that can serve an ORDER BY on a string parameter. The wider payload is paid
 /// on ~250k rows — the size of the partial set, inferred from the 25 MB
 /// footprint — i.e. tens of megabytes.
-async fn migrate_v24_to_v25(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v25_to_v26(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let index_stmts = [
         "DROP INDEX IF EXISTS idx_search_token",
         "CREATE INDEX IF NOT EXISTS idx_search_token
@@ -1554,13 +2024,13 @@ async fn migrate_v24_to_v25(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v24->v25 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v25->v26 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v25 -> v26: stop storing the text `resource_fts` only ever indexed.
+/// v26 -> v27: stop storing the text `resource_fts` only ever indexed.
 ///
 /// `resource_fts` held four columns for two questions. `narrative_text` and
 /// `full_content` carried the raw strings — the latter being every string value
@@ -1591,14 +2061,14 @@ async fn migrate_v24_to_v25(client: &deadpool_postgres::Client) -> StorageResult
 /// reasoning as `param_url` in v23: `DROP COLUMN` runs against real databases
 /// and cannot be undone, and unbound they cost one bit each in the null bitmap.
 /// Rows written before this keep their text; nothing reads it either way.
-async fn migrate_v25_to_v26(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v26_to_v27(client: &deadpool_postgres::Client) -> StorageResult<()> {
     client
         .execute(
             "DROP TRIGGER IF EXISTS trg_update_fts_vectors ON resource_fts",
             &[],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v25->v26 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v26->v27 failed: {}", e)))?;
     let _ = client
         .execute("DROP FUNCTION IF EXISTS update_fts_vectors()", &[])
         .await;
@@ -1606,7 +2076,7 @@ async fn migrate_v25_to_v26(client: &deadpool_postgres::Client) -> StorageResult
     Ok(())
 }
 
-/// v26 -> v27: stop indexing rows the index in question can never answer for.
+/// v27 -> v28: stop indexing rows the index in question can never answer for.
 ///
 /// `search_index` is one wide table holding every parameter of every resource
 /// type, and the write path is where the whole benchmark lives: 79% of the
@@ -1738,7 +2208,7 @@ async fn migrate_v25_to_v26(client: &deadpool_postgres::Client) -> StorageResult
 /// `build_composite_condition_legacy` reads the base value columns of rows that
 /// these predicates would exclude. Such a database keeps the v26 index set and
 /// behaves exactly as before.
-async fn migrate_v26_to_v27(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v27_to_v28(client: &deadpool_postgres::Client) -> StorageResult<()> {
     if read_index_layout(client).await != IndexLayout::Denormalized {
         tracing::info!(
             "search_index predates v18; keeping the v26 index set. Existing \
@@ -1778,13 +2248,13 @@ async fn migrate_v26_to_v27(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v26->v27 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v27->v28 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v27 -> v28: give the composite covering indexes the fast path's sort key —
+/// v28 -> v29: give the composite covering indexes the fast path's sort key —
 /// as KEY columns — and give them back the payload v27 took away.
 ///
 /// ## The regression this repairs
@@ -1938,7 +2408,7 @@ async fn migrate_v26_to_v27(client: &deadpool_postgres::Client) -> StorageResult
 /// here is stated in terms of the denormalized one-row-per-composite-instance
 /// layout, and `build_composite_condition_legacy` reads columns of rows these
 /// predicates exclude.
-async fn migrate_v27_to_v28(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v28_to_v29(client: &deadpool_postgres::Client) -> StorageResult<()> {
     if read_index_layout(client).await != IndexLayout::Denormalized {
         tracing::info!(
             "search_index predates v18; keeping the v27 index set. The composite \
@@ -1971,13 +2441,13 @@ async fn migrate_v27_to_v28(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v27->v28 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v28->v29 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v28 -> v29: four indexes on `search_index` that no predicate the query
+/// v29 -> v30: four indexes on `search_index` that no predicate the query
 /// builder emits can seek, and that a surviving index already covers.
 ///
 /// After v27 the write path is still 85% of the import suite's Postgres time —
@@ -2139,7 +2609,7 @@ async fn migrate_v27_to_v28(client: &deadpool_postgres::Client) -> StorageResult
 /// `build_composite_component` with the denormalized form — its string
 /// component is the same non-sargable `value_string ILIKE $n`, and it reads no
 /// display column and no folded column. Nothing here depends on the row layout.
-async fn migrate_v28_to_v29(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v29_to_v30(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         // 1. Same key columns, same predicate, and `text_pattern_ops` carries
         //    `=`. The pattern index additionally serves the prefix `LIKE`s that
@@ -2159,13 +2629,13 @@ async fn migrate_v28_to_v29(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v28->v29 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v29->v30 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v29 -> v30: make one resource's full-text row unique, and stop charging a
+/// v30 -> v31: make one resource's full-text row unique, and stop charging a
 /// foreign-key check for writing it.
 ///
 /// `INSERT INTO resource_fts` was the second-largest statement in the crud
@@ -2199,7 +2669,7 @@ async fn migrate_v28_to_v29(client: &deadpool_postgres::Client) -> StorageResult
 ///
 /// ## `fk_fts_resource` goes
 ///
-/// The same trade `migrate_v23_to_v24` made for `search_index`, for the same
+/// The same trade `migrate_v24_to_v25` made for `search_index`, for the same
 /// reason: Postgres enforces a FK with a per-row `AFTER INSERT` trigger that
 /// runs `SELECT 1 FROM ONLY resources … FOR KEY SHARE`, so every full-text write
 /// paid an extra index probe, a `FOR KEY SHARE` lock on the parent row, and the
@@ -2226,7 +2696,7 @@ async fn migrate_v28_to_v29(client: &deadpool_postgres::Client) -> StorageResult
 /// ids and references `collect_strings` no longer indexes. That is a superset of
 /// what the new writer produces, so nothing that used to be findable stops being
 /// findable without a rewrite; `$reindex` rebuilds them on the narrower rule.
-async fn migrate_v29_to_v30(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v30_to_v31(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         // 1. One row per resource, so the unique index can be built.
         "DELETE FROM resource_fts a
@@ -2247,13 +2717,13 @@ async fn migrate_v29_to_v30(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v29->v30 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v30->v31 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v30 -> v31: the token family is 62% of the index footprint and one of its
+/// v31 -> v32: the token family is 62% of the index footprint and one of its
 /// three indexes is 2,283 MB of redundancy.
 ///
 /// ## The regime this is trying to change
@@ -2501,7 +2971,7 @@ async fn migrate_v29_to_v30(client: &deadpool_postgres::Client) -> StorageResult
 /// v20, v21, v22, v25), so both layouts hold the identical token family, and the
 /// writer invariant the new conjunct rests on is a property of `IndexValue`
 /// rather than of the row layout.
-async fn migrate_v30_to_v31(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v31_to_v32(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         // Its only unique shape is `system|`, and it never gave that shape the
         // sort key: `value_token_code` sits between the system and
@@ -2519,13 +2989,13 @@ async fn migrate_v30_to_v31(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v30->v31 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v31->v32 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v31 -> v32: v31's replacement index became an attractive nuisance, and the
+/// v32 -> v33: v31's replacement index became an attractive nuisance, and the
 /// recent-first token index cannot answer a `system|code` predicate without the
 /// heap.
 ///
@@ -2736,7 +3206,7 @@ async fn migrate_v30_to_v31(client: &deadpool_postgres::Client) -> StorageResult
 /// Applied to a legacy (pre-v18) layout too, for v31's reason: both token
 /// indexes here were created by ungated migrations (v20, v21, v22), so both
 /// layouts hold the identical shapes.
-async fn migrate_v31_to_v32(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v32_to_v33(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         // 1. Seekable by `system|code`, which it cannot answer without a heap
         //    fetch per row and a sort. 5,334 scans, 80,089,347 tuples read.
@@ -2756,13 +3226,13 @@ async fn migrate_v31_to_v32(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v31->v32 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v32->v33 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v32 -> v33: store `value_reference` in its version-agnostic base form, and
+/// v33 -> v34: store `value_reference` in its version-agnostic base form, and
 /// delete the `LIKE` that existed only because it was not.
 ///
 /// `build_reference_condition` emitted, for the `Type/id` form that is every
@@ -2946,7 +3416,7 @@ async fn migrate_v31_to_v32(client: &deadpool_postgres::Client) -> StorageResult
 /// 366 MB vs 382 MB on the replica, because included columns disable
 /// deduplication as surely as key columns do, and it gives up the ordering as
 /// well. Neither is done here.
-async fn migrate_v32_to_v33(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v33_to_v34(client: &deadpool_postgres::Client) -> StorageResult<()> {
     // `left(v, strpos(v, '/_history/') - 1)` rather than a `LIKE`/`substring`
     // pair: no escape character to get wrong (LIKE's default escape is the
     // backslash, so the pattern would have to be `'%/\_history/%'` for the
@@ -2961,12 +3431,12 @@ async fn migrate_v32_to_v33(client: &deadpool_postgres::Client) -> StorageResult
             &[],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v32->v33 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v33->v34 failed: {}", e)))?;
 
     Ok(())
 }
 
-/// v33 -> v34: make FHIR `string` search seek instead of scan.
+/// v34 -> v35: make FHIR `string` search seek instead of scan.
 ///
 /// String search was the single most expensive statement of run 33128380492:
 /// **268.2 s of ~885 s** of k6-window Postgres execution — 30% of all search
@@ -2982,7 +3452,7 @@ async fn migrate_v32_to_v33(client: &deadpool_postgres::Client) -> StorageResult
 /// ```
 ///
 /// 3,120 tuples read per scan through a generic index, and the 495 MB index
-/// `migrate_v24_to_v25` built *for this query* had zero scans for the third run
+/// `migrate_v25_to_v26` built *for this query* had zero scans for the third run
 /// running. v29 dropped its competitor `idx_search_string_folded` on the theory
 /// that the planner was merely preferring the smaller sibling; that did not
 /// move it either. It has been pure write cost since v25.
@@ -3268,7 +3738,7 @@ async fn migrate_v32_to_v33(client: &deadpool_postgres::Client) -> StorageResult
 /// exactly as it does today (verified: same plan, same 1,709 buffers). A new
 /// binary against an un-migrated database is not reachable: migrations complete
 /// under the advisory lock before the instance serves.
-async fn migrate_v33_to_v34(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v34_to_v35(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         // Same key columns and same population as v25 built. Two things
         // change: the predicate is reworded onto the expression the query
@@ -3289,7 +3759,7 @@ async fn migrate_v33_to_v34(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v33->v34 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v34->v35 failed: {}", e)))?;
     }
 
     // The trigram index for `:contains` / `:text`. Best-effort as a unit: both
@@ -3322,7 +3792,7 @@ async fn migrate_v33_to_v34(client: &deadpool_postgres::Client) -> StorageResult
     for sql in trigram_stmts {
         if let Err(e) = client.execute(sql, &[]).await {
             tracing::warn!(
-                "Migration v33->v34: trigram index unavailable, `:contains` string \
+                "Migration v34->v35: trigram index unavailable, `:contains` string \
                  search falls back to a parameter-slice scan (search remains \
                  correct): {}",
                 e
@@ -3336,7 +3806,7 @@ async fn migrate_v33_to_v34(client: &deadpool_postgres::Client) -> StorageResult
     // here costs plan quality, not correctness.
     if let Err(e) = client.execute("ANALYZE search_index", &[]).await {
         tracing::warn!(
-            "Migration v33->v34: optional ANALYZE failed (plans may be suboptimal \
+            "Migration v34->v35: optional ANALYZE failed (plans may be suboptimal \
              until autovacuum catches up, search remains correct): {}",
             e
         );
@@ -3345,7 +3815,7 @@ async fn migrate_v33_to_v34(client: &deadpool_postgres::Client) -> StorageResult
     Ok(())
 }
 
-/// v34 -> v35: stop maintaining three indexes nothing reads, and compress the
+/// v35 -> v36: stop maintaining three indexes nothing reads, and compress the
 /// two JSONB columns with LZ4 instead of PGLZ.
 ///
 /// Every council round so far has attacked `search_index`. This one attacks the
@@ -3485,7 +3955,7 @@ async fn migrate_v33_to_v34(client: &deadpool_postgres::Client) -> StorageResult
 /// which would extend the same win to `search_index`'s text columns. That table
 /// belongs to another seat and was not measured here, so this migration stays
 /// column-scoped.
-async fn migrate_v34_to_v35(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v35_to_v36(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         // 1-2. Strict prefixes of their tables' primary keys.
         "DROP INDEX IF EXISTS idx_resources_type",
@@ -3499,7 +3969,7 @@ async fn migrate_v34_to_v35(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v34->v35 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v35->v36 failed: {}", e)))?;
     }
 
     // Catalog-only, and optional: a server built without LZ4 rejects the method
@@ -3524,7 +3994,7 @@ async fn migrate_v34_to_v35(client: &deadpool_postgres::Client) -> StorageResult
     Ok(())
 }
 
-/// v35 -> v36: let autovacuum keep up with `search_index`.
+/// v36 -> v37: let autovacuum keep up with `search_index`.
 ///
 /// `search_index` is by construction the highest-churn table in this schema: a
 /// resource rewrite deletes every one of its ~13.6 rows and inserts ~13.6 new
@@ -3558,7 +4028,7 @@ async fn migrate_v34_to_v35(client: &deadpool_postgres::Client) -> StorageResult
 /// a deployment that disagrees can `ALTER TABLE ... RESET` them. They are set
 /// on `search_index` alone: it is the only table in the schema whose steady
 /// state is delete-and-reinsert.
-async fn migrate_v35_to_v36(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v36_to_v37(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = ["ALTER TABLE search_index SET (\
              autovacuum_vacuum_scale_factor = 0.05, \
              autovacuum_vacuum_threshold = 50000, \
@@ -3570,7 +4040,42 @@ async fn migrate_v35_to_v36(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v35->v36 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v36->v37 failed: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// v37 -> v38: add the denormalized composite slot-2 columns on **every**
+/// layout, including a pre-v18 `legacy` `search_index`.
+///
+/// `#279` folded token+token / number+number composites into one row by adding
+/// `value_token_system_2`, `value_token_code_2`, and `value_number_2`. Those
+/// columns were written into `create_schema_v1` and into the INSERT the writer
+/// always emits, but no migration added them to an existing table. A database
+/// created before that CREATE TABLE change — typical of a dedicated
+/// `HFS_AUDIT_DATABASE_URL` that was populated at the v18 layout fork and then
+/// migrated in place — stays at `search_index_layout = legacy` and never grew
+/// the columns. Every subsequent `INSERT INTO search_index` then fails with
+/// `column "value_token_system_2" does not exist`. Clinical FHIR writes can
+/// still succeed when search is offloaded to Elasticsearch; the database audit
+/// sink cannot, because it indexes locally.
+///
+/// `ADD COLUMN IF NOT EXISTS` is catalog-only (nullable, no rewrite). Legacy
+/// query paths ignore slot 2; denormalized paths start matching a table the
+/// writer has been assuming all along.
+async fn migrate_v37_to_v38(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    let stmts = [
+        "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS value_token_system_2 TEXT",
+        "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS value_token_code_2 TEXT",
+        "ALTER TABLE search_index ADD COLUMN IF NOT EXISTS value_number_2 DOUBLE PRECISION",
+    ];
+
+    for sql in stmts {
+        client
+            .execute(sql, &[])
+            .await
+            .map_err(|e| pg_error(format!("Migration v37->v38 failed: {}", e)))?;
     }
 
     Ok(())
@@ -3582,12 +4087,12 @@ async fn migrate_v35_to_v36(client: &deadpool_postgres::Client) -> StorageResult
 /// not publication-sealed. Add the same columns and partial unique indexes as
 /// SQLite, then classify the rows with the shared legacy classifier. DDL,
 /// data classification, indexes, and the version marker all commit together.
-async fn migrate_v36_to_v37(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_publication(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
     let tx = client
         .transaction()
         .await
         .map_err(|e| pg_error(format!("begin v37 migration: {e}")))?;
-    let result = migrate_v36_to_v37_in_transaction(&tx).await;
+    let result = migrate_publication_in_transaction(&tx).await;
 
     // Errors and cancellation rely on the transaction's rollback-on-drop
     // behavior; only a successful classification reaches this commit.
@@ -3616,7 +4121,7 @@ async fn table_columns(
 }
 
 #[allow(clippy::too_many_lines)]
-async fn migrate_v36_to_v37_in_transaction(
+async fn migrate_publication_in_transaction(
     tx: &deadpool_postgres::Transaction<'_>,
 ) -> StorageResult<()> {
     // ALTERs would take these same ACCESS EXCLUSIVE locks, but acquire them
@@ -3863,7 +4368,7 @@ async fn mark_manifest_publication(
 /// writing. `types_done`/`types_total` accompany it so the poll can also show
 /// how far through the type list the worker is — both are `0` on a job the
 /// worker has not yet started.
-async fn migrate_v37_to_v38(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_export_types_progress(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let stmts = [
         "ALTER TABLE bulk_export_jobs ADD COLUMN IF NOT EXISTS types_done INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE bulk_export_jobs ADD COLUMN IF NOT EXISTS types_total INTEGER NOT NULL DEFAULT 0",
@@ -3879,7 +4384,38 @@ async fn migrate_v37_to_v38(client: &deadpool_postgres::Client) -> StorageResult
     Ok(())
 }
 
-/// v38 -> v39: bulk-submit progress that a re-walk cannot inflate (#1127).
+/// Named step `subscription_outbox_dead_letter`: tombstone exhausted
+/// subscription outbox claims (`dead_at`).
+///
+/// Before this step the worker delayed a timed-out row 3600s with
+/// `"max retries exceeded"` and retried it hourly forever. Dead rows keep
+/// `processed_at` NULL so `$events` does not treat them as successful delivery.
+async fn migrate_v38_to_v39(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    ensure_outbox_dead_letter(client).await
+}
+
+/// Named step `bulk_manifests_phase_progress` (stamp v41 after file-progress):
+/// pre-ingest phase columns Helios stuffed into `add_bulk_submit_worker_schema`
+/// without bumping their Postgres integer. Existing fork DBs already recorded
+/// `bulk_submit_worker`, so those `IF NOT EXISTS` ALTERs would never re-run
+/// without this step.
+async fn migrate_v39_to_v40(client: &deadpool_postgres::Client) -> StorageResult<()> {
+    for sql in [
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS phase TEXT",
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS files_done BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS files_total BIGINT NOT NULL DEFAULT 0",
+    ] {
+        client.execute(sql, &[]).await.map_err(|e| {
+            pg_error(format!(
+                "Migration bulk_manifests_phase_progress failed: {e}"
+            ))
+        })?;
+    }
+    Ok(())
+}
+
+/// Named step `bulk_manifest_file_progress` (Helios v39, #1127): per-file
+/// ingest counters that a re-walk cannot inflate.
 ///
 /// `bulk_manifest_file_progress` keeps, per input file of a manifest, the
 /// highest line whose entry has already been charged to the manifest's
@@ -3889,7 +4425,9 @@ async fn migrate_v37_to_v38(client: &deadpool_postgres::Client) -> StorageResult
 /// rather than the sum over passes, and they still never move backwards
 /// (#969). `skipped_entries` gives the submission summary a skip count without
 /// scanning `bulk_entry_results`.
-async fn migrate_v38_to_v39(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_bulk_manifest_file_progress(
+    client: &deadpool_postgres::Client,
+) -> StorageResult<()> {
     let stmts = [
         "ALTER TABLE bulk_manifests ADD COLUMN IF NOT EXISTS skipped_entries INTEGER NOT NULL DEFAULT 0",
         "CREATE TABLE IF NOT EXISTS bulk_manifest_file_progress (
@@ -3914,13 +4452,14 @@ async fn migrate_v38_to_v39(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v38->v39 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration bulk_manifest_file_progress failed: {e}")))?;
     }
 
     Ok(())
 }
 
-/// v39 -> v40: `attempts` on `bulk_export_jobs` (#1041).
+/// Named step `bulk_export_jobs_attempts` (Helios v40, #1041): `attempts` on
+/// `bulk_export_jobs`.
 ///
 /// Counts how many times the job has been claimed by a worker. A job whose
 /// lease expires mid-run is reclaimable, so without a count of past claims a
@@ -3928,14 +4467,16 @@ async fn migrate_v38_to_v39(client: &deadpool_postgres::Client) -> StorageResult
 /// never reaching a terminal state and never giving its tenant's concurrency
 /// slot back. `claim_next` bumps the column on every claim and retires the job
 /// once the count would exceed the configured cap.
-async fn migrate_v39_to_v40(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_bulk_export_jobs_attempts(
+    client: &deadpool_postgres::Client,
+) -> StorageResult<()> {
     client
         .execute(
             "ALTER TABLE bulk_export_jobs ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0",
             &[],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v39->v40 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration bulk_export_jobs_attempts failed: {e}")))?;
 
     Ok(())
 }
@@ -4026,7 +4567,6 @@ async fn migrate_v41_to_v42(client: &mut deadpool_postgres::Client) -> StorageRe
     tx.execute(create_index.as_str(), &[])
         .await
         .map_err(|e| pg_error(format!("Migration v41->v42 failed: {e}")))?;
-    set_schema_version(&tx, 42).await?;
     tx.commit()
         .await
         .map_err(|e| pg_error(format!("commit v42 migration: {e}")))?;
@@ -4124,15 +4664,15 @@ const OPEN_END_SQL: &str = "TIMESTAMPTZ '9999-12-31 23:59:59.999999+00'";
 ///    already passed, or written during the builds by an instance that has not
 ///    been upgraded yet.
 ///
-/// The marker is stamped by the common loop only after all of this returns, so
-/// a failure at any point leaves the database at v42 and the next startup
-/// resumes. The concurrent builds wait for every older transaction in the
+/// The named ledger records the step only after all of this returns, and this
+/// function does not stamp Helios's integer 43. A failure at any point leaves
+/// the step unrecorded and the next startup resumes. The concurrent builds wait for every older transaction in the
 /// database (a long export delays startup) and block other DDL and `VACUUM` on
 /// `search_index` while they run. The session `statement_timeout` is set to 0
 /// for the whole step and restored with `set_config`, not `RESET`, so a value
 /// set before startup survives. The best-effort `ANALYZE` runs last, in a
 /// transaction of its own bounded by [`POST_MIGRATION_ANALYZE_TIMEOUT`]; if it
-/// fails or times out, the step still succeeds and is stamped, a warning says
+/// fails or times out, the step still succeeds and is recorded, a warning says
 /// autovacuum will fill in the statistics, and the session keeps its own
 /// `statement_timeout`.
 async fn migrate_v42_to_v43(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
@@ -4520,11 +5060,11 @@ async fn analyze_search_index_with_timeout(
 /// drives the sweep. Independent of the FHIR `resources` table, like
 /// `user_settings`.
 ///
-/// Runs in its own transaction with `SET LOCAL statement_timeout = 0` and
-/// writes the v44 marker inside it, like v42: a deployment-wide statement
-/// timeout must not be able to cut a migration's DDL short, the setting
-/// reverts at commit, and a failure rolls the table and the marker back
-/// together so the next startup retries the whole step.
+/// Runs in its own transaction with `SET LOCAL statement_timeout = 0`. The
+/// named ledger records the step; this function does not stamp Helios's
+/// integer 44. A deployment-wide statement timeout must not be able to cut
+/// the DDL short, the setting reverts at commit, and a failure rolls the
+/// table back so the next startup retries the whole step.
 async fn migrate_v43_to_v44(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
     let tx = client
         .transaction()
@@ -4547,7 +5087,6 @@ async fn migrate_v43_to_v44(client: &mut deadpool_postgres::Client) -> StorageRe
     )
     .await
     .map_err(|e| pg_error(format!("Migration v43->v44 failed: {e}")))?;
-    set_schema_version(&tx, 44).await?;
     tx.commit()
         .await
         .map_err(|e| pg_error(format!("commit v44 migration: {e}")))?;
@@ -4559,6 +5098,8 @@ async fn migrate_v43_to_v44(client: &mut deadpool_postgres::Client) -> StorageRe
 /// The index is installed separately after this transaction. Building it inside
 /// the migration would hold a write-blocking table lock for the entire scan of
 /// `resources`; it must use `CREATE INDEX CONCURRENTLY` in autocommit mode.
+/// The named ledger records the step; this function does not stamp Helios's
+/// integer 45.
 async fn migrate_v44_to_v45(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
     let tx = client
         .transaction()
@@ -4582,7 +5123,6 @@ async fn migrate_v44_to_v45(client: &mut deadpool_postgres::Client) -> StorageRe
     )
     .await
     .map_err(|e| pg_error(format!("Migration v44->v45 failed: {e}")))?;
-    set_schema_version(&tx, 45).await?;
     tx.commit()
         .await
         .map_err(|e| pg_error(format!("commit v45 migration: {e}")))?;
@@ -4638,7 +5178,6 @@ async fn migrate_v46_to_v47(client: &mut deadpool_postgres::Client) -> StorageRe
     )
     .await
     .map_err(|e| pg_error(format!("Migration v46->v47 failed: {e}")))?;
-    set_schema_version(&tx, 47).await?;
     tx.commit()
         .await
         .map_err(|e| pg_error(format!("commit v47 migration: {e}")))?;
@@ -4663,7 +5202,6 @@ async fn migrate_v47_to_v48(client: &mut deadpool_postgres::Client) -> StorageRe
     )
     .await
     .map_err(|e| pg_error(format!("Migration v47->v48 failed: {e}")))?;
-    set_schema_version(&tx, 48).await?;
     tx.commit()
         .await
         .map_err(|e| pg_error(format!("commit v48 migration: {e}")))?;
@@ -4935,9 +5473,9 @@ async fn migrate_v49_to_v50(client: &mut deadpool_postgres::Client) -> StorageRe
 
 /// v50 -> v51: the SQL-on-FHIR terminology tables (#2185), PostgreSQL's
 /// counterpart of SQLite's v41. New, empty tables only, so the step is one
-/// transaction that stamps its own marker. `SET LOCAL statement_timeout = 0`,
-/// like the other transactional steps: a deployment-wide timeout must not fail
-/// the DDL.
+/// transaction. The named ledger records it; this function does not stamp
+/// Helios integer 51. `SET LOCAL statement_timeout = 0`, like the other
+/// transactional steps: a deployment-wide timeout must not fail the DDL.
 async fn migrate_v50_to_v51(client: &mut deadpool_postgres::Client) -> StorageResult<()> {
     let tx = client
         .transaction()
@@ -4949,7 +5487,6 @@ async fn migrate_v50_to_v51(client: &mut deadpool_postgres::Client) -> StorageRe
     tx.batch_execute(super::sof_terminology::CREATE_TABLES_SQL)
         .await
         .map_err(|e| pg_error(format!("Migration v50->v51 failed: {e}")))?;
-    set_schema_version(&tx, 51).await?;
     tx.commit()
         .await
         .map_err(|e| pg_error(format!("commit v51 migration: {e}")))?;
@@ -4984,7 +5521,6 @@ async fn migrate_v51_to_v52(client: &mut deadpool_postgres::Client) -> StorageRe
     )
     .await
     .map_err(|e| pg_error(format!("Migration v51->v52 failed: {e}")))?;
-    set_schema_version(&tx, 52).await?;
     tx.commit()
         .await
         .map_err(|e| pg_error(format!("commit v52 migration: {e}")))?;
@@ -5251,7 +5787,7 @@ async fn ensure_patient_export_index(client: &deadpool_postgres::Client) -> Stor
     }
 }
 
-/// v23 -> v24: drop `fk_search_resource`.
+/// v24 -> v25: drop `fk_search_resource`.
 ///
 /// `search_index` carried a composite FK to `resources` with `ON DELETE
 /// CASCADE`. Postgres enforces that with a per-row `AFTER INSERT` trigger, and
@@ -5281,19 +5817,19 @@ async fn ensure_patient_export_index(client: &deadpool_postgres::Client) -> Stor
 /// now load-bearing rather than belt-and-braces: **a new path that deletes from
 /// `resources` must delete from `search_index` too.** The comments at those
 /// call sites say so.
-async fn migrate_v23_to_v24(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v24_to_v25(client: &deadpool_postgres::Client) -> StorageResult<()> {
     client
         .execute(
             "ALTER TABLE search_index DROP CONSTRAINT IF EXISTS fk_search_resource",
             &[],
         )
         .await
-        .map_err(|e| pg_error(format!("Migration v23->v24 failed: {}", e)))?;
+        .map_err(|e| pg_error(format!("Migration v24->v25 failed: {}", e)))?;
 
     Ok(())
 }
 
-/// v21 -> v22: restore the recent-first token index alongside v21's.
+/// v22 -> v23: restore the recent-first token index alongside v21's.
 ///
 /// v21 dropped `idx_search_token_code_recent` on the reasoning that a value-first
 /// key serves an equality predicate at every selectivity — true, and it fixed
@@ -5332,7 +5868,7 @@ async fn migrate_v23_to_v24(client: &deadpool_postgres::Client) -> StorageResult
 /// This re-adds 5.6 GB. The write path pays for it, which is a real cost on an
 /// 11 GB host and the reason v21 was worth trying; the measurement says search
 /// buys more than the write path loses.
-async fn migrate_v21_to_v22(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v22_to_v23(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let index_stmts = ["CREATE INDEX IF NOT EXISTS idx_search_token_code_recent
          ON search_index (tenant_id, resource_type, param_name, last_updated DESC, resource_id ASC)
          INCLUDE (value_token_code)
@@ -5342,13 +5878,13 @@ async fn migrate_v21_to_v22(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v21->v22 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v22->v23 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v20 -> v21: fold the sort key into the token index instead of carrying a
+/// v21 -> v22: fold the sort key into the token index instead of carrying a
 /// second, recent-first copy of it.
 ///
 /// v20 gave the fast path early termination by keying on
@@ -5387,7 +5923,7 @@ async fn migrate_v21_to_v22(client: &deadpool_postgres::Client) -> StorageResult
 /// index shapes v20 created remain the right answer there — the planner picks
 /// value-first when the range is sparse (verified: plan section V) and
 /// recent-first when it is broad (section U).
-async fn migrate_v20_to_v21(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v21_to_v22(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let index_stmts = [
         "DROP INDEX IF EXISTS idx_search_token_code",
         "CREATE INDEX IF NOT EXISTS idx_search_token_code
@@ -5404,13 +5940,13 @@ async fn migrate_v20_to_v21(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v20->v21 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v21->v22 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v19 -> v20: recent-first indexes so the fast path can terminate early.
+/// v20 -> v21: recent-first indexes so the fast path can terminate early.
 ///
 /// Every search ends `ORDER BY last_updated DESC, id ASC LIMIT n`, and the
 /// #279/v18 fast path takes that top-n from `search_index` directly:
@@ -5453,7 +5989,7 @@ async fn migrate_v20_to_v21(client: &deadpool_postgres::Client) -> StorageResult
 ///
 /// Partial, for the reason v19 gives: a row carrying a token value must not pay
 /// an index insert into the date and quantity indexes.
-async fn migrate_v19_to_v20(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v20_to_v21(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let index_stmts = [
         "CREATE INDEX IF NOT EXISTS idx_search_date_recent
          ON search_index (tenant_id, resource_type, param_name, last_updated DESC, resource_id ASC)
@@ -5473,13 +6009,13 @@ async fn migrate_v19_to_v20(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v19->v20 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v20->v21 failed: {}", e)))?;
     }
 
     Ok(())
 }
 
-/// v18 -> v19: make the value-column indexes partial.
+/// v19 -> v20: make the value-column indexes partial.
 ///
 /// `search_index` is one wide table holding every parameter of every resource
 /// type, so for any given row almost every `value_*` column is NULL. An index
@@ -5526,7 +6062,7 @@ async fn migrate_v19_to_v20(client: &deadpool_postgres::Client) -> StorageResult
 /// `CREATE INDEX CONCURRENTLY` is not used here for the reason given on v15: a
 /// process death mid-build leaves an INVALID index that a later
 /// `IF NOT EXISTS` would skip forever.
-async fn migrate_v18_to_v19(client: &deadpool_postgres::Client) -> StorageResult<()> {
+async fn migrate_v19_to_v20(client: &deadpool_postgres::Client) -> StorageResult<()> {
     let index_stmts = [
         // The largest index in the schema, and the only one v18 rebuilt while
         // leaving its (absent) predicate alone — date and token_code kept theirs.
@@ -5603,7 +6139,7 @@ async fn migrate_v18_to_v19(client: &deadpool_postgres::Client) -> StorageResult
         client
             .execute(sql, &[])
             .await
-            .map_err(|e| pg_error(format!("Migration v18->v19 failed: {}", e)))?;
+            .map_err(|e| pg_error(format!("Migration v19->v20 failed: {}", e)))?;
     }
 
     Ok(())
@@ -5866,34 +6402,19 @@ fn pg_error(message: String) -> crate::error::StorageError {
 }
 
 #[cfg(test)]
-mod schema_version_tests {
+mod tests {
     use super::*;
-    use crate::error::StorageError;
 
-    /// #2367: the refusal of a database that records a newer schema version
-    /// names the database and both versions, and says nothing was changed.
     #[test]
-    fn newer_schema_error_names_the_database_and_both_versions() {
-        let error = newer_schema_error("fhir", SCHEMA_VERSION + 1, SCHEMA_VERSION);
-        assert!(
-            matches!(
-                &error,
-                StorageError::Backend(BackendError::Internal { backend_name, .. })
-                    if backend_name == "postgres"
-            ),
-            "{error:?}"
-        );
-        let message = error.to_string();
-        for expected in [
-            "PostgreSQL database 'fhir'".to_string(),
-            format!("has schema_version {}", SCHEMA_VERSION + 1),
-            format!("the {SCHEMA_VERSION} this HFS build supports"),
-            "the database was written by a newer HFS".to_string(),
-            "The schema was not changed".to_string(),
-            format!("supports schema version {} or later", SCHEMA_VERSION + 1),
-        ] {
-            assert!(message.contains(&expected), "{expected:?} not in {message}");
-        }
+    fn pg_steps_align_with_schema_version() {
+        assert_eq!(PG_STEPS.len() as i32 + 1, SCHEMA_VERSION);
+        assert_eq!(PG_STEPS[OUTBOX_STEP_INDEX], OUTBOX_STEP);
+        let unique: HashSet<&str> = PG_STEPS.iter().copied().collect();
+        assert_eq!(unique.len(), PG_STEPS.len(), "step names must be unique");
+        assert!(PG_STEPS.contains(&OUTBOX_STEP));
+        assert!(PG_STEPS.contains(&"secondary_sync_failures"));
+        assert!(PG_STEPS.contains(&"search_index_reference_target_id"));
+        assert!(PG_STEPS.contains(&OUTBOX_DEAD_LETTER_STEP));
     }
 }
 
@@ -5912,7 +6433,7 @@ mod postgres_integration_migrations {
         LEGACY_REASON_CONFLICTING_DUPLICATE, LEGACY_REASON_EXACT_DUPLICATE,
         LEGACY_REASON_INVALID_DOMAIN,
     };
-    use crate::error::{StorageError, StorageResult};
+    use crate::error::StorageResult;
 
     struct SharedPg {
         host: String,
@@ -5987,30 +6508,6 @@ mod postgres_integration_migrations {
         .expect("connect migration test backend")
     }
 
-    /// Records `version` unconditionally, lowering it if need be. This is how a
-    /// fixture rewinds a database so a migration runs again, or plays a newer
-    /// build; production writes go through [`set_schema_version`], which never
-    /// lowers (#2367).
-    async fn force_schema_version(
-        client: &deadpool_postgres::Client,
-        version: i32,
-    ) -> StorageResult<()> {
-        client
-            .execute("DELETE FROM schema_version", &[])
-            .await
-            .map_err(|e| pg_error(format!("Failed to clear schema_version: {}", e)))?;
-
-        client
-            .execute(
-                "INSERT INTO schema_version (version) VALUES ($1)",
-                &[&version],
-            )
-            .await
-            .map_err(|e| pg_error(format!("Failed to set schema_version: {}", e)))?;
-
-        Ok(())
-    }
-
     async fn create_v41_database(pg: &SharedPg, name: &str) -> PostgresBackend {
         let backend = create_database(pg, name).await;
         let mut client = backend.get_client().await.unwrap();
@@ -6021,10 +6518,14 @@ mod postgres_integration_migrations {
             .execute("DROP INDEX idx_search_reference_target_id", &[])
             .await
             .expect("remove the v42 index from the fixture");
-        force_schema_version(&client, 41)
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = $1",
+                &[&"search_index_reference_target_id"],
+            )
             .await
-            .expect("mark fixture as v41");
-        assert_eq!(get_schema_version(&client).await.unwrap(), 41);
+            .expect("unrecord named v42 step so initialize_schema rebuilds it");
+        assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
         backend
     }
 
@@ -6054,7 +6555,14 @@ mod postgres_integration_migrations {
             )
             .await
             .expect("take v43 back out of the fixture");
-        force_schema_version(&client, 42)
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = $1",
+                &[&"search_index_date_range"],
+            )
+            .await
+            .expect("unrecord named v43 step so initialize_schema rebuilds it");
+        set_schema_version(&client, 42)
             .await
             .expect("mark fixture as v42");
         backend
@@ -6072,7 +6580,14 @@ mod postgres_integration_migrations {
             .batch_execute("DROP INDEX idx_resources_live_tenant")
             .await
             .expect("remove the v49 index from the fixture");
-        force_schema_version(&client, 48)
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'resources_live_tenant'",
+                &[],
+            )
+            .await
+            .expect("unrecord the live tenant step");
+        set_schema_version(&client, 48)
             .await
             .expect("mark fixture as v48");
         assert_eq!(live_tenant_count_index_state(&client).await.unwrap(), None);
@@ -6097,32 +6612,6 @@ mod postgres_integration_migrations {
             .await
             .expect("read index definition")
             .map(|row| row.get(0))
-    }
-
-    /// Every index of the current schema as `(name, definition)`, by name.
-    async fn schema_indexes(client: &deadpool_postgres::Client) -> Vec<(String, String)> {
-        client
-            .query(
-                "SELECT indexname::text, indexdef FROM pg_indexes
-                 WHERE schemaname = current_schema() ORDER BY indexname",
-                &[],
-            )
-            .await
-            .expect("list indexes")
-            .iter()
-            .map(|row| (row.get(0), row.get(1)))
-            .collect()
-    }
-
-    /// The rows of `schema_version`, ascending.
-    async fn recorded_versions(client: &deadpool_postgres::Client) -> Vec<i32> {
-        client
-            .query("SELECT version FROM schema_version ORDER BY version", &[])
-            .await
-            .expect("read schema_version rows")
-            .iter()
-            .map(|row| row.get(0))
-            .collect()
     }
 
     #[derive(Debug, PartialEq, Eq)]
@@ -6280,7 +6769,13 @@ mod postgres_integration_migrations {
                  composite_group, value_token_code, is_contained, contained_type, contained_local_id)
              VALUES ('t', 'Observation', 'container', 'pair', 7, 'A', TRUE, 'Observation', 'child');",
         ).await.unwrap();
-        force_schema_version(&client, 47).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'search_index_composite_slot'",
+                &[],
+            )
+            .await
+            .unwrap();
         initialize_schema(&mut client).await.unwrap();
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
         assert_eq!(client.query_one("SELECT COUNT(*) FROM search_index WHERE composite_group = 7 AND value_token_code = 'A' AND composite_slot IS NULL", &[]).await.unwrap().get::<_, i64>(0), 2);
@@ -7325,12 +7820,10 @@ mod postgres_integration_migrations {
             )
             .await
             .unwrap();
-        migrate_v36_to_v37(&mut migration_client)
+        migrate_publication(&mut migration_client)
             .await
             .expect("replay current");
-        // The replay's v37 marker write never lowers the recorded version
-        // (#2367), so a current database stays at SCHEMA_VERSION.
-        assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
+        assert_eq!(get_schema_version(&client).await.unwrap(), 37);
         assert_eq!(
             publication_marker(
                 &client,
@@ -7349,6 +7842,142 @@ mod postgres_integration_migrations {
         );
         assert_eq!(classification(&client, output).await, first_classification);
         assert_eq!(index_count(&client).await, 2);
+    }
+
+    /// Every reference shape the Rust function is tested with, plus edges
+    /// (empty base, query/fragment, `_history`, 64/65-char ids, `%` in id).
+    fn reference_target_vectors() -> Vec<String> {
+        let mut v: Vec<String> = [
+            "http://example.org/fhir/Patient/p1",
+            "https://ehr.example.com/r4/Patient/p1",
+            "https://ehr.example.com/r4/Patient/p1/_history/2",
+            "http://h/Patient/p.1?x=1#f",
+            "http://h/Patient/p-1/",
+            "Patient/p1",
+            "Patient/p1/_history/3",
+            "urn:uuid:1234",
+            "http://example.org/",
+            "http://example.org/foo",
+            "http://Patient/p1",
+            "http://h/patient/p1",
+            "http://h/Pat_ient/p1",
+            "http:///Patient/p1",
+            "http://h//Patient/p1",
+            "https://h/a/b/c/Observation/o-1.2",
+            "https://h/Patient/p1#frag/Patient/p2",
+            "https://h/Patient/p1?next=/Patient/p2",
+            "https://h/Patient/p%201",
+            "https://h/Patient/",
+            "https://h/Patient/p_1",
+            "HTTP://h/Patient/p1",
+            "https://",
+            "http://h/Patient/p1/_history/",
+            "http://h/_history/Patient/p1",
+            "bare-id",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        v.push(format!("http://h/Patient/{}", "a".repeat(64)));
+        v.push(format!("http://h/Patient/{}", "a".repeat(65)));
+        v
+    }
+
+    /// The v55 backfill expression gives exactly what
+    /// `absolute_reference_target` gives, for every vector.
+    #[tokio::test]
+    async fn postgres_integration_reference_target_sql_matches_rust() {
+        let _guard = POSTGRES_TEST_LOCK.lock().await;
+        let pg = shared_pg().await;
+        let backend = create_database(
+            pg,
+            &format!("hfs_reftarget_sql_{}", uuid::Uuid::new_v4().simple()),
+        )
+        .await;
+        let client = backend.get_client().await.unwrap();
+        let sql = format!("SELECT {}", absolute_reference_target_sql("$1::text"));
+        for vector in reference_target_vectors() {
+            let got: Option<String> = client
+                .query_one(sql.as_str(), &[&vector])
+                .await
+                .expect("evaluate the SQL expression")
+                .get(0);
+            assert_eq!(
+                got,
+                crate::types::absolute_reference_target(&vector),
+                "SQL and Rust disagree on {vector:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn postgres_integration_v54_to_v55_backfills_reference_target() {
+        let _guard = POSTGRES_TEST_LOCK.lock().await;
+        let pg = shared_pg().await;
+        let backend = create_database(
+            pg,
+            &format!("hfs_v55_test_{}", uuid::Uuid::new_v4().simple()),
+        )
+        .await;
+        let mut client = backend.get_client().await.unwrap();
+        initialize_schema(&mut client)
+            .await
+            .expect("initialize current schema fixture");
+        client
+            .batch_execute(
+                "DROP INDEX idx_search_reference_target_v2;
+                 ALTER TABLE search_index DROP COLUMN value_reference_target;",
+            )
+            .await
+            .expect("take v55 back out of the fixture");
+        force_schema_version(&client, 54).await.unwrap();
+        let vectors = reference_target_vectors();
+        for (i, vector) in vectors.iter().enumerate() {
+            client
+                .execute(
+                    "INSERT INTO search_index
+                     (tenant_id, resource_type, resource_id, param_name, value_reference)
+                     VALUES ('t', 'Provenance', $1, 'target', $2)",
+                    &[&format!("pv{i}"), vector],
+                )
+                .await
+                .expect("seed a pre-v55 reference row");
+        }
+
+        initialize_schema(&mut client)
+            .await
+            .expect("migrate v54 to v55");
+        assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
+        assert_eq!(SCHEMA_VERSION, 55);
+        for (i, vector) in vectors.iter().enumerate() {
+            let got: Option<String> = client
+                .query_one(
+                    "SELECT value_reference_target FROM search_index
+                     WHERE tenant_id = 't' AND resource_id = $1",
+                    &[&format!("pv{i}")],
+                )
+                .await
+                .unwrap()
+                .get(0);
+            assert_eq!(
+                got,
+                crate::types::absolute_reference_target(vector),
+                "backfill of {vector:?}"
+            );
+        }
+        let definition = index_definition(&client, "idx_search_reference_target_v2")
+            .await
+            .expect("v55 index must exist");
+        assert!(
+            definition.contains("value_reference_target")
+                && definition.contains("WHERE (value_reference_target IS NOT NULL)"),
+            "unexpected v55 index: {definition}"
+        );
+
+        // A restart that kept the column and index but lost the marker.
+        force_schema_version(&client, 54).await.unwrap();
+        initialize_schema(&mut client).await.expect("re-run v55");
+        assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
     }
 
     #[tokio::test]
@@ -8265,143 +8894,6 @@ mod postgres_integration_migrations {
         assert_eq!(advisory_locks, 0, "the migration lock must not be taken");
     }
 
-    /// Asserts `error` is the startup refusal of a database that records a
-    /// newer schema version than this build's, for the database `database`.
-    fn assert_newer_schema_refusal(error: StorageError, database: &str) {
-        assert!(
-            matches!(
-                &error,
-                StorageError::Backend(BackendError::Internal { backend_name, .. })
-                    if backend_name == "postgres"
-            ),
-            "{error:?}"
-        );
-        let message = error.to_string();
-        for expected in [
-            format!("'{database}'"),
-            format!("has schema_version {}", SCHEMA_VERSION + 1),
-            format!("the {SCHEMA_VERSION} this HFS build supports"),
-            "written by a newer HFS".to_string(),
-            "The schema was not changed".to_string(),
-        ] {
-            assert!(message.contains(&expected), "{expected:?} not in {message}");
-        }
-    }
-
-    /// #2367: a database that records a newer schema version than this build's
-    /// is refused under the migration lock before anything is written; neither
-    /// the version nor any index changes, not even through the `ensure_*` steps
-    /// that follow the migrations.
-    #[tokio::test]
-    async fn postgres_integration_newer_schema_version_is_refused_before_any_change() {
-        let _guard = POSTGRES_TEST_LOCK.lock().await;
-        let name = format!("hfs_newer_schema_{}", uuid::Uuid::new_v4().simple());
-        let backend = create_database(shared_pg().await, &name).await;
-        let mut client = backend.get_client().await.unwrap();
-        initialize_schema(&mut client)
-            .await
-            .expect("initialize current schema fixture");
-
-        // The patient export index is what `ensure_patient_export_index`
-        // recreates, so a refused start that still ran the ensure steps would
-        // bring it back.
-        client
-            .batch_execute(&format!("DROP INDEX {PATIENT_EXPORT_INDEX_NAME}"))
-            .await
-            .expect("drop the probe index");
-        force_schema_version(&client, SCHEMA_VERSION + 1)
-            .await
-            .expect("play a newer build");
-        let before = schema_indexes(&client).await;
-        assert_eq!(patient_export_index_state(&client).await.unwrap(), None);
-
-        let error = initialize_schema(&mut client)
-            .await
-            .expect_err("a newer schema_version must be refused");
-        assert_newer_schema_refusal(error, &name);
-        assert_eq!(recorded_versions(&client).await, vec![SCHEMA_VERSION + 1]);
-        assert_eq!(schema_indexes(&client).await, before);
-        assert_eq!(
-            patient_export_index_state(&client).await.unwrap(),
-            None,
-            "the ensure steps must not run"
-        );
-        let advisory_locks: i64 = client
-            .query_one(
-                "SELECT COUNT(*) FROM pg_locks
-                 WHERE locktype = 'advisory' AND pid = pg_backend_pid()",
-                &[],
-            )
-            .await
-            .expect("count advisory locks")
-            .get(0);
-        assert_eq!(advisory_locks, 0, "the migration lock must be released");
-
-        // The path `hfs` takes is refused the same way.
-        let error = backend
-            .init_schema()
-            .await
-            .expect_err("the hfs startup path must be refused");
-        assert_newer_schema_refusal(error, &name);
-        assert!(!backend.has_patient_export_index());
-        assert_eq!(recorded_versions(&client).await, vec![SCHEMA_VERSION + 1]);
-        assert_eq!(schema_indexes(&client).await, before);
-
-        // At this build's version the same database initializes again, and
-        // the ensure steps run.
-        force_schema_version(&client, SCHEMA_VERSION)
-            .await
-            .expect("play this build");
-        initialize_schema(&mut client)
-            .await
-            .expect("a database at this build's version initializes");
-        assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
-        assert_eq!(
-            patient_export_index_state(&client).await.unwrap(),
-            Some(true)
-        );
-    }
-
-    /// #2367: `set_schema_version` records a version unless the table already
-    /// records it or a newer one, as a single statement that always leaves one
-    /// row, through a plain client and through a transaction alike.
-    #[tokio::test]
-    async fn postgres_integration_schema_version_write_never_lowers() {
-        let _guard = POSTGRES_TEST_LOCK.lock().await;
-        let backend = create_database(
-            shared_pg().await,
-            &format!("hfs_version_write_{}", uuid::Uuid::new_v4().simple()),
-        )
-        .await;
-        let mut client = backend.get_client().await.unwrap();
-        assert_eq!(get_schema_version(&client).await.unwrap(), 0);
-        assert_eq!(recorded_versions(&client).await, Vec::<i32>::new());
-
-        set_schema_version(&client, 5).await.expect("first write");
-        assert_eq!(recorded_versions(&client).await, vec![5]);
-        set_schema_version(&client, 3).await.expect("lower write");
-        assert_eq!(recorded_versions(&client).await, vec![5]);
-        set_schema_version(&client, 5).await.expect("equal write");
-        assert_eq!(recorded_versions(&client).await, vec![5]);
-        set_schema_version(&client, 7).await.expect("higher write");
-        assert_eq!(recorded_versions(&client).await, vec![7]);
-
-        let tx = client.transaction().await.unwrap();
-        set_schema_version(&tx, 6)
-            .await
-            .expect("lower write in a transaction");
-        tx.commit().await.unwrap();
-        assert_eq!(recorded_versions(&client).await, vec![7]);
-
-        force_schema_version(&client, SCHEMA_VERSION + 1)
-            .await
-            .expect("play a newer build");
-        set_schema_version(&client, SCHEMA_VERSION)
-            .await
-            .expect("this build's write");
-        assert_eq!(recorded_versions(&client).await, vec![SCHEMA_VERSION + 1]);
-    }
-
     /// #1283: v51 -> v52 adds the deferred-rebuild marker to `bulk_manifests`
     /// even under a session `statement_timeout` shorter than the index build,
     /// stamps its own marker, gives the session its timeout back, and is a
@@ -8426,7 +8918,7 @@ mod postgres_integration_migrations {
             )
             .await
             .expect("remove the v52 marker from the fixture");
-        force_schema_version(&client, 51)
+        set_schema_version(&client, 51)
             .await
             .expect("mark fixture as v51");
         client
@@ -8466,7 +8958,7 @@ mod postgres_integration_migrations {
         );
 
         // A restart that finds the columns and index but lost the marker.
-        force_schema_version(&client, 51).await.unwrap();
+        set_schema_version(&client, 51).await.unwrap();
         initialize_schema(&mut client)
             .await
             .expect("re-run v52 over an applied schema");
@@ -8536,7 +9028,6 @@ mod postgres_integration_migrations {
             "CREATE INDEX injection did not outlast the session timeout: {elapsed:?}"
         );
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
-        assert_eq!(SCHEMA_VERSION, 54);
         assert_eq!(
             live_tenant_count_index_state(&client).await.unwrap(),
             Some(true)
@@ -8568,7 +9059,14 @@ mod postgres_integration_migrations {
 
         // A crash after the build but before the marker, or an operator who
         // pre-built the index: the step finds it valid and only stamps v49.
-        force_schema_version(&client, 48).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'resources_live_tenant'",
+                &[],
+            )
+            .await
+            .unwrap();
+        set_schema_version(&client, 48).await.unwrap();
         initialize_schema(&mut client)
             .await
             .expect("re-run v48 to v49 over a valid index");
@@ -8642,7 +9140,14 @@ mod postgres_integration_migrations {
                 Some(false),
                 "{wrong_shape}"
             );
-            force_schema_version(&client, 48).await.unwrap();
+            client
+                .execute(
+                    "DELETE FROM schema_migrations WHERE name = 'resources_live_tenant'",
+                    &[],
+                )
+                .await
+                .unwrap();
+            set_schema_version(&client, 48).await.unwrap();
             initialize_schema(&mut client)
                 .await
                 .expect("repair the wrong-shape index");
@@ -8734,7 +9239,14 @@ mod postgres_integration_migrations {
             .batch_execute("DROP INDEX idx_search_date_recent_end; SET statement_timeout = '777ms'")
             .await
             .unwrap();
-        force_schema_version(&client, 49).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'search_index_date_recent_end'",
+                &[],
+            )
+            .await
+            .unwrap();
+        set_schema_version(&client, 49).await.unwrap();
         initialize_schema(&mut client).await.expect("v49 to v50");
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
         assert_eq!(statement_timeout(&client).await, "777ms");
@@ -8743,7 +9255,14 @@ mod postgres_integration_migrations {
             .expect("v50 rebuilds the index");
         assert!(rebuilt.ends_with(expected), "{rebuilt}");
 
-        force_schema_version(&client, 49).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'search_index_date_recent_end'",
+                &[],
+            )
+            .await
+            .unwrap();
+        set_schema_version(&client, 49).await.unwrap();
         initialize_schema(&mut client).await.expect("repeat v50");
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
     }
@@ -8790,7 +9309,7 @@ mod postgres_integration_migrations {
             )
             .await
             .unwrap();
-        force_schema_version(&client, 52).await.unwrap();
+        set_schema_version(&client, 52).await.unwrap();
         initialize_schema(&mut client).await.expect("v52 to v53");
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
         assert_eq!(statement_timeout(&client).await, "777ms");
@@ -8845,7 +9364,7 @@ mod postgres_integration_migrations {
             .await
             .unwrap();
 
-        force_schema_version(&client, 52).await.unwrap();
+        set_schema_version(&client, 52).await.unwrap();
         initialize_schema(&mut client).await.expect("repeat v53");
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
     }
@@ -8884,7 +9403,14 @@ mod postgres_integration_migrations {
                 .unwrap(),
             Some(false)
         );
-        force_schema_version(&client, 49).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'search_index_date_recent_end'",
+                &[],
+            )
+            .await
+            .unwrap();
+        set_schema_version(&client, 49).await.unwrap();
         initialize_schema(&mut client)
             .await
             .expect("v50 repairs invalid indexes");

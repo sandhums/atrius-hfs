@@ -119,12 +119,12 @@ pub fn tail_function(
         has_undefined_order,
         ..
     } = invocation_base
+        && *has_undefined_order
+        && context.check_ordered_functions
     {
-        if *has_undefined_order && context.check_ordered_functions {
-            return Err(EvaluationError::SemanticError(
+        return Err(EvaluationError::SemanticError(
                 "tail() operation on collection with undefined order is not allowed when checkOrderedFunctions is true.".to_string()
             ));
-        }
     }
 
     // Get the order status

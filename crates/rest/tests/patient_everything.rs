@@ -13,14 +13,9 @@ use common::everything::*;
 /// authentication, so `authz_middleware` never evaluates them, and narrowing does not
 /// depend on the scope type.
 fn smart_principal(context: Option<LaunchContext>) -> Principal {
-    Principal {
-        subject: "smart-app".to_string(),
-        issuer: "https://idp.example.com".to_string(),
-        scopes: ScopeSet::parse("patient/*.rs"),
-        expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
-        launch_context: context,
-        ..Default::default()
-    }
+    Principal::stub("smart-app", ScopeSet::parse("patient/*.rs"))
+        .with_issuer("https://idp.example.com")
+        .with_launch_context(context)
 }
 
 fn patient_context(p: &str) -> Option<LaunchContext> {

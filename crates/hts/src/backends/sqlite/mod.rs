@@ -18,9 +18,6 @@ mod concept_map;
 pub(crate) mod resource_identity;
 mod value_set;
 
-pub(crate) use code_system::invalidate_cs_language_cache;
-pub(crate) use value_set::invalidate_cs_id_cache;
-
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -45,6 +42,8 @@ pub(crate) type StringOptionMap = HashMap<String, Option<String>>;
 pub(crate) type BoolMap = HashMap<String, bool>;
 pub(crate) type LookupResponseMap = HashMap<String, Arc<LookupResponse>>;
 pub(crate) type ValidateCodeResponseMap = HashMap<String, Arc<ValidateCodeResponse>>;
+/// CodeSystem URL → preferred `(system_id, version)` row.
+pub(crate) type SystemIdCacheMap = HashMap<String, (String, Option<String>)>;
 
 /// Search metadata using backend-neutral FHIR string matching, then hydrate
 /// only the selected page. Exact URL/version/status predicates stay in SQL.
@@ -449,6 +448,13 @@ pub struct SqliteTerminologyBackend {
     /// `resource_json` only to discard everything except `is_empty()`.
     /// Invalidated alongside the other per-instance caches on `import_bundle`.
     pub(crate) cs_exists_cache: Arc<RwLock<BoolMap>>,
+    /// CodeSystem URL → preferred `(storage id, version)` for `$expand` /
+    /// `$validate-code` compose resolution. Was a process-wide static; tests
+    /// running in parallel leaked ids across in-memory backends.
+    pub(crate) cs_system_id_cache: Arc<RwLock<SystemIdCacheMap>>,
+    /// CodeSystem URL → `language` for `$lookup` `preferredForLanguage`.
+    /// Same isolation reason as `cs_system_id_cache`.
+    pub(crate) cs_language_cache: Arc<RwLock<StringOptionMap>>,
 }
 
 impl SqliteTerminologyBackend {
@@ -648,6 +654,8 @@ impl SqliteTerminologyBackend {
             validate_code_response_cache: Arc::new(RwLock::new(HashMap::new())),
             cs_version_for_url_cache: Arc::new(RwLock::new(HashMap::new())),
             cs_exists_cache: Arc::new(RwLock::new(HashMap::new())),
+            cs_system_id_cache: Arc::new(RwLock::new(HashMap::new())),
+            cs_language_cache: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -780,6 +788,8 @@ impl SqliteTerminologyBackend {
             validate_code_response_cache: Arc::new(RwLock::new(HashMap::new())),
             cs_version_for_url_cache: Arc::new(RwLock::new(HashMap::new())),
             cs_exists_cache: Arc::new(RwLock::new(HashMap::new())),
+            cs_system_id_cache: Arc::new(RwLock::new(HashMap::new())),
+            cs_language_cache: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -970,6 +980,8 @@ impl TerminologyCaches for SqliteTerminologyBackend {
             validate_code_response_cache,
             cs_version_for_url_cache,
             cs_exists_cache,
+            cs_system_id_cache,
+            cs_language_cache,
         } = self;
 
         // Clear one `RwLock`-guarded map, ignoring a poisoned lock: a poisoned
@@ -998,14 +1010,12 @@ impl TerminologyCaches for SqliteTerminologyBackend {
             validate_code_response_cache,
             cs_version_for_url_cache,
             cs_exists_cache,
+            cs_system_id_cache,
+            cs_language_cache,
         );
 
-        // Process-global caches shared by every backend instance in this
-        // process. CodeSystem writes and deletes already drop these on the
-        // paths they cover; doing it here too makes the hook total
-        // regardless of which resource type was written, and both are cheap.
-        invalidate_cs_id_cache();
-        invalidate_cs_language_cache();
+        // Exhaustive `clear!` above is the only invalidation. Import and CRUD
+        // both call this hook; do not reintroduce process-wide statics.
     }
 }
 
@@ -1102,6 +1112,37 @@ impl BundleImportBackend for SqliteTerminologyBackend {
                 |r| r.get(0),
             )
             .map_err(|e| HtsError::StorageError(e.to_string()))
+        })
+        .await
+        .map_err(|e| HtsError::Internal(format!("Blocking task error: {e}")))?
+    }
+
+    async fn code_system_concept_codes(
+        &self,
+        _ctx: &TenantContext,
+        url: &str,
+        version: &str,
+    ) -> Result<std::collections::HashSet<String>, HtsError> {
+        let pool = self.pool.clone();
+        let url = url.to_string();
+        let version = version.to_string();
+        tokio::task::spawn_blocking(move || -> Result<_, HtsError> {
+            let conn = pool
+                .get()
+                .map_err(|e| HtsError::StorageError(format!("Pool error: {e}")))?;
+            let mut stmt = conn
+                .prepare(
+                    "SELECT c.code FROM concepts c
+                     JOIN code_systems s ON c.system_id = s.id
+                     WHERE s.url = ?1 AND s.version = ?2",
+                )
+                .map_err(|e| HtsError::StorageError(e.to_string()))?;
+            let codes = stmt
+                .query_map(rusqlite::params![url, version], |r| r.get::<_, String>(0))
+                .map_err(|e| HtsError::StorageError(e.to_string()))?
+                .collect::<Result<std::collections::HashSet<String>, _>>()
+                .map_err(|e| HtsError::StorageError(e.to_string()))?;
+            Ok(codes)
         })
         .await
         .map_err(|e| HtsError::Internal(format!("Blocking task error: {e}")))?

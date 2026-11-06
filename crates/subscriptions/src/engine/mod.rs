@@ -13,7 +13,7 @@ use dispatch::{CompletionTicket, SchedulerOwner, SchedulerState};
 use std::sync::{Arc, RwLock};
 
 use dashmap::DashMap;
-use helios_persistence::core::ResourceStorage;
+use helios_persistence::core::{DynSubscriptionOutboxStore, ResourceStorage};
 use helios_persistence::error::StorageError;
 use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 use tokio::sync::Semaphore;
@@ -29,10 +29,12 @@ use crate::channels::{ChannelDispatcher, DispatchResult};
 use crate::config::SubscriptionConfig;
 use crate::evaluator::EventEvaluator;
 use crate::event::{ResourceEvent, ResourceEventType};
+use crate::heartbeat::run_heartbeat_worker;
 use crate::manager::{
     ChannelType, SubscriptionManager, SubscriptionSnapshot, SubscriptionStatusCode,
 };
 use crate::notification::{self, NotificationEventData};
+use crate::outbox::run_outbox_worker;
 use crate::topics::{InMemoryTopicRegistry, TopicDefinition};
 use helios_auth::{NoOpOutboundAuthProvider, OutboundAuthProvider};
 
@@ -43,6 +45,8 @@ use helios_auth::{NoOpOutboundAuthProvider, OutboundAuthProvider};
 pub struct SubscriptionEngine {
     core: Arc<EngineCore>,
     scheduler: SchedulerOwner,
+    outbox: Option<DynSubscriptionOutboxStore>,
+    outbox_notify: Arc<tokio::sync::Notify>,
 }
 
 struct EngineCore {
@@ -165,7 +169,12 @@ impl SubscriptionEngine {
             status_write_slots,
             delivery_stats: Arc::new(crate::delivery_stats::DeliveryStats::new()),
         });
-        Self { core, scheduler }
+        Self {
+            core,
+            scheduler,
+            outbox: None,
+            outbox_notify: Arc::new(tokio::sync::Notify::new()),
+        }
     }
 
     /// Attaches the storage handle that server-driven status transitions are
@@ -202,6 +211,82 @@ impl SubscriptionEngine {
             .unwrap_or_else(|e| e.into_inner())
             .is_some()
             && self.core.config.persist_status
+    }
+
+    /// Attach a durable outbox. SQL backends write the row in the resource
+    /// transaction; [`Self::enqueue_resource_event`] only wakes the worker.
+    ///
+    /// Call [`Self::start_outbox_worker`] after wrapping the engine in `Arc`.
+    pub fn with_outbox(mut self, store: DynSubscriptionOutboxStore) -> Self {
+        self.outbox = Some(store);
+        self
+    }
+
+    /// Whether a durable outbox is attached.
+    pub fn has_outbox(&self) -> bool {
+        self.outbox.is_some()
+    }
+
+    /// Returns the attached outbox store, if any.
+    pub fn outbox_store(&self) -> Option<&DynSubscriptionOutboxStore> {
+        self.outbox.as_ref()
+    }
+
+    /// Wake the outbox worker. The row was already written in the resource transaction.
+    pub fn enqueue_resource_event(self: &Arc<Self>) {
+        if self.outbox.is_some() {
+            self.outbox_notify.notify_one();
+        }
+    }
+
+    /// Spawn the background outbox consumer. No-op when no outbox is attached.
+    pub fn start_outbox_worker(self: &Arc<Self>) {
+        let Some(store) = self.outbox.clone() else {
+            return;
+        };
+        let engine = Arc::clone(self);
+        let config = self.core.config.clone();
+        let notify = Arc::clone(&self.outbox_notify);
+        tokio::spawn(async move {
+            run_outbox_worker(engine, store, config, notify).await;
+        });
+        info!("Subscription outbox worker spawned");
+    }
+
+    /// Spawn the background heartbeat sender.
+    pub fn start_heartbeat_worker(self: &Arc<Self>) {
+        let engine = Arc::clone(self);
+        let config = self.core.config.clone();
+        tokio::spawn(async move {
+            run_heartbeat_worker(engine, config).await;
+        });
+        info!("Subscription heartbeat worker spawned");
+    }
+
+    /// Canonical public base URL for background notifications for `tenant_id`.
+    pub fn public_base_url(&self, tenant_id: &str) -> String {
+        (self.core.public_base_url_for_tenant)(tenant_id)
+    }
+
+    /// Dispatch a heartbeat notification.
+    pub(crate) async fn dispatch_heartbeat(
+        &self,
+        subscription: &crate::manager::ActiveSubscription,
+        bundle: &serde_json::Value,
+    ) {
+        let Some(snapshot) = self
+            .core
+            .manager
+            .get_snapshot(&subscription.tenant_id, &subscription.id)
+        else {
+            return;
+        };
+        if !self.scheduler.start(&self.core) {
+            return;
+        }
+        self.core
+            .dispatch_with_retry(&snapshot, bundle, "heartbeat", None, &self.scheduler.state)
+            .await;
     }
 
     /// Returns a reference to the topic registry.
@@ -1034,6 +1119,7 @@ impl EngineCore {
                     {
                         return;
                     }
+                    self.manager.touch_last_notification(tenant_id, sub_id);
                     info!(
                         tenant_id,
                         subscription_id = sub_id,

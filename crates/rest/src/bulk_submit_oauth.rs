@@ -134,10 +134,10 @@ impl FileTokenProvider for JwtClientCredentialsTokenProvider {
         // Serve a cached, unexpired token.
         {
             let cache = self.cache.lock().await;
-            if let Some((tok, exp)) = cache.get(&cache_key) {
-                if Instant::now() < *exp {
-                    return Some(tok.clone());
-                }
+            if let Some((tok, exp)) = cache.get(&cache_key)
+                && Instant::now() < *exp
+            {
+                return Some(tok.clone());
             }
         }
 

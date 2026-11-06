@@ -31,7 +31,6 @@ use axum::extract::{Query, Request, State};
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
-use chrono::Utc;
 use helios_auth::{AccessOutcome, PENDING_COOKIE, SESSION_COOKIE, SessionStore};
 use serde::Deserialize;
 
@@ -147,19 +146,11 @@ pub(crate) async fn require_session(
 pub struct SignedIn(pub helios_auth::SessionPrincipal);
 
 fn session_principal(session: &helios_auth::Session) -> helios_auth::Principal {
-    helios_auth::Principal {
-        subject: session.principal.subject.clone(),
-        issuer: session.principal.issuer.clone(),
-        tenant_id: None,
-        scopes: helios_auth::ScopeSet::empty(),
-        jti: None,
-        // The UI never authorizes by scope or expiry itself — the FHIR layer
-        // does, on the bearer the session stands for — so this is only the
-        // identity that keys per-user settings.
-        expires_at: Utc::now() + chrono::Duration::hours(1),
-        custom_claims: serde_json::Map::new(),
-        ..Default::default()
-    }
+    helios_auth::Principal::stub(
+        session.principal.subject.clone(),
+        helios_auth::ScopeSet::empty(),
+    )
+    .with_issuer(session.principal.issuer.clone())
 }
 
 #[derive(Debug, Deserialize)]
@@ -408,6 +399,7 @@ mod selfcall_tests {
     use std::time::{Duration, Instant};
 
     use axum::http::{HeaderMap, HeaderValue, header};
+    use chrono::Utc;
     use helios_auth::{LoginConfig, Session, SessionPrincipal, SessionStore};
 
     use super::*;

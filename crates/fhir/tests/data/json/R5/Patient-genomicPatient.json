@@ -43,7 +43,7 @@
   "meta": {
     "tag": [
       {
-        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason",
+        "system": "http://hl7.org/fhir/ValueSet/common-tags",
         "code": "HTEST",
         "display": "test health data"
       }

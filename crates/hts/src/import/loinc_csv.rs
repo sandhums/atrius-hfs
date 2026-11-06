@@ -582,10 +582,10 @@ fn derive_language_tag(
     // The numeric id (if any) sits between the language/country letters and the
     // `LinguisticVariant` suffix, e.g. `frfr28` → "28".
     let id: String = stem.chars().filter(|c| c.is_ascii_digit()).collect();
-    if !id.is_empty() {
-        if let Some((lang, country)) = index.get(&id) {
-            return Some(format_lang_tag(lang, country));
-        }
+    if !id.is_empty()
+        && let Some((lang, country)) = index.get(&id)
+    {
+        return Some(format_lang_tag(lang, country));
     }
 
     // Fallback: leading letters encode `<lang><country>` (e.g. `frfr`).

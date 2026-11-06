@@ -19,7 +19,9 @@
 //!
 //! ## Key Types
 //!
-//! - [`Principal`] — Authenticated identity extracted from a validated JWT
+//! - [`Principal`] — Authenticated identity extracted from a validated JWT.
+//!   Tests build one with [`Principal::stub`] or a literal ending in
+//!   `..Default::default()`.
 //! - [`LaunchContext`] — SMART launch context (`patient`, `encounter`, `fhirUser`) on a [`Principal`]
 //! - [`ScopeSet`] — Parsed SMART v2 scopes with permission checking
 //! - [`AuthProvider`] — Trait for token validation implementations
@@ -31,6 +33,7 @@ pub mod audit;
 pub mod config;
 pub mod discovery;
 pub mod error;
+pub mod jti;
 pub mod jwks;
 pub mod outbound;
 pub mod policy;
@@ -40,9 +43,10 @@ pub mod scope;
 pub mod session;
 
 // Re-export commonly used types
-pub use config::AuthConfig;
+pub use config::{AuthConfig, DEFAULT_JTI_REVOCATION_TIMEOUT_MS};
 pub use discovery::SmartConfiguration;
 pub use error::{AuthError, FhirOperation};
+pub use jti::{JtiRevocation, NoOpJtiRevocation, REVOKED_JTI_KEY_PREFIX, build_jti_revocation};
 pub use jwks::JwksCache;
 pub use outbound::{
     NoOpOutboundAuthProvider, OutboundAuthProvider, StaticBearerOutboundAuthProvider,
@@ -52,6 +56,9 @@ pub use policy::{AccessScope, SmartScopePolicy};
 pub use principal::{LaunchContext, Principal};
 pub use provider::{AuthProvider, jwks_bearer::JwksBearerAuthProvider};
 pub use scope::{ScopeSet, SmartPermissions};
+
+#[cfg(feature = "redis")]
+pub use jti::RedisJtiRevocation;
 pub use session::{
     AccessOutcome, LoginConfig, PENDING_COOKIE, PersistedPending, PersistedSession, SESSION_COOKIE,
     SaveOutcome, Session, SessionPersistence, SessionPrincipal, SessionStore, cookie_value,

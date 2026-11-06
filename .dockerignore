@@ -7,3 +7,8 @@ target/
 **/*.rs
 **/node_modules/
 **/__pycache__/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+.claude
+.agents

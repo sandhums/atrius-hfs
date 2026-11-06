@@ -217,66 +217,6 @@ impl CapabilityMatrix {
             ],
         );
 
-        // Cassandra capabilities
-        matrix.set_backend_capabilities(
-            BackendKind::Cassandra,
-            vec![
-                (BackendCapability::Crud, SupportLevel::Planned),
-                (BackendCapability::Versioning, SupportLevel::Planned),
-                (BackendCapability::InstanceHistory, SupportLevel::Planned),
-                (BackendCapability::TypeHistory, SupportLevel::NotPlanned),
-                (BackendCapability::SystemHistory, SupportLevel::NotPlanned),
-                (BackendCapability::BasicSearch, SupportLevel::Partial),
-                (BackendCapability::DateSearch, SupportLevel::Planned),
-                (BackendCapability::ReferenceSearch, SupportLevel::NotPlanned),
-                (BackendCapability::ChainedSearch, SupportLevel::NotPlanned),
-                (BackendCapability::ReverseChaining, SupportLevel::NotPlanned),
-                (BackendCapability::Include, SupportLevel::NotPlanned),
-                (BackendCapability::Revinclude, SupportLevel::NotPlanned),
-                (BackendCapability::FullTextSearch, SupportLevel::NotPlanned),
-                (BackendCapability::TerminologySearch, SupportLevel::NotPlanned),
-                (BackendCapability::Transactions, SupportLevel::NotPlanned),
-                (BackendCapability::OptimisticLocking, SupportLevel::Planned),
-                (BackendCapability::CursorPagination, SupportLevel::Planned),
-                (BackendCapability::OffsetPagination, SupportLevel::NotPlanned),
-                (BackendCapability::Sorting, SupportLevel::NotPlanned),
-                (BackendCapability::BulkExport, SupportLevel::Planned),
-                (BackendCapability::SharedSchema, SupportLevel::Planned),
-                (BackendCapability::SchemaPerTenant, SupportLevel::NotPlanned),
-                (BackendCapability::DatabasePerTenant, SupportLevel::Planned),
-            ],
-        );
-
-        // Neo4j capabilities
-        matrix.set_backend_capabilities(
-            BackendKind::Neo4j,
-            vec![
-                (BackendCapability::Crud, SupportLevel::Planned),
-                (BackendCapability::Versioning, SupportLevel::Partial),
-                (BackendCapability::InstanceHistory, SupportLevel::Partial),
-                (BackendCapability::TypeHistory, SupportLevel::NotPlanned),
-                (BackendCapability::SystemHistory, SupportLevel::NotPlanned),
-                (BackendCapability::BasicSearch, SupportLevel::Planned),
-                (BackendCapability::DateSearch, SupportLevel::Planned),
-                (BackendCapability::ReferenceSearch, SupportLevel::Implemented),
-                (BackendCapability::ChainedSearch, SupportLevel::Implemented),
-                (BackendCapability::ReverseChaining, SupportLevel::Implemented),
-                (BackendCapability::Include, SupportLevel::Implemented),
-                (BackendCapability::Revinclude, SupportLevel::Implemented),
-                (BackendCapability::FullTextSearch, SupportLevel::Partial),
-                (BackendCapability::TerminologySearch, SupportLevel::Implemented),
-                (BackendCapability::Transactions, SupportLevel::Planned),
-                (BackendCapability::OptimisticLocking, SupportLevel::Partial),
-                (BackendCapability::CursorPagination, SupportLevel::Planned),
-                (BackendCapability::OffsetPagination, SupportLevel::Planned),
-                (BackendCapability::Sorting, SupportLevel::Planned),
-                (BackendCapability::BulkExport, SupportLevel::NotPlanned),
-                (BackendCapability::SharedSchema, SupportLevel::Planned),
-                (BackendCapability::SchemaPerTenant, SupportLevel::NotPlanned),
-                (BackendCapability::DatabasePerTenant, SupportLevel::Planned),
-            ],
-        );
-
         // Elasticsearch capabilities
         matrix.set_backend_capabilities(
             BackendKind::Elasticsearch,
@@ -446,8 +386,6 @@ impl CapabilityMatrix {
             BackendKind::Sqlite,
             BackendKind::Postgres,
             BackendKind::MongoDB,
-            BackendKind::Cassandra,
-            BackendKind::Neo4j,
             BackendKind::Elasticsearch,
             BackendKind::S3,
         ];
@@ -521,9 +459,9 @@ mod tests {
             SupportLevel::NotPlanned
         );
 
-        // Neo4j should have chained search
+        // Elasticsearch should have full-text search
         assert_eq!(
-            matrix.support_level(BackendKind::Neo4j, BackendCapability::ChainedSearch),
+            matrix.support_level(BackendKind::Elasticsearch, BackendCapability::FullTextSearch),
             SupportLevel::Implemented
         );
     }

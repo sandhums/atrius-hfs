@@ -813,6 +813,38 @@ impl BundleImportBackend for PostgresTerminologyBackend {
         Ok(row.get(0))
     }
 
+    async fn code_system_concept_codes(
+        &self,
+        _ctx: &TenantContext,
+        url: &str,
+        version: &str,
+    ) -> Result<std::collections::HashSet<String>, HtsError> {
+        let client = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| HtsError::StorageError(format!("Pool error: {e}")))?;
+        let rows = client
+            .query(
+                "SELECT c.code FROM concepts c
+                 JOIN code_systems s ON c.system_id = s.id
+                 WHERE s.url = $1 AND s.version = $2",
+                &[&url, &version],
+            )
+            .await
+            .map_err(|e| HtsError::StorageError(e.to_string()))?;
+        Ok(rows.iter().map(|r| r.get::<_, String>(0)).collect())
+    }
+
+    /// Delete all HTS normalized rows for the resource identified by `resource_url`.
+    ///
+    /// For CodeSystem: purges expansion cache entries that include codes from
+    /// this system, then deletes the code_system row (FK CASCADE handles
+    /// concepts, hierarchy, properties, designations).
+    ///
+    /// For ValueSet: deletes the value_set row (FK CASCADE handles expansions).
+    ///
+    /// For ConceptMap: deletes the concept_map row (FK CASCADE handles elements).
     async fn delete_normalized(
         &self,
         resource_type: &str,

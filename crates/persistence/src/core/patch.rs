@@ -6,6 +6,10 @@
 //! endpoint and on every backend (#1406). Before, REST, SQLite and PostgreSQL
 //! each carried a private copy.
 //!
+//! Bundle PATCH entries have no Content-Type. [`patch_format_from_bundle_resource`]
+//! infers format from the entry resource, and [`patched_from_bundle_entry`]
+//! applies it through the same applier.
+//!
 //! # Formats
 //!
 //! * JSON Patch (RFC 6902) and JSON Merge Patch (RFC 7396) are applied with
@@ -38,6 +42,7 @@ use serde_json::{Map, Value};
 use thiserror::Error;
 
 use super::PatchFormat;
+use crate::error::{StorageError, StorageResult, ValidationError};
 
 /// Why a patch was not applied. Nothing has been written when one is returned.
 ///
@@ -89,6 +94,36 @@ pub enum PatchError {
 
 /// The elements a patch may neither change nor remove.
 const IMMUTABLE_ELEMENTS: [&str; 2] = ["resourceType", "id"];
+
+/// Infers a [`PatchFormat`] from a Bundle entry's `resource`.
+pub fn patch_format_from_bundle_resource(resource: &Value) -> StorageResult<PatchFormat> {
+    if resource.get("resourceType").and_then(Value::as_str) == Some("Parameters") {
+        return Ok(PatchFormat::FhirPathPatch(resource.clone()));
+    }
+    if resource.is_array() {
+        return Ok(PatchFormat::JsonPatch(resource.clone()));
+    }
+    if resource.is_object() {
+        return Ok(PatchFormat::MergePatch(resource.clone()));
+    }
+    Err(StorageError::Validation(ValidationError::InvalidResource {
+        message: "Bundle PATCH resource must be a Parameters resource, a JSON Patch array, or a merge-patch object".to_string(),
+        details: vec![],
+    }))
+}
+
+/// Applies `patch` to `resource` and returns the patched document.
+///
+/// Same applier as [`apply_patch`]; maps [`PatchError`] into [`StorageError`].
+pub fn apply_resource_patch(resource: &Value, patch: &PatchFormat) -> StorageResult<Value> {
+    apply_patch(resource, patch).map_err(|e| StorageError::Validation(e.into()))
+}
+
+/// Applies a Bundle PATCH entry's resource to the current representation.
+pub fn patched_from_bundle_entry(current: &Value, patch_resource: &Value) -> StorageResult<Value> {
+    let format = patch_format_from_bundle_resource(patch_resource)?;
+    apply_patch(current, &format).map_err(|e| StorageError::Validation(e.into()))
+}
 
 /// Applies `patch` to `current` and returns the patched content.
 ///
@@ -197,6 +232,33 @@ pub fn decode_bundle_patch_resource(
         }),
         _ => Err(malformed(
             "Bundle PATCH resource must be Parameters or Binary",
+        )),
+    }
+}
+
+/// Bundle PATCH format for this fork.
+///
+/// Helios [`decode_bundle_patch_resource`] accepts Parameters and, on R5/R6,
+/// a Binary holding JSON Patch. A JSON Patch array or any other object is a
+/// merge-style Bundle document this fork already applies.
+pub fn bundle_patch_format(
+    resource: &Value,
+    version: FhirVersion,
+) -> Result<PatchFormat, PatchError> {
+    match resource.get("resourceType").and_then(Value::as_str) {
+        Some("Parameters") | Some("Binary") => decode_bundle_patch_resource(resource, version),
+        _ if resource.is_array() => {
+            let _: json_patch::Patch = serde_json::from_value(resource.clone()).map_err(|e| {
+                PatchError::MalformedDocument {
+                    format: "JSON Patch",
+                    message: e.to_string(),
+                }
+            })?;
+            Ok(PatchFormat::JsonPatch(resource.clone()))
+        }
+        _ if resource.is_object() => Ok(PatchFormat::MergePatch(resource.clone())),
+        _ => Err(malformed(
+            "Bundle PATCH resource must be Parameters, Binary, a JSON Patch array, or a merge-patch object",
         )),
     }
 }
@@ -941,6 +1003,68 @@ mod tests {
             "active": false,
             "name": [{"family": "Before"}]
         })
+    }
+
+    #[test]
+    fn a_parameters_body_is_fhirpath_patch() {
+        let doc = json!({ "resourceType": "Parameters", "parameter": [] });
+        assert!(matches!(
+            patch_format_from_bundle_resource(&doc).unwrap(),
+            PatchFormat::FhirPathPatch(_)
+        ));
+    }
+
+    #[test]
+    fn a_json_array_is_json_patch() {
+        let doc = json!([{ "op": "replace", "path": "/active", "value": false }]);
+        assert!(matches!(
+            patch_format_from_bundle_resource(&doc).unwrap(),
+            PatchFormat::JsonPatch(_)
+        ));
+    }
+
+    #[test]
+    fn an_object_is_merge_patch() {
+        let doc = json!({ "resourceType": "Patient", "name": [{ "family": "Patched" }] });
+        assert!(matches!(
+            patch_format_from_bundle_resource(&doc).unwrap(),
+            PatchFormat::MergePatch(_)
+        ));
+    }
+
+    #[test]
+    fn merge_patch_replaces_family() {
+        let current = json!({
+            "resourceType": "Patient",
+            "id": "p1",
+            "name": [{ "family": "Nguyen" }]
+        });
+        let patch = json!({
+            "resourceType": "Patient",
+            "id": "p1",
+            "name": [{ "family": "Patched" }]
+        });
+        let patched = patched_from_bundle_entry(&current, &patch).unwrap();
+        assert_eq!(patched["name"][0]["family"], "Patched");
+        assert_eq!(patched["id"], "p1");
+    }
+
+    #[test]
+    fn json_patch_replaces_a_pointer() {
+        let current = json!({ "resourceType": "Patient", "active": true });
+        let patch = PatchFormat::JsonPatch(json!([
+            { "op": "replace", "path": "/active", "value": false }
+        ]));
+        let patched = apply_resource_patch(&current, &patch).unwrap();
+        assert_eq!(patched["active"], false);
+    }
+
+    #[test]
+    fn resource_type_change_is_refused() {
+        let current = json!({ "resourceType": "Patient", "id": "p1" });
+        let patch = json!({ "resourceType": "Observation" });
+        let err = patched_from_bundle_entry(&current, &patch).unwrap_err();
+        assert!(err.to_string().contains("resourceType"));
     }
 
     #[test]

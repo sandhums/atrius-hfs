@@ -30,10 +30,10 @@ impl FileSink {
         let path = path.into();
 
         // Ensure parent directories exist
-        if let Some(parent) = path.parent() {
-            if !parent.as_os_str().is_empty() {
-                tokio::fs::create_dir_all(parent).await?;
-            }
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            tokio::fs::create_dir_all(parent).await?;
         }
 
         let file = tokio::fs::OpenOptions::new()

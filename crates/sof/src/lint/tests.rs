@@ -1191,6 +1191,7 @@ fn key_model_matches_generated_structs() {
     let _: ViewDefinitionSelectColumnTag = ViewDefinitionSelectColumnTag {
         name: String::default().into(),
         value: String::default().into(),
+        ..Default::default()
     };
     let _: helios_fhir::r4::ViewDefinitionConstant = helios_fhir::r4::ViewDefinitionConstant {
         name: String::default().into(),

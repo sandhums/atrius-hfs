@@ -19,6 +19,27 @@ off
 # Test artifacts
 /test-artifacts
 
+/crates/fhir/tests/
+/crates/hts/terminology-data/
+/crates/hts/data/
+/deploy/kr/.env.kr
+
+# Expanded Atrius IG package (regenerate via ./scripts/setup-atrius-profile-registry.sh)
+/manifests/atrius-ig-package/
+/manifests/atrius-ig-package.tgz
+.cache/
+
+# Local service env (secrets) — keep only *.env.example in git
+deploy/env/*.env
+!deploy/env/*.env.example
+.env
+
+# Local audit sink dumps (runtime; may contain PHI)
+/data/audit*.ndjson
+
+# Seeded FHIR NPM package cache (./scripts/setup-atrius-profile-registry.sh)
+/data/fhir-packages/
+
 # Runtime + build logs (hts-*.log, hts-run.log, test-*.log, compile.log, …)
 *.log
 

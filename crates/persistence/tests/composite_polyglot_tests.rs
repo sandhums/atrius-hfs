@@ -101,7 +101,7 @@ fn test_polyglot_query_routing() {
     let config = CompositeConfigBuilder::new()
         .primary("primary", BackendKind::Sqlite)
         .search_backend("elasticsearch", BackendKind::Elasticsearch)
-        .graph_backend("neo4j", BackendKind::Neo4j)
+        .graph_backend("graph", BackendKind::Postgres)
         .terminology_backend("terminology", BackendKind::Postgres)
         .build()
         .unwrap();

@@ -7,7 +7,7 @@ use std::{pin::Pin, time::Duration};
 
 use axum::{
     body::Body,
-    extract::{Path, Request, State},
+    extract::{Path, Query, Request, State},
     http::{HeaderMap, Method, StatusCode},
     response::Response,
 };
@@ -17,8 +17,8 @@ use helios_fhir::FhirVersion;
 use helios_persistence::core::ExportDataProvider;
 use helios_persistence::core::{
     DownloadUrl, ExportJobId, ExportLevel, ExportManifest, ExportOutputFile, ExportOutputStore,
-    ExportRequest, ExportStatus, GroupExportProvider, PatientExportProvider, RawManifestEntry,
-    ResourceStorage, SearchProvider, StartExportInput, TypeFilter,
+    ExportRequest, ExportStatus, GroupExportProvider, ListExportsQuery, PatientExportProvider,
+    RawManifestEntry, ResourceStorage, SearchProvider, StartExportInput, TypeFilter,
 };
 use helios_persistence::error::{BulkExportError, ResourceError, StorageError};
 use tokio::io::AsyncRead;
@@ -30,6 +30,7 @@ use crate::extractors::{
     unknown_search_params,
 };
 use crate::state::AppState;
+use std::collections::HashMap;
 
 /// Trait bound shared by all bulk-export handlers (the resource-store side).
 pub trait ExportResourceStore:
@@ -152,10 +153,8 @@ where
 
     let is_post = method == Method::POST;
     let mut pairs = parse_query_pairs(raw_query);
-    if is_post {
-        if let Some(b) = body {
-            pairs.extend(pairs_from_parameters(b));
-        }
+    if is_post && let Some(b) = body {
+        pairs.extend(pairs_from_parameters(b));
     }
 
     // _outputFormat
@@ -620,6 +619,70 @@ where
     .await
 }
 
+/// `GET /export-jobs` — list jobs the caller owns (or all jobs, with `system/*`).
+pub async fn export_jobs_list_handler<S>(
+    State(state): State<AppState<S>>,
+    tenant: TenantExtractor,
+    Query(params): Query<HashMap<String, String>>,
+    request: Request,
+) -> RestResult<Response>
+where
+    S: ExportResourceStore + Send + Sync + 'static,
+{
+    let cfg = state.bulk_export_config();
+    if !cfg.enabled {
+        return Err(not_implemented());
+    }
+    let jobs = state.bulk_export_jobs().ok_or_else(not_implemented)?;
+    let principal = request.extensions().get::<Principal>().cloned();
+
+    let count = match params.get("_count") {
+        None => 0,
+        Some(s) => s
+            .parse::<u32>()
+            .map_err(|_| bad_request("invalid `_count`"))?,
+    };
+    let status = match params.get("status") {
+        None => None,
+        Some(s) => Some(
+            s.parse::<ExportStatus>()
+                .map_err(|_| bad_request(format!("invalid `status` '{s}'")))?,
+        ),
+    };
+    let since = match params.get("_since") {
+        None => None,
+        Some(s) => Some(parse_instant_param("_since", s)?),
+    };
+    let cursor = params.get("_cursor").cloned();
+    if let Some(c) = cursor.as_deref()
+        && helios_persistence::core::decode_export_job_cursor(c).is_none()
+    {
+        return Err(bad_request("invalid `_cursor`"));
+    }
+
+    let query = ListExportsQuery {
+        owner_subject: list_owner_filter(principal.as_ref()),
+        status,
+        since,
+        count,
+        cursor,
+    };
+    let list = jobs
+        .list_export_jobs(tenant.context(), &query)
+        .await
+        .map_err(map_storage_err)?;
+    let body = serde_json::to_vec(&list).map_err(|e| RestError::InternalError {
+        message: e.to_string(),
+    })?;
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/json")
+        .body(Body::from(body))
+        .map_err(|e| RestError::InternalError {
+            message: e.to_string(),
+        })
+}
+
 /// `GET /export-status/{job_id}` — poll status / fetch manifest.
 ///
 /// While the job is `accepted` or `in-progress`, the poll returns `202
@@ -984,7 +1047,6 @@ fn streamed_reader_body(reader: Pin<Box<dyn AsyncRead + Send>>) -> Body {
 /// because `helios-persistence` gated its audit code behind a cargo feature that
 /// only the `hfs` binary enabled. Two implementations of one event drift; now
 /// there is one.
-#[allow(clippy::too_many_arguments)]
 async fn emit_export_audit<S>(
     state: &AppState<S>,
     tenant: &str,
@@ -1000,19 +1062,25 @@ async fn emit_export_audit<S>(
     let Some(sink) = state.audit_sink() else {
         return;
     };
-    helios_persistence::core::bulk_export::audit::record_export_event(
-        sink.as_ref(),
-        state.audit_source_observer(),
-        principal.map(|p| p.subject.as_str()),
-        Some(tenant),
-        job_id,
-        operation,
-        level,
-        resource_types,
-        outcome,
-        None,
-    )
-    .await;
+    let mut builder = helios_audit::AuditEventBuilder::new(state.audit_source_observer())
+        .event_type(
+            "http://terminology.hl7.org/CodeSystem/audit-event-type",
+            "object",
+        )
+        .action(helios_audit::AuditAction::Execute)
+        .outcome(outcome)
+        .detail("audit-operation", "bulk-export")
+        .detail("bulk-export-operation", operation)
+        .detail("job-id", job_id)
+        .detail("export-level", level.to_string())
+        .tenant(tenant);
+    if !resource_types.is_empty() {
+        builder = builder.detail("resource-types", resource_types.join(","));
+    }
+    if let Some(p) = principal {
+        builder = builder.agent_identity(crate::audit::audit_agent(p));
+    }
+    sink.record(builder.build()).await;
 }
 
 /// Ownership check: the principal owns the job, holds a wildcard scope in a
@@ -1033,10 +1101,40 @@ fn owns_job(principal: Option<&Principal>, owner_subject: Option<&str>) -> bool 
     }
 }
 
+/// Jobs the list endpoint may return: the caller's own, unless they hold
+/// `system/*` (or auth is off). Matches the per-id `system/*` override in
+/// spirit; typed `user/*` wildcards do not see other owners' jobs.
+fn list_owner_filter(principal: Option<&Principal>) -> Option<String> {
+    match principal {
+        None => None,
+        Some(p) if p.scopes.has_system_wildcard() => None,
+        Some(p) => Some(p.subject.clone()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use helios_auth::ScopeSet;
     use helios_persistence::error::BackendError;
+
+    fn principal(subject: &str, scopes: &str) -> Principal {
+        Principal::stub(subject, ScopeSet::parse(scopes)).with_issuer("https://issuer.example")
+    }
+
+    #[test]
+    fn list_owner_filter_is_caller_unless_system_wildcard() {
+        assert_eq!(list_owner_filter(None), None);
+        let typed = principal("alice", "system/Patient.rs");
+        assert_eq!(list_owner_filter(Some(&typed)).as_deref(), Some("alice"));
+        let wildcard_user = principal("alice", "user/*.rs");
+        assert_eq!(
+            list_owner_filter(Some(&wildcard_user)).as_deref(),
+            Some("alice")
+        );
+        let admin = principal("alice", "system/*.rs");
+        assert_eq!(list_owner_filter(Some(&admin)), None);
+    }
 
     #[tokio::test]
     async fn streamed_export_body_propagates_reader_errors() {

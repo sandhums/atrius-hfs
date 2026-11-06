@@ -70,6 +70,18 @@ pub struct SubscriptionConfig {
     /// FHIR Messaging channel settings. `None` disables the messaging dispatcher.
     pub messaging: Option<MessagingSettings>,
 
+    /// How often the outbox worker polls when idle.
+    pub outbox_poll_interval: Duration,
+
+    /// Max rows claimed per outbox worker iteration.
+    pub outbox_batch_size: u32,
+
+    /// Lease duration for a claimed outbox row.
+    pub outbox_claim_lease: Duration,
+
+    /// Soft timeout for processing a single outbox event (match + dispatch).
+    pub outbox_process_timeout: Duration,
+
     /// Whether server-driven status transitions are written back into the
     /// stored `Subscription` resource (issue #357).
     ///
@@ -135,6 +147,10 @@ impl Default for SubscriptionConfig {
             ws_token_lifetime_secs: 30,
             smtp: None,
             messaging: None,
+            outbox_poll_interval: Duration::from_secs(2),
+            outbox_batch_size: 32,
+            outbox_claim_lease: Duration::from_secs(60),
+            outbox_process_timeout: Duration::from_secs(120),
             persist_status: true,
             status_write_timeout: Duration::from_secs(5),
             status_write_concurrency: 4,

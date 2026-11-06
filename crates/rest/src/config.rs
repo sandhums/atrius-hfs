@@ -37,10 +37,13 @@
 //! | `HFS_VALIDATION_UNKNOWN_PROFILE` | warn | Unresolvable profiles: warn, error, or ignore |
 //! | `HFS_VALIDATION_CONSTRAINTS` | true | Evaluate FHIRPath invariants |
 //! | `HFS_VALIDATION_SUPPRESS_CONSTRAINTS` | dom-6 | Comma-separated constraint ids to skip |
-//! | `HFS_VALIDATION_TERMINOLOGY` | embedded | Required-binding checks: embedded (offline FHIR core value sets), remote (`$validate-code` against `HFS_TERMINOLOGY_SERVER`), or off |
+//! | `HFS_VALIDATION_TERMINOLOGY` | embedded | Required-binding checks: `off`, `embedded` (offline FHIR core value sets), `remote` (`$validate-code` against `HFS_TERMINOLOGY_SERVER`), or `tiered` (embedded hit/miss, HTS on ValueSets not in the pack) |
 //! | `HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS` | 3000 | Per-check terminology timeout |
 //! | `HFS_VALIDATION_TERMINOLOGY_FAIL` | open | Terminology outage posture: open (warn) or closed (error) |
 //! | `HFS_VALIDATION_STORED_PROFILES` | true | Maintain per-tenant profile registries from stored StructureDefinitions |
+//! | `HFS_FHIR_PACKAGE_CACHE` | (none) | Curated FHIR NPM package cache root (offline materialization) |
+//! | `HFS_FHIR_PACKAGES` | (none) | Comma-separated `name@version` packages to overlay (listed packages only) |
+//! | `HFS_PROFILE_MANIFEST` / `HFS_PROFILE_VALIDATION_MODE` / `HFS_PROFILE_VALIDATION_ADDONS` | removed | Startup fails if set; use `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`. `HFS_PROFILE_CORPUS` is unrelated (search profiling) and still valid. |
 //!
 //! # Example
 //!
@@ -503,6 +506,13 @@ pub struct ValidationConfig {
     /// Maintain per-tenant profile registries from stored
     /// StructureDefinitions (updated on StructureDefinition writes).
     pub stored_profiles: bool,
+    /// Curated FHIR NPM package cache directory (`HFS_FHIR_PACKAGE_CACHE`).
+    /// Empty disables package overlays.
+    pub package_cache: Option<String>,
+    /// Comma-separated `name@version` packages (`HFS_FHIR_PACKAGES`).
+    /// Requires [`Self::package_cache`]. Resolution is offline against the
+    /// cache only and does not walk `package.json` dependencies.
+    pub packages: Vec<String>,
 }
 
 impl Default for ValidationConfig {
@@ -517,6 +527,8 @@ impl Default for ValidationConfig {
             terminology_timeout_ms: 3000,
             terminology_fail: "open".to_string(),
             stored_profiles: true,
+            package_cache: None,
+            packages: Vec::new(),
         }
     }
 }
@@ -562,6 +574,19 @@ impl ValidationConfig {
             terminology_fail: std::env::var("HFS_VALIDATION_TERMINOLOGY_FAIL")
                 .unwrap_or(d.terminology_fail),
             stored_profiles: env_bool("HFS_VALIDATION_STORED_PROFILES", d.stored_profiles),
+            package_cache: std::env::var("HFS_FHIR_PACKAGE_CACHE")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
+            packages: std::env::var("HFS_FHIR_PACKAGES")
+                .map(|s| {
+                    s.split(',')
+                        .map(str::trim)
+                        .filter(|s| !s.is_empty())
+                        .map(str::to_string)
+                        .collect()
+                })
+                .unwrap_or_default(),
         }
     }
 
@@ -580,9 +605,12 @@ impl ValidationConfig {
                 self.unknown_profile
             ));
         }
-        if !matches!(self.terminology.as_str(), "off" | "embedded" | "remote") {
+        if !matches!(
+            self.terminology.as_str(),
+            "off" | "embedded" | "remote" | "tiered"
+        ) {
             errors.push(format!(
-                "HFS_VALIDATION_TERMINOLOGY '{}' invalid (expected off|embedded|remote)",
+                "HFS_VALIDATION_TERMINOLOGY '{}' invalid (expected off|embedded|remote|tiered)",
                 self.terminology
             ));
         }
@@ -594,6 +622,16 @@ impl ValidationConfig {
         }
         if self.terminology_timeout_ms == 0 {
             errors.push("HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS must be > 0".to_string());
+        }
+        if !self.packages.is_empty() && self.package_cache.is_none() {
+            errors.push("HFS_FHIR_PACKAGES is set but HFS_FHIR_PACKAGE_CACHE is unset".to_string());
+        }
+        for pkg in &self.packages {
+            if helios_fhir_validator::PackageRef::parse(pkg).is_err() {
+                errors.push(format!(
+                    "HFS_FHIR_PACKAGES entry '{pkg}' invalid (expected name@version)"
+                ));
+            }
         }
         if errors.is_empty() {
             Ok(())
@@ -1509,6 +1547,17 @@ pub struct ServerConfig {
     #[arg(long, env = "HFS_SOF_ENABLED", default_value = "true")]
     pub sof_enabled: bool,
 
+    /// Accepted for backward compatibility with existing deployments
+    /// (`HFS_REINDEX_ENABLED`): `$reindex` is now wired automatically for
+    /// backends with a search index, so this flag no longer gates anything.
+    #[arg(
+        long,
+        env = "HFS_REINDEX_ENABLED",
+        default_value = "false",
+        hide = true
+    )]
+    pub reindex_enabled: bool,
+
     /// Mount the web UI at `/ui` and run its dashboard's background work.
     ///
     /// On by default. Headless deployments (behind an API gateway, or anywhere
@@ -1730,7 +1779,7 @@ pub struct ServerConfig {
     /// - FHIRPath `subsumes()` → `POST /CodeSystem/$subsumes` (via env var passthrough)
     ///
     /// Leave unset (default: none) to disable terminology integration.
-    /// Example: `http://localhost:8090`
+    /// Example: `http://localhost:9091`
     #[arg(long, env = "HFS_TERMINOLOGY_SERVER", hide_env_values = true)]
     pub terminology_server: Option<String>,
 
@@ -1799,6 +1848,7 @@ impl fmt::Debug for ServerConfig {
             reindex_batch_bytes,
             reindex_prefetch,
             sof_enabled,
+            reindex_enabled,
             ui_enabled,
             dashboard_reconcile_interval_secs,
             dashboard_refresh_secs,
@@ -1911,6 +1961,7 @@ impl fmt::Debug for ServerConfig {
             .field("reindex_batch_bytes", reindex_batch_bytes)
             .field("reindex_prefetch", reindex_prefetch)
             .field("sof_enabled", sof_enabled)
+            .field("reindex_enabled", reindex_enabled)
             .field("ui_enabled", ui_enabled)
             .field(
                 "dashboard_reconcile_interval_secs",
@@ -1993,6 +2044,31 @@ fn parse_public_base_url_arg(value: &str) -> Result<String, String> {
     crate::public_url::PublicUrl::parse(value).map(|url| url.as_str().to_string())
 }
 
+/// Dual-engine profile validation was removed. Fail if leftover env still looks
+/// like write-path validation is on. `HFS_PROFILE_CORPUS` is not in this list.
+fn reject_removed_profile_env<F>(getenv: F) -> Result<(), String>
+where
+    F: Fn(&str) -> Result<String, std::env::VarError>,
+{
+    const REMOVED: &[&str] = &[
+        "HFS_PROFILE_MANIFEST",
+        "HFS_PROFILE_VALIDATION_MODE",
+        "HFS_PROFILE_VALIDATION_ADDONS",
+    ];
+    let set: Vec<&str> = REMOVED
+        .iter()
+        .copied()
+        .filter(|name| getenv(name).is_ok())
+        .collect();
+    if set.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "removed env var(s) still set: {}. Use HFS_VALIDATION_MODE + HFS_FHIR_PACKAGES instead (see docs/validation-cutover.md). HFS_PROFILE_CORPUS is unrelated and still valid.",
+        set.join(", ")
+    ))
+}
+
 impl ServerConfig {
     /// Loads configuration for the HFS binary and reports command-line,
     /// environment, and validation errors to the caller.
@@ -2025,6 +2101,9 @@ impl ServerConfig {
     }
 
     fn finish_parsed(mut config: Self) -> Result<Self, clap::Error> {
+        reject_removed_profile_env(|name| std::env::var(name)).map_err(|message| {
+            clap::Error::raw(clap::error::ErrorKind::ValueValidation, message)
+        })?;
         config.multitenancy = MultitenancyConfig::from_env();
         config.bulk_export = BulkExportConfig::from_env();
         config.bulk_submit = BulkSubmitConfig::from_env();
@@ -2089,6 +2168,7 @@ impl Default for ServerConfig {
             reindex_batch_bytes: 32 * 1024 * 1024,
             reindex_prefetch: true,
             sof_enabled: true,
+            reindex_enabled: false,
             ui_enabled: true,
             dashboard_reconcile_interval_secs: 30,
             dashboard_refresh_secs: 5,
@@ -2382,11 +2462,14 @@ impl ServerConfig {
             errors.append(&mut validation_errors);
         }
 
-        // Remote terminology checking needs a terminology server to call.
-        if self.validation.terminology == "remote" && self.terminology_server.is_none() {
-            errors.push(
-                "HFS_VALIDATION_TERMINOLOGY=remote requires HFS_TERMINOLOGY_SERVER".to_string(),
-            );
+        // Remote / tiered terminology checking needs a terminology server to call.
+        if matches!(self.validation.terminology.as_str(), "remote" | "tiered")
+            && self.terminology_server.is_none()
+        {
+            errors.push(format!(
+                "HFS_VALIDATION_TERMINOLOGY={} requires HFS_TERMINOLOGY_SERVER",
+                self.validation.terminology
+            ));
         }
 
         if errors.is_empty() {
@@ -2444,6 +2527,7 @@ impl ServerConfig {
             reindex_batch_bytes: 32 * 1024 * 1024,
             reindex_prefetch: true,
             sof_enabled: true,
+            reindex_enabled: false,
             ui_enabled: true,
             dashboard_reconcile_interval_secs: 30,
             dashboard_refresh_secs: 5,
@@ -2523,6 +2607,38 @@ mod tests {
         assert_eq!(config.port, 8080);
         assert_eq!(config.host, "127.0.0.1");
         assert!(config.enable_cors);
+    }
+
+    #[test]
+    fn rejects_removed_hfs_profile_env() {
+        let err = reject_removed_profile_env(|name| {
+            if name == "HFS_PROFILE_MANIFEST" {
+                Ok("/tmp/legacy-manifest.json".into())
+            } else {
+                Err(std::env::VarError::NotPresent)
+            }
+        })
+        .expect_err("legacy HFS_PROFILE_MANIFEST must fail startup");
+        assert!(
+            err.contains("HFS_PROFILE_MANIFEST"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            err.contains("HFS_VALIDATION_MODE"),
+            "error should point at the replacement vars: {err}"
+        );
+    }
+
+    #[test]
+    fn allows_hfs_profile_corpus_and_unset_removed_vars() {
+        reject_removed_profile_env(|name| {
+            if name == "HFS_PROFILE_CORPUS" {
+                Ok("/tmp/synthea".into())
+            } else {
+                Err(std::env::VarError::NotPresent)
+            }
+        })
+        .expect("HFS_PROFILE_CORPUS is still a live search-profiling knob");
     }
 
     #[test]
@@ -3991,6 +4107,34 @@ mod tests {
             assert_eq!(variant.to_string(), expected);
             assert_eq!(expected.parse::<StorageBackendMode>().unwrap(), variant);
         }
+    }
+
+    #[test]
+    fn validation_terminology_tiered_requires_terminology_server() {
+        let mut cfg = ValidationConfig::default();
+        cfg.terminology = "tiered".to_string();
+        cfg.validate().unwrap();
+
+        let mut server = ServerConfig::default();
+        server.validation.terminology = "tiered".to_string();
+        server.terminology_server = None;
+        let errs = server.validate().unwrap_err();
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("HFS_VALIDATION_TERMINOLOGY=tiered")),
+            "{errs:?}"
+        );
+
+        server.terminology_server = Some("http://127.0.0.1:9091".into());
+        server.validate().unwrap();
+    }
+
+    #[test]
+    fn validation_terminology_rejects_unknown_mode() {
+        let mut cfg = ValidationConfig::default();
+        cfg.terminology = "local-then-remote".to_string();
+        let errs = cfg.validate().unwrap_err();
+        assert!(errs.iter().any(|e| e.contains("tiered")), "{errs:?}");
     }
 
     // ── bulk submit file fan-out (#942) ───────────────────────────

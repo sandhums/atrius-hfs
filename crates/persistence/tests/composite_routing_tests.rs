@@ -300,7 +300,7 @@ fn test_route_fulltext_query_mongodb_elasticsearch_split() {
 fn test_route_chained_search_to_graph() {
     let config = CompositeConfigBuilder::new()
         .primary("primary", BackendKind::Sqlite)
-        .graph_backend("neo4j", BackendKind::Neo4j)
+        .graph_backend("graph", BackendKind::Postgres)
         .build()
         .unwrap();
 
@@ -324,8 +324,8 @@ fn test_route_chained_search_to_graph() {
 
     // Chained searches benefit from graph backend
     assert!(
-        routing.auxiliary_targets.values().any(|v| v == "neo4j")
-            || routing.primary_target == "neo4j"
+        routing.auxiliary_targets.values().any(|v| v == "graph")
+            || routing.primary_target == "graph"
     );
 }
 
@@ -398,7 +398,7 @@ fn test_route_complex_query_to_multiple_backends() {
     let config = CompositeConfigBuilder::new()
         .primary("primary", BackendKind::Sqlite)
         .search_backend("elasticsearch", BackendKind::Elasticsearch)
-        .graph_backend("neo4j", BackendKind::Neo4j)
+        .graph_backend("graph", BackendKind::Postgres)
         .terminology_backend("terminology", BackendKind::Postgres)
         .build()
         .unwrap();

@@ -463,8 +463,9 @@ fn is_mongodb_url(url: &str) -> bool {
 /// default) acks the write as soon as the primary commits and forwards the
 /// search-index write on a background worker — lowest latency, but a
 /// follow-up search can race the indexing. `Synchronous` blocks the write
-/// until the search backend has indexed it, giving read-your-write
-/// semantics at the cost of extra latency on each write.
+/// until the search backend has indexed it and a refresh has made it
+/// searchable (`refresh=wait_for`), giving read-your-write semantics at the
+/// cost of extra latency on each write (bounded by the index refresh interval).
 #[cfg(feature = "elasticsearch")]
 fn composite_sync_mode_from_env() -> helios_persistence::composite::SyncMode {
     use helios_persistence::composite::SyncMode;
@@ -1543,6 +1544,7 @@ async fn start_mongodb(
     let submit_bundle = build_bulk_submit(
         &config,
         backend.clone(),
+        backend.clone(),
         reindex_hook,
         observability.observers.clone(),
     )
@@ -1892,14 +1894,25 @@ async fn init_auth_with_audit(
     }
 
     // Create JWKS cache
-    let jwks_cache = Arc::new(JwksCache::new(
+    let jwks_cache = Arc::new(JwksCache::with_insecure_tls(
         jwks_url,
         auth_config.jwks_min_refresh_interval,
+        auth_config.jwks_insecure_tls,
     ));
     jwks_cache.initial_fetch().await?;
 
+    let jti_revocation = helios_auth::build_jti_revocation(&auth_config)
+        .await
+        .map_err(|e| anyhow::anyhow!("JTI revocation init: {e}"))?;
+    if auth_config.jti_revocation_enabled {
+        info!(
+            timeout_ms = auth_config.jti_revocation_timeout_ms,
+            "JTI revocation blocklist ENABLED (shared Redis)"
+        );
+    }
+
     // Create auth provider
-    let provider = JwksBearerAuthProvider::new(jwks_cache, &auth_config);
+    let provider = JwksBearerAuthProvider::new(jwks_cache, jti_revocation, &auth_config);
 
     info!(
         jwks_url = %redact_url(jwks_url),
@@ -2127,6 +2140,7 @@ async fn main() -> anyhow::Result<()> {
     // Keep the skipped sub-configs populated while surfacing invalid CLI and
     // environment values instead of silently replacing the whole config with
     // defaults.
+    info!("starting HFS server");
     let (mut config, default_fhir_version_is_implicit) =
         ServerConfig::try_from_env_with_provenance().unwrap_or_else(|error| error.exit());
     // The REST builder uses this same flag to start the dashboard's background
@@ -2174,19 +2188,19 @@ async fn main() -> anyhow::Result<()> {
     // Propagate HFS_TERMINOLOGY_SERVER to FHIRPATH_TERMINOLOGY_SERVER so that any
     // FHIRPath evaluation (CDS Hooks, _filter, etc.) delegates terminology
     // operations (memberOf, subsumes) to the configured HTS instance.
-    if let Some(ref ts_url) = config.terminology_server {
-        if std::env::var("FHIRPATH_TERMINOLOGY_SERVER").is_err() {
-            // Safety: single-threaded at this point (before tokio runtime hands
-            // off to worker threads), so set_var is safe here.
-            // SAFETY: called before any threads are spawned by the tokio runtime.
-            unsafe {
-                std::env::set_var("FHIRPATH_TERMINOLOGY_SERVER", ts_url);
-            }
-            info!(
-                url = %redact_url(ts_url),
-                "HFS_TERMINOLOGY_SERVER wired to FHIRPath context"
-            );
+    if let Some(ref ts_url) = config.terminology_server
+        && std::env::var("FHIRPATH_TERMINOLOGY_SERVER").is_err()
+    {
+        // Safety: single-threaded at this point (before tokio runtime hands
+        // off to worker threads), so set_var is safe here.
+        // SAFETY: called before any threads are spawned by the tokio runtime.
+        unsafe {
+            std::env::set_var("FHIRPATH_TERMINOLOGY_SERVER", ts_url);
         }
+        info!(
+            url = %redact_url(ts_url),
+            "HFS_TERMINOLOGY_SERVER wired to FHIRPath context"
+        );
     }
 
     // Initialize audit subsystem
@@ -2712,6 +2726,7 @@ async fn start_sqlite(
         .map(|op| automatic_reindex_hook_with_ledger(op, &config, Some(backend.clone())));
     let submit_bundle = build_bulk_submit(
         &config,
+        backend.clone(),
         backend.clone(),
         reindex_hook,
         observability.observers.clone(),
@@ -3287,6 +3302,7 @@ struct SubmitFileScheduling {
 async fn build_bulk_submit(
     config: &ServerConfig,
     jobs: Arc<dyn BulkSubmitJobStore>,
+    storage: Arc<dyn ResourceStorage>,
     reindex_hook: Option<Arc<dyn helios_persistence::core::DeferredReindexHook>>,
     write_observer: Arc<dyn WriteObserver>,
 ) -> anyhow::Result<Option<helios_rest::BulkSubmitBundle>> {
@@ -3397,6 +3413,17 @@ async fn build_bulk_submit(
         .with_decryption_keys(decryption_keys),
     );
 
+    let ingest_validator: Option<Arc<dyn helios_persistence::core::IngestValidator>> = {
+        let svc = helios_rest::validation::ValidationService::from_config(
+            &config.validation,
+            config.terminology_server.as_deref(),
+            config.default_fhir_version,
+        )
+        .map_err(|e| anyhow::anyhow!("bulk-submit ingest validator: {e}"))?
+        .with_storage_resolve(storage);
+        Some(Arc::new(svc))
+    };
+
     // SQLite serialises writers, so a fan-out queues batch writes behind one
     // lock until they outlast `busy_timeout` and abort the manifest (#942).
     // Ignore the configured value there, and warn about it, rather than letting
@@ -3428,6 +3455,7 @@ async fn build_bulk_submit(
         &cfg,
         file_scheduling,
         reindex_hook,
+        ingest_validator,
         write_observer,
     );
     // A tenant purge from the web UI deletes this store's files too (#2279).
@@ -3456,6 +3484,7 @@ fn spawn_submit_workers(
     cfg: &helios_rest::config::BulkSubmitConfig,
     file_scheduling: SubmitFileScheduling,
     reindex_hook: Option<Arc<dyn helios_persistence::core::DeferredReindexHook>>,
+    ingest_validator: Option<Arc<dyn helios_persistence::core::IngestValidator>>,
     write_observer: Arc<dyn WriteObserver>,
 ) {
     if cfg.disable_local_worker {
@@ -3529,6 +3558,7 @@ fn spawn_submit_workers(
         let reindex_hook = reindex_hook.clone();
         let write_observer = write_observer.clone();
         let worker_id = WorkerId::new(format!("hfs-submit-worker-{i}"));
+        let ingest_validator = ingest_validator.clone();
         let pools = worker_shutdown::pools();
         let shutdown = pools.token();
         pools.spawn(async move {
@@ -3540,6 +3570,9 @@ fn spawn_submit_workers(
                     .with_batch_size(batch_size)
                     .with_skip_unchanged(skip_unchanged)
                     .with_shutdown(shutdown.clone());
+            if let Some(validator) = ingest_validator {
+                worker = worker.with_ingest_validator(validator);
+            }
             if file_scheduling.independent_tasks {
                 worker = worker.with_independent_file_tasks();
             }
@@ -3800,6 +3833,7 @@ async fn start_sqlite_elasticsearch(
     let submit_bundle = build_bulk_submit(
         &config,
         submit_jobs,
+        composite.clone(),
         reindex_hook,
         observability.observers.clone(),
     )
@@ -3913,6 +3947,7 @@ async fn start_postgres(
         .map(|op| automatic_reindex_hook_with_ledger(op, &config, None));
     let submit_bundle = build_bulk_submit(
         &config,
+        backend.clone(),
         backend.clone(),
         reindex_hook,
         observability.observers.clone(),
@@ -4150,6 +4185,7 @@ async fn start_postgres_elasticsearch(
     let submit_bundle = build_bulk_submit(
         &config,
         submit_jobs,
+        composite.clone(),
         reindex_hook,
         observability.observers.clone(),
     )
@@ -4402,6 +4438,7 @@ async fn start_mongodb_elasticsearch(
     let submit_bundle = build_bulk_submit(
         &config,
         submit_jobs,
+        mongo.clone(),
         reindex_hook,
         observability.observers.clone(),
     )
@@ -4549,6 +4586,7 @@ async fn start_s3(
     let submit_bundle = if backend.supports_bulk_submit_worker() {
         build_bulk_submit(
             &config,
+            backend.clone(),
             backend.clone(),
             ops.reindex.clone().map(|op| {
                 Arc::new(
@@ -4873,6 +4911,7 @@ async fn start_s3_elasticsearch(
         build_bulk_submit(
             &config,
             submit_jobs,
+            s3.clone(),
             reindex_hook,
             observability.observers.clone(),
         )

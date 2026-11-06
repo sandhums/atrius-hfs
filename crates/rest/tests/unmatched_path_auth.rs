@@ -26,16 +26,7 @@ impl AuthProvider for StubProvider {
             h if h == format!("Bearer {SYSTEM_TOKEN}") => "system/*.cruds",
             _ => return Err(AuthError::InvalidSignature),
         };
-        Ok(Principal {
-            subject: "demo-sub".to_string(),
-            issuer: "https://idp.example.com".to_string(),
-            tenant_id: None,
-            scopes: ScopeSet::parse(scopes),
-            jti: None,
-            expires_at: chrono::Utc::now() + chrono::Duration::minutes(5),
-            custom_claims: serde_json::Map::new(),
-            ..Default::default()
-        })
+        Ok(Principal::stub("demo-sub", ScopeSet::parse(scopes)))
     }
 
     fn name(&self) -> &str {

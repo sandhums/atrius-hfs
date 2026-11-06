@@ -1165,11 +1165,11 @@ fn apply_subsetting(
     }
 
     // Apply _elements if specified (takes precedence over _summary for element selection)
-    if let Some(elem_list) = elements {
-        if !elem_list.is_empty() {
-            result = apply_elements(&result, elem_list);
-            subsetted = true;
-        }
+    if let Some(elem_list) = elements
+        && !elem_list.is_empty()
+    {
+        result = apply_elements(&result, elem_list);
+        subsetted = true;
     }
 
     // Flag incomplete representations with the SUBSETTED tag (FHIR spec).

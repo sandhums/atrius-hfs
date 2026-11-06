@@ -43,6 +43,7 @@ env:
 jobs:
   test-rust:
     name: Test Rust (${{ matrix.rust }})
+    if: github.repository_owner == 'HeliosSoftware'
     env:
       # Rustup ranks this above a directory override left on a self-hosted
       # runner (see ci.yml), so each leg really runs the toolchain it names.
@@ -210,7 +211,7 @@ jobs:
     name: Cleanup Test Containers
     runs-on: [self-hosted, Linux]
     needs: [test-rust]
-    if: always()
+    if: github.repository_owner == 'HeliosSoftware' && (always())
     env:
       # Must exceed the longest CI job runtime (the beta leg runs ~90 minutes).
       MAX_CONTAINER_AGE_MIN: 180

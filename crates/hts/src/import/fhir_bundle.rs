@@ -445,10 +445,10 @@ fn write_code_system(
                 .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
             // Extra hierarchy edge from a "parent" property.
-            if prop.is_parent_edge {
-                if let Some(ref pv) = prop.parent_code_value {
-                    insert_hierarchy(conn, &system_id, pv, &concept.code)?;
-                }
+            if prop.is_parent_edge
+                && let Some(ref pv) = prop.parent_code_value
+            {
+                insert_hierarchy(conn, &system_id, pv, &concept.code)?;
             }
         }
 
@@ -521,14 +521,6 @@ fn write_code_system(
     );
 
     invalidate_expansion_cache_for_system(conn, &cs.url)?;
-
-    // The process-wide URL→system_id cache may have memoised a now-stale row
-    // (e.g. an empty stub that this import is about to replace, or a
-    // re-imported system whose preferred row changed). Drop everything; the
-    // cache will repopulate lazily on the next request. The parallel
-    // URL→language cache is invalidated alongside.
-    crate::backends::sqlite::invalidate_cs_id_cache();
-    crate::backends::sqlite::invalidate_cs_language_cache();
 
     stats.code_systems += 1;
     Ok(())

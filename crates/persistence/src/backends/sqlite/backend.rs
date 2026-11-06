@@ -698,6 +698,46 @@ impl SqliteBackend {
         SearchParameterExtractor::new(self.tenant_registry(tenant_id))
     }
 
+    /// Registry for indexing on `conn`: use the cache when warm, otherwise load
+    /// stored params on this same connection (safe inside an open write txn).
+    ///
+    /// Required on SQLite after subscription outbox same-TX writes: create/update
+    /// index inside the writer txn, and a pool-based overlay load can
+    /// `SQLITE_LOCKED`, return no stored params, and cache that empty overlay.
+    /// Postgres avoids this via its in-memory `stored_by_tenant` loader (no
+    /// second DB round-trip during `for_tenant`). On a load error the base
+    /// registry is used for this call and is not cached, matching
+    /// [`TenantSearchRegistries::for_tenant`].
+    pub(crate) fn tenant_registry_for_indexing(
+        &self,
+        conn: &rusqlite::Connection,
+        tenant_id: &str,
+    ) -> Arc<RwLock<SearchParameterRegistry>> {
+        if let Some(reg) = self.registries.cached(tenant_id) {
+            return reg;
+        }
+        match load_tenant_stored_params_with_conn(conn, self.config.fhir_version, tenant_id) {
+            Ok(overlay) => self.registries.build_and_cache(tenant_id, overlay),
+            Err(e) => {
+                tracing::warn!(
+                    tenant_id,
+                    error = %e,
+                    "SearchParameter overlay load on writer conn failed; indexing with base registry only"
+                );
+                Arc::new(RwLock::new(self.registries.base().read().clone()))
+            }
+        }
+    }
+
+    /// Extractor for write-path indexing; see [`Self::tenant_registry_for_indexing`].
+    pub(crate) fn tenant_extractor_for_indexing(
+        &self,
+        conn: &rusqlite::Connection,
+        tenant_id: &str,
+    ) -> SearchParameterExtractor {
+        SearchParameterExtractor::new(self.tenant_registry_for_indexing(conn, tenant_id))
+    }
+
     /// Configure connection settings.
     fn configure_connection(&self) -> StorageResult<()> {
         let conn = self.get_connection()?;

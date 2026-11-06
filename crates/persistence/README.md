@@ -223,7 +223,7 @@ Backend (connection management, capabilities)
 
 ## Features
 
-- **Multiple Backends**: SQLite, PostgreSQL, Cassandra, MongoDB, Neo4j, Elasticsearch, S3
+- **Multiple Backends**: SQLite, PostgreSQL, MongoDB, Elasticsearch, S3
 - **Multitenancy**: Shared-schema isolation via a `tenant_id` discriminator on every backend, with a mandatory `TenantContext` on every tenant-scoped operation (the S3 backend additionally offers a bucket-per-tenant mode, `HFS_S3_TENANCY=bucket-per-tenant` in the `hfs` binary — see S3 tenancy below)
 - **Full FHIR Search**: All parameter types, modifiers, chaining, \_include/\_revinclude
 - **Versioning**: Complete resource history with optimistic locking
@@ -635,9 +635,7 @@ Backends can serve as primary (CRUD, versioning, and — where the backend suppo
 | ------------------ | --------------------------- | -------------- |
 | `sqlite` (default) | SQLite (in-memory and file) | rusqlite       |
 | `postgres`         | PostgreSQL with JSONB       | tokio-postgres |
-| `cassandra`        | Apache Cassandra            | cdrs-tokio     |
 | `mongodb`          | MongoDB document store      | mongodb        |
-| `neo4j`            | Neo4j graph database        | neo4rs         |
 | `elasticsearch`    | Elasticsearch search        | elasticsearch  |
 | `s3`               | AWS S3 object storage       | aws-sdk-s3     |
 
@@ -676,6 +674,8 @@ SQLite handles CRUD, versioning, history, and transactions. Elasticsearch handle
 - Cursor-based pagination via `search_after`
 
 **Prerequisites:** A running Elasticsearch 8.x instance.
+
+**Upgrading from a build before #2394.** The Elasticsearch mapping gains `search_params.reference.reference_target` (schema version 3), added to existing indices at startup. Documents indexed before that have no such field, so references stored as absolute URLs (`http(s)://host/fhir/Patient/p1`) are not found by `Type/id` searches or by `_revinclude` until you run `POST /$reindex`. Relative references are unaffected, nothing is lost, and the startup log warns once per affected index. Run `$reindex` once after upgrading.
 
 ```bash
 # Build with Elasticsearch support
@@ -820,6 +820,8 @@ PostgreSQL handles CRUD, versioning, history, and transactions with ACID guarant
 - Multi-tenant support (shared schema via a `tenant_id` discriminator column)
 
 **Prerequisites:** Running PostgreSQL (14+) and Elasticsearch 8.x instances.
+
+**Upgrading from a build before #2394:** run `POST /$reindex` once; see [SQLite + Elasticsearch](#sqlite--elasticsearch).
 
 ```bash
 # Build with PostgreSQL and Elasticsearch support
@@ -1697,6 +1699,8 @@ MongoDB remains the canonical write/read store while Elasticsearch owns delegate
 
 **Prerequisites:** Running MongoDB and Elasticsearch 8.x instances.
 
+**Upgrading from a build before #2394:** run `POST /$reindex` once; see [SQLite + Elasticsearch](#sqlite--elasticsearch).
+
 ```bash
 # Build with MongoDB and Elasticsearch support
 cargo build --bin hfs --features mongodb,elasticsearch --release
@@ -1736,6 +1740,8 @@ S3 handles CRUD, versioning, history, and the whole `$bulk-submit` surface (inge
 - Tenant isolation (`PrefixPerTenant` or `BucketPerTenant`)
 
 **Prerequisites:** An AWS S3 bucket (or S3-compatible service) and a running Elasticsearch 8.x instance.
+
+**Upgrading from a build before #2394:** run `POST /$reindex` once; see [SQLite + Elasticsearch](#sqlite--elasticsearch).
 
 ```bash
 # Build with S3 and Elasticsearch support
@@ -2567,7 +2573,7 @@ FHIR [transaction](https://build.fhir.org/http.html#transaction) bundle processi
 | Gap                              | Description                                                          | Spec Reference                                                       |
 | -------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Conditional reference resolution | References like `Patient?identifier=12345` should resolve via search | [Transaction](https://build.fhir.org/http.html#trules)               |
-| PATCH method                     | PATCH operations in bundle entries return 501                        | [Patch](https://build.fhir.org/http.html#patch)                      |
+| Conditional PATCH in a Bundle    | `[type]?[criteria]` PATCH is refused; instance-url PATCH is applied  | [Patch](https://build.fhir.org/http.html#patch)                      |
 | Duplicate resource detection     | Same resource appearing twice in transaction should fail             | [Transaction](https://build.fhir.org/http.html#trules)               |
 | Prefer header handling           | `return=minimal`, `return=representation`, `return=OperationOutcome` | [Prefer](https://build.fhir.org/http.html#return)                    |
 | History bundle acceptance        | Servers SHOULD accept history bundles for replay                     | [History](https://build.fhir.org/http.html#history)                  |
@@ -2748,7 +2754,7 @@ The SQLite backend includes a complete FHIR search implementation using pre-comp
 - [x] `ReindexableStorage` trait for backend-agnostic reindexing
 - [x] `ReindexOperation` with background task execution
 - [x] Progress tracking and cancellation support
-- [ ] `$reindex` HTTP endpoint (planned for server layer)
+- [x] `$reindex` HTTP endpoint (`HFS_REINDEX_ENABLED=true`; SQLite/Postgres)
 
 **Capability Reporting:**
 
@@ -2822,14 +2828,14 @@ The SQLite backend includes a complete FHIR search implementation using pre-comp
 
 ### Phase 5+: Additional Backends (Planned)
 
-- [ ] Cassandra backend (wide-column, partition keys)
+- [ ] ClickHouse backend
 - [x] MongoDB Phase 1 scaffold (module wiring, config, Backend trait baseline)
 - [x] MongoDB Phase 2 core storage parity (CRUD/count/read_batch/create_or_update, tenant isolation, soft-delete, schema bootstrap)
 - [x] MongoDB Phase 3 versioning/history plus best-effort session-backed consistency
 - [x] MongoDB Phase 4 native search, pagination/sorting, and conditional create/update/delete
 - [x] MongoDB Phase 5 composite MongoDB + Elasticsearch integration and runtime wiring
 - [x] MongoDB Phase 6 runtime wiring verification, documentation sync, and release-readiness validation
-- [ ] Neo4j backend (graph queries, Cypher)
+- [ ] Graph-role routing docs (no dedicated graph engine)
 
 ### Phase 6: Composite Storage ✓
 
@@ -3228,12 +3234,16 @@ let config = CompositeConfigBuilder::new()
     .build()?;
 ```
 
-#### Graph-Heavy Workloads
+#### Graph-role routing (no dedicated graph engine)
+
+Chained search is routed to `BackendRole::Graph` when one is configured.
+There is no Neo4j/Cassandra backend in this crate; an existing engine can
+fill the role if you want that routing:
 
 ```rust
 let config = CompositeConfigBuilder::new()
     .primary("pg", BackendKind::Postgres)
-    .graph_backend("neo4j", BackendKind::Neo4j)
+    .graph_backend("graph", BackendKind::Postgres)
     .sync_mode(SyncMode::Hybrid { sync_for_search: false })
     .build()?;
 ```

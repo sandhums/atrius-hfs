@@ -3,6 +3,10 @@ use serde_json::{Map, Value};
 
 use crate::scope::ScopeSet;
 
+/// Default `iss` used by [`Principal::stub`]. Override with
+/// [`Principal::with_issuer`] when a test asserts on the issuer.
+const STUB_ISSUER: &str = "https://idp.example/realms/fhir";
+
 /// Represents an authenticated identity extracted from a validated JWT.
 ///
 /// Injected into Axum request extensions by the auth middleware after
@@ -35,6 +39,55 @@ pub struct Principal {
 }
 
 impl Principal {
+    /// Test helper: a principal with `subject` and `scopes`, and otherwise
+    /// empty optional claims.
+    ///
+    /// Defaults: issuer [`STUB_ISSUER`], no tenant / `jti` / launch context,
+    /// expiry one hour from now, empty custom claims. Chain
+    /// [`with_issuer`](Self::with_issuer), [`with_tenant_id`](Self::with_tenant_id),
+    /// or [`with_fhir_user`](Self::with_fhir_user) when a test needs those.
+    #[must_use]
+    pub fn stub(subject: impl Into<String>, scopes: ScopeSet) -> Self {
+        Self {
+            subject: subject.into(),
+            issuer: STUB_ISSUER.to_string(),
+            scopes,
+            expires_at: Utc::now() + chrono::Duration::hours(1),
+            ..Default::default()
+        }
+    }
+
+    /// Override the token issuer (SMART `iss`).
+    #[must_use]
+    pub fn with_issuer(mut self, issuer: impl Into<String>) -> Self {
+        self.issuer = issuer.into();
+        self
+    }
+
+    /// Set the tenant claim used by path/header resolution tests.
+    #[must_use]
+    pub fn with_tenant_id(mut self, tenant_id: impl Into<String>) -> Self {
+        self.tenant_id = Some(tenant_id.into());
+        self
+    }
+
+    /// Set the SMART `fhirUser` claim on the launch context, keeping any
+    /// patient or encounter already there.
+    #[must_use]
+    pub fn with_fhir_user(mut self, fhir_user: impl Into<String>) -> Self {
+        self.launch_context
+            .get_or_insert_with(LaunchContext::default)
+            .fhir_user = Some(fhir_user.into());
+        self
+    }
+
+    /// Set the SMART launch context (`patient`, `encounter`, `fhirUser`).
+    #[must_use]
+    pub fn with_launch_context(mut self, launch_context: Option<LaunchContext>) -> Self {
+        self.launch_context = launch_context;
+        self
+    }
+
     /// Returns the client/subject identifier.
     pub fn subject(&self) -> &str {
         &self.subject
@@ -45,78 +98,104 @@ impl Principal {
         &self.issuer
     }
 
+    /// Returns the SMART `fhirUser` claim (named by `HFS_AUTH_FHIR_USER_CLAIM`)
+    /// when set on the access token.
+    pub fn fhir_user(&self) -> Option<&str> {
+        self.launch_context.as_ref()?.fhir_user.as_deref()
+    }
+
     /// Returns the tenant ID if present in the token.
     pub fn tenant_id(&self) -> Option<&str> {
         self.tenant_id.as_deref()
     }
-}
 
-/// The SMART App Launch context the authorization server bound to an access
-/// token, read from the claims named by `HFS_AUTH_PATIENT_CLAIM`,
-/// `HFS_AUTH_ENCOUNTER_CLAIM` and `HFS_AUTH_FHIR_USER_CLAIM`.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct LaunchContext {
-    /// The patient claim as issued, normally a bare Patient id.
-    pub patient: Option<String>,
-    /// The encounter claim as issued.
-    pub encounter: Option<String>,
-    /// The fhirUser claim as issued, e.g. `Practitioner/123`.
-    pub fhir_user: Option<String>,
-}
-
-impl LaunchContext {
-    /// Reads the launch context from the named claims.
-    ///
-    /// Only non-empty string claims count. Returns `None` when none of the
-    /// three is present.
-    pub fn from_claims(
-        claims: &Map<String, Value>,
-        patient_claim: &str,
-        encounter_claim: &str,
-        fhir_user_claim: &str,
-    ) -> Option<Self> {
-        let read = |name: &str| {
-            claims
-                .get(name)
-                .and_then(Value::as_str)
-                .filter(|v| !v.is_empty())
-                .map(String::from)
-        };
-        let ctx = Self {
-            patient: read(patient_claim),
-            encounter: read(encounter_claim),
-            fhir_user: read(fhir_user_claim),
-        };
-        if ctx.patient.is_none() && ctx.encounter.is_none() && ctx.fhir_user.is_none() {
-            None
-        } else {
-            Some(ctx)
+    /// Identity for audit `agent.who`: valid FHIR `fhirUser` reference, else `sub`.
+    #[must_use]
+    pub fn audit_agent_identity(&self) -> Option<&str> {
+        if let Some(fu) = self.fhir_user()
+            && is_fhir_relative_reference(fu)
+        {
+            return Some(fu);
         }
-    }
-
-    /// The launch patient's logical id, if the patient claim names a usable one.
-    ///
-    /// A bare `<id>` or a `Patient/<id>` relative reference is accepted; any
-    /// other form (another resource type, an absolute URL, `_history`, empty)
-    /// yields `None`.
-    pub fn patient_id(&self) -> Option<&str> {
-        let raw = self.patient.as_deref()?;
-        let id = raw.strip_prefix("Patient/").unwrap_or(raw);
-        is_fhir_id(id).then_some(id)
+        if !self.subject.is_empty() {
+            return Some(self.subject.as_str());
+        }
+        None
     }
 }
 
-/// FHIR `id` syntax: 1 to 64 characters of `[A-Za-z0-9\-.]`.
-fn is_fhir_id(s: &str) -> bool {
-    (1..=64).contains(&s.len())
-        && s.bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'.')
+/// True when `value` looks like a FHIR relative reference (`ResourceType/id`).
+///
+/// Rejects pseudo-values such as `frontdesk/sweety` (resource type must start
+/// with an uppercase ASCII letter).
+#[must_use]
+pub fn is_fhir_relative_reference(value: &str) -> bool {
+    let Some((resource_type, id)) = value.split_once('/') else {
+        return false;
+    };
+    if resource_type.is_empty() || id.is_empty() || id.contains('/') {
+        return false;
+    }
+    resource_type
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+        && resource_type.chars().all(|c| c.is_ascii_alphanumeric())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn principal(subject: &str, fhir_user: Option<&str>) -> Principal {
+        let p = Principal::stub(subject, ScopeSet::empty());
+        match fhir_user {
+            Some(fu) => p.with_fhir_user(fu),
+            None => p,
+        }
+    }
+
+    #[test]
+    fn audit_agent_identity_prefers_valid_fhir_user() {
+        let p = principal("uuid-sub", Some("Practitioner/dr-patel"));
+        assert_eq!(p.audit_agent_identity(), Some("Practitioner/dr-patel"));
+    }
+
+    #[test]
+    fn audit_agent_identity_falls_back_to_sub_for_invalid_fhir_user() {
+        let p = principal("uuid-sub", Some("frontdesk/sweety"));
+        assert_eq!(p.audit_agent_identity(), Some("uuid-sub"));
+    }
+
+    #[test]
+    fn audit_agent_identity_uses_sub_when_fhir_user_absent() {
+        let p = principal("uuid-sub", None);
+        assert_eq!(p.audit_agent_identity(), Some("uuid-sub"));
+    }
+
+    #[test]
+    fn is_fhir_relative_reference_accepts_practitioner() {
+        assert!(is_fhir_relative_reference("Practitioner/dr-patel"));
+        assert!(is_fhir_relative_reference("RelatedPerson/abc"));
+    }
+
+    #[test]
+    fn is_fhir_relative_reference_rejects_lowercase_type() {
+        assert!(!is_fhir_relative_reference("frontdesk/sweety"));
+    }
+
+    #[test]
+    fn stub_defaults_fhir_user_and_tenant_to_none() {
+        let p = Principal::stub("sub", ScopeSet::empty());
+        assert_eq!(p.subject(), "sub");
+        assert_eq!(p.issuer(), super::STUB_ISSUER);
+        assert_eq!(p.fhir_user(), None);
+        assert_eq!(p.tenant_id(), None);
+        let p = p.with_tenant_id("acme").with_fhir_user("Practitioner/1");
+        assert_eq!(p.tenant_id(), Some("acme"));
+        assert_eq!(p.fhir_user(), Some("Practitioner/1"));
+    }
 
     fn claims(value: Value) -> Map<String, Value> {
         value.as_object().expect("object").clone()
@@ -214,4 +293,66 @@ mod tests {
         let max = "a".repeat(64);
         assert_eq!(with_patient(Some(&max)).patient_id(), Some(max.as_str()));
     }
+}
+
+/// The SMART App Launch context the authorization server bound to an access
+/// token, read from the claims named by `HFS_AUTH_PATIENT_CLAIM`,
+/// `HFS_AUTH_ENCOUNTER_CLAIM` and `HFS_AUTH_FHIR_USER_CLAIM`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LaunchContext {
+    /// The patient claim as issued, normally a bare Patient id.
+    pub patient: Option<String>,
+    /// The encounter claim as issued.
+    pub encounter: Option<String>,
+    /// The fhirUser claim as issued, e.g. `Practitioner/123`.
+    pub fhir_user: Option<String>,
+}
+
+impl LaunchContext {
+    /// Reads the launch context from the named claims.
+    ///
+    /// Only non-empty string claims count. Returns `None` when none of the
+    /// three is present.
+    pub fn from_claims(
+        claims: &Map<String, Value>,
+        patient_claim: &str,
+        encounter_claim: &str,
+        fhir_user_claim: &str,
+    ) -> Option<Self> {
+        let read = |name: &str| {
+            claims
+                .get(name)
+                .and_then(Value::as_str)
+                .filter(|v| !v.is_empty())
+                .map(String::from)
+        };
+        let ctx = Self {
+            patient: read(patient_claim),
+            encounter: read(encounter_claim),
+            fhir_user: read(fhir_user_claim),
+        };
+        if ctx.patient.is_none() && ctx.encounter.is_none() && ctx.fhir_user.is_none() {
+            None
+        } else {
+            Some(ctx)
+        }
+    }
+
+    /// The launch patient's logical id, if the patient claim names a usable one.
+    ///
+    /// A bare `<id>` or a `Patient/<id>` relative reference is accepted; any
+    /// other form (another resource type, an absolute URL, `_history`, empty)
+    /// yields `None`.
+    pub fn patient_id(&self) -> Option<&str> {
+        let raw = self.patient.as_deref()?;
+        let id = raw.strip_prefix("Patient/").unwrap_or(raw);
+        is_fhir_id(id).then_some(id)
+    }
+}
+
+/// FHIR `id` syntax: 1 to 64 characters of `[A-Za-z0-9\-.]`.
+fn is_fhir_id(s: &str) -> bool {
+    (1..=64).contains(&s.len())
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'.')
 }

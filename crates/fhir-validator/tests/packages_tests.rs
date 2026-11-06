@@ -1,0 +1,452 @@
+//! FHIR NPM package cache, dependency resolution, and materialization.
+
+use flate2::Compression;
+use flate2::write::GzEncoder;
+use helios_fhir::FhirVersion;
+use helios_fhir_validator::{
+    CompositeResolver, PackageCache, PackageRef, SchemaResolver, ValidationOptions, Validator,
+    materialize_package, materialize_package_layers, packs, resolve_packages,
+};
+use serde_json::json;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tar::{Builder, Header};
+
+fn write_tgz(path: &Path, files: &[(&str, &[u8])]) {
+    let file = fs::File::create(path).unwrap();
+    let enc = GzEncoder::new(file, Compression::default());
+    let mut archive = Builder::new(enc);
+    for (name, data) in files {
+        let mut header = Header::new_gnu();
+        header.set_size(data.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        archive.append_data(&mut header, *name, *data).unwrap();
+    }
+    let enc = archive.into_inner().unwrap();
+    enc.finish().unwrap();
+}
+
+fn minimal_patient_profile_sd() -> Vec<u8> {
+    serde_json::to_vec(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/fhir/StructureDefinition/example-patient",
+        "name": "ExamplePatient",
+        "status": "active",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient|4.0.1",
+        "derivation": "constraint",
+        "differential": {
+            "element": [
+                {
+                    "id": "Patient",
+                    "path": "Patient",
+                    "min": 0,
+                    "max": "*"
+                },
+                {
+                    "id": "Patient.active",
+                    "path": "Patient.active",
+                    "min": 1,
+                    "max": "1"
+                }
+            ]
+        }
+    }))
+    .unwrap()
+}
+
+fn dep_extension_sd() -> Vec<u8> {
+    serde_json::to_vec(&json!({
+        "resourceType": "StructureDefinition",
+        "url": "http://example.org/fhir/StructureDefinition/example-ext",
+        "name": "ExampleExt",
+        "status": "active",
+        "kind": "complex-type",
+        "abstract": false,
+        "type": "Extension",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+        "derivation": "constraint",
+        "differential": {
+            "element": [
+                { "id": "Extension", "path": "Extension", "min": 0, "max": "*" },
+                {
+                    "id": "Extension.url",
+                    "path": "Extension.url",
+                    "fixedUri": "http://example.org/fhir/StructureDefinition/example-ext"
+                }
+            ]
+        }
+    }))
+    .unwrap()
+}
+
+fn seed_dep_and_root(cache_root: &Path) -> PathBuf {
+    let tgz_dir = cache_root.join("_tgz");
+    fs::create_dir_all(&tgz_dir).unwrap();
+
+    let dep_tgz = tgz_dir.join("dep.tgz");
+    write_tgz(
+        &dep_tgz,
+        &[
+            (
+                "package/package.json",
+                br#"{
+                  "name": "example.dep",
+                  "version": "1.0.0",
+                  "fhirVersions": ["4.0.1"],
+                  "dependencies": {}
+                }"#,
+            ),
+            (
+                "package/StructureDefinition-example-ext.json",
+                &dep_extension_sd(),
+            ),
+        ],
+    );
+
+    let root_tgz = tgz_dir.join("root.tgz");
+    write_tgz(
+        &root_tgz,
+        &[
+            (
+                "package/package.json",
+                br#"{
+                  "name": "example.ig",
+                  "version": "1.0.0",
+                  "fhirVersions": ["4.0.1"],
+                  "dependencies": { "example.dep": "1.0.0" }
+                }"#,
+            ),
+            (
+                "package/StructureDefinition-example-patient.json",
+                &minimal_patient_profile_sd(),
+            ),
+            // Poison abstract root — must be skipped, not abort materialize.
+            (
+                "package/StructureDefinition-Element.json",
+                br#"{
+                  "resourceType": "StructureDefinition",
+                  "url": "http://hl7.org/fhir/StructureDefinition/Element",
+                  "name": "Element",
+                  "status": "active",
+                  "kind": "complex-type",
+                  "abstract": true,
+                  "type": "Element",
+                  "differential": { "element": [] }
+                }"#,
+            ),
+        ],
+    );
+
+    let cache = PackageCache::new(cache_root);
+    cache.ensure_from_tgz(&dep_tgz).unwrap();
+    cache.ensure_from_tgz(&root_tgz).unwrap();
+    tgz_dir
+}
+
+#[test]
+fn cache_ensure_from_tgz_and_get() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cache = PackageCache::new(tmp.path());
+    let tgz = tmp.path().join("pkg.tgz");
+    write_tgz(
+        &tgz,
+        &[
+            (
+                "package/package.json",
+                br#"{"name":"solo.pkg","version":"0.1.0","dependencies":{}}"#,
+            ),
+            (
+                "package/StructureDefinition-example-patient.json",
+                &minimal_patient_profile_sd(),
+            ),
+        ],
+    );
+    let id = cache.ensure_from_tgz(&tgz).unwrap();
+    assert_eq!(id.to_string(), "solo.pkg@0.1.0");
+    let dir = cache.get(&id).unwrap();
+    assert!(dir.join("package.json").is_file());
+    assert!(dir.join(".sha256").is_file());
+}
+
+#[test]
+fn resolve_lists_only_configured_roots() {
+    let tmp = tempfile::tempdir().unwrap();
+    seed_dep_and_root(tmp.path());
+    let cache = PackageCache::new(tmp.path());
+
+    let ok = resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap();
+    assert_eq!(ok.len(), 1);
+    assert_eq!(ok[0].id.to_string(), "example.ig@1.0.0");
+
+    let both = resolve_packages(
+        &cache,
+        &[
+            PackageRef::parse("example.ig@1.0.0").unwrap(),
+            PackageRef::parse("example.dep@1.0.0").unwrap(),
+            PackageRef::parse("example.ig@1.0.0").unwrap(),
+        ],
+    )
+    .unwrap();
+    assert_eq!(both.len(), 2);
+    assert_eq!(both[0].id.to_string(), "example.ig@1.0.0");
+    assert_eq!(both[1].id.to_string(), "example.dep@1.0.0");
+}
+
+#[test]
+fn resolve_succeeds_when_package_json_deps_are_absent() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cache = PackageCache::new(tmp.path());
+    let tgz = tmp.path().join("root.tgz");
+    write_tgz(
+        &tgz,
+        &[
+            (
+                "package/package.json",
+                br#"{
+                  "name": "example.ig",
+                  "version": "1.0.0",
+                  "dependencies": { "example.dep": "1.0.0" }
+                }"#,
+            ),
+            (
+                "package/StructureDefinition-example-patient.json",
+                &minimal_patient_profile_sd(),
+            ),
+        ],
+    );
+    cache.ensure_from_tgz(&tgz).unwrap();
+    let ok = resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap();
+    assert_eq!(ok.len(), 1);
+    assert_eq!(ok[0].id.to_string(), "example.ig@1.0.0");
+}
+
+#[test]
+fn resolve_fails_when_configured_root_is_missing() {
+    let tmp = tempfile::tempdir().unwrap();
+    let cache = PackageCache::new(tmp.path());
+    let err =
+        resolve_packages(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()]).unwrap_err();
+    assert!(err.to_string().contains("example.ig@1.0.0"), "{err}");
+}
+
+#[test]
+fn materialize_skips_abstract_and_inserts_profile() {
+    let tmp = tempfile::tempdir().unwrap();
+    seed_dep_and_root(tmp.path());
+    let cache = PackageCache::new(tmp.path());
+    let dir = cache
+        .get(&PackageRef::parse("example.ig@1.0.0").unwrap())
+        .unwrap();
+    let (registry, report) = materialize_package(&dir).unwrap();
+    assert!(report.skipped_abstract >= 1);
+    assert!(report.inserted >= 1);
+    assert!(
+        registry
+            .resolve("http://example.org/fhir/StructureDefinition/example-patient")
+            .is_some()
+    );
+}
+
+#[test]
+fn package_layers_overlay_core_for_meta_profile() {
+    let tmp = tempfile::tempdir().unwrap();
+    seed_dep_and_root(tmp.path());
+    let cache = PackageCache::new(tmp.path());
+    let layers =
+        materialize_package_layers(&cache, &[PackageRef::parse("example.ig@1.0.0").unwrap()])
+            .unwrap();
+    assert_eq!(layers.len(), 1);
+    assert_eq!(layers[0].0.to_string(), "example.ig@1.0.0");
+    assert!(
+        layers[0]
+            .1
+            .resolve("http://example.org/fhir/StructureDefinition/example-patient")
+            .is_some()
+    );
+    assert!(
+        layers[0]
+            .1
+            .resolve("http://example.org/fhir/StructureDefinition/example-ext")
+            .is_none(),
+        "package.json deps must not be auto-overlaid"
+    );
+
+    let core = packs::core_registry(FhirVersion::R4);
+    let mut resolvers: Vec<Arc<dyn helios_fhir_validator::SchemaResolver>> = layers
+        .into_iter()
+        .map(|(_, reg, _)| reg as Arc<dyn helios_fhir_validator::SchemaResolver>)
+        .collect();
+    resolvers.push(core);
+    let resolver = Arc::new(CompositeResolver::new(resolvers));
+    let validator = Validator::new(resolver);
+
+    // Missing required Patient.active from the example profile.
+    let resource = json!({
+        "resourceType": "Patient",
+        "meta": {
+            "profile": ["http://example.org/fhir/StructureDefinition/example-patient"]
+        }
+    });
+    let outcome = validator.validate_sync(&resource, &ValidationOptions::default());
+    assert!(
+        outcome.errors.iter().any(|e| e.message.contains("active")
+            || e.path.contains("active")
+            || e.message.to_lowercase().contains("required")),
+        "expected required active issue, got {:?}",
+        outcome.errors
+    );
+}
+
+/// IGs built with `pin-canonicals` name extension slices `url|version`;
+/// instances carry the bare `extension.url` and must still fill the slice.
+#[test]
+fn pinned_extension_slice_matches_unversioned_instance_url() {
+    let ext_url = "http://example.org/fhir/StructureDefinition/example-ext";
+    let profile_url = "http://example.org/fhir/StructureDefinition/pinned-patient";
+    let profile = json!({
+        "resourceType": "StructureDefinition",
+        "url": profile_url,
+        "name": "PinnedPatient",
+        "status": "active",
+        "kind": "resource",
+        "abstract": false,
+        "type": "Patient",
+        "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient|4.0.1",
+        "derivation": "constraint",
+        "differential": {
+            "element": [
+                { "id": "Patient", "path": "Patient" },
+                {
+                    "id": "Patient.extension",
+                    "path": "Patient.extension",
+                    "slicing": {
+                        "discriminator": [{ "type": "value", "path": "url" }],
+                        "rules": "open"
+                    }
+                },
+                {
+                    "id": "Patient.extension:flag",
+                    "path": "Patient.extension",
+                    "sliceName": "flag",
+                    "min": 1,
+                    "max": "1",
+                    "type": [{ "code": "Extension", "profile": [format!("{ext_url}|1.0.0")] }]
+                }
+            ]
+        }
+    });
+    let tmp = tempfile::tempdir().unwrap();
+    fs::write(
+        tmp.path().join("StructureDefinition-pinned-patient.json"),
+        serde_json::to_vec(&profile).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        tmp.path().join("StructureDefinition-example-ext.json"),
+        dep_extension_sd(),
+    )
+    .unwrap();
+    let (registry, report) = materialize_package(tmp.path()).unwrap();
+    assert!(
+        report.convert_errors.is_empty(),
+        "{:?}",
+        report.convert_errors
+    );
+    let resolver = Arc::new(CompositeResolver::new(vec![
+        Arc::new(registry) as Arc<dyn SchemaResolver>,
+        packs::core_registry(FhirVersion::R4),
+    ]));
+    let validator = Validator::new(resolver);
+    let opts = ValidationOptions {
+        use_meta_profiles: true,
+        ..Default::default()
+    };
+    let patient = |extension: serde_json::Value| {
+        json!({
+            "resourceType": "Patient",
+            "meta": { "profile": [profile_url] },
+            "extension": extension
+        })
+    };
+
+    let filled = validator.validate_sync(
+        &patient(json!([{ "url": ext_url, "valueBoolean": true }])),
+        &opts,
+    );
+    assert!(
+        filled.errors.is_empty(),
+        "unversioned url must fill the pinned slice: {:?}",
+        filled.errors
+    );
+
+    let missing = validator.validate_sync(
+        &patient(json!([{ "url": "http://example.org/other", "valueBoolean": true }])),
+        &opts,
+    );
+    assert!(
+        missing
+            .errors
+            .iter()
+            .any(|e| e.kind == helios_fhir_validator::ErrorKind::SliceCardinality),
+        "absent required extension must still fail: {:?}",
+        missing.errors
+    );
+}
+
+/// Materialize the seeded Atrius IG package and assert zero converter warnings.
+///
+/// Looks at `ATRIUS_IG_PACKAGE`, then `manifests/atrius-ig-package` relative to
+/// the workspace root (or crate parent). Skips when `package.json` is absent so
+/// `cargo test` stays offline-green without a seeded package.
+#[test]
+fn materialize_seeded_atrius_ig_has_no_warnings() {
+    let pkg = seeded_atrius_ig_package();
+    let Some(pkg) = pkg else {
+        eprintln!(
+            "skip materialize_seeded_atrius_ig_has_no_warnings: no ATRIUS_IG_PACKAGE \
+             / manifests/atrius-ig-package (seed via scripts/setup-atrius-profile-registry.sh)"
+        );
+        return;
+    };
+    let (_registry, report) = materialize_package(&pkg).expect("materialize Atrius IG package");
+    assert!(
+        report.convert_errors.is_empty(),
+        "Atrius IG convert_errors: {:?}",
+        report.convert_errors
+    );
+    assert!(
+        report.warnings.is_empty(),
+        "Atrius IG materialization warnings (expected empty after converter fixes): {:?}",
+        report.warnings
+    );
+    assert!(
+        report.inserted >= 100,
+        "expected ≥100 StructureDefinitions inserted, got {}",
+        report.inserted
+    );
+}
+
+fn seeded_atrius_ig_package() -> Option<PathBuf> {
+    if let Ok(p) = std::env::var("ATRIUS_IG_PACKAGE") {
+        let path = PathBuf::from(p);
+        if path.join("package.json").is_file() {
+            return Some(path);
+        }
+    }
+    // crates/fhir-validator → workspace root
+    let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf())?;
+    let candidate = workspace.join("manifests/atrius-ig-package");
+    if candidate.join("package.json").is_file() {
+        Some(candidate)
+    } else {
+        None
+    }
+}

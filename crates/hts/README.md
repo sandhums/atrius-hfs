@@ -45,6 +45,8 @@ All six standard [FHIR Terminology Service](http://hl7.org/fhir/terminology-serv
 |----------|-------------|
 | [IG Publisher compatibility](docs/ig-publisher-compatibility.md) | `$validate-code` parameter aliases, SNOMED `version=current`, LOINC version labeling — required for HL7 IG Publisher `-tx` validation |
 | [Expand paths architecture](docs/expand-paths-architecture.md) | ValueSet `$expand` code paths |
+| [ICD import / expand / subsumes fork (2026-09-20)](docs/fork-icd-import-expand-subsumes-2026-09-20.md) | Items 1–3 adopted upstream (#2114 / #2125). Keep on merge: idempotent DELETE of imported resources (item 4) and HFS `:in` paging (item 5) |
+| [BCP 47 languages fork (2026-09-22)](docs/fork-bcp47-languages.md) | Keep on `upstream/main` merge: expand enumerated language ValueSets without a CodeSystem; validate well-formed tags against `urn:ietf:bcp:47` |
 
 ### Terminologies
 
@@ -93,12 +95,12 @@ Pre-built binaries are available on the [GitHub Releases](https://github.com/Hel
 # 1. Import every bundled terminology in one pass (a few minutes)
 ./hts import ./terminology-data
 
-# 2. Start the server (R4, SQLite, port 8090)
+# 2. Start the server (R4, SQLite, port 9091)
 ./hts run
 
 # 3. Verify
-curl http://localhost:8090/health
-curl http://localhost:8090/metadata
+curl http://localhost:9091/health
+curl http://localhost:9091/metadata
 ```
 
 ### Using Docker Images
@@ -108,20 +110,20 @@ Pre-built multi-arch Docker images (amd64/arm64) are available on GitHub Contain
 ```bash
 # First run: auto-imports bundled terminologies into the persistent volume
 # (takes a few minutes), then starts the server.
-docker run -p 8090:8090 \
+docker run -p 9091:9091 \
   -v hts-data:/data \
   -e HTS_DATABASE_URL=/data/hts.db \
   ghcr.io/heliossoftware/hts:latest
 
 # Subsequent runs: DB is populated, auto-bootstrap is a no-op; server starts
 # immediately.
-docker run -p 8090:8090 \
+docker run -p 9091:9091 \
   -v hts-data:/data \
   -e HTS_DATABASE_URL=/data/hts.db \
   ghcr.io/heliossoftware/hts:latest
 
 # Disable auto-bootstrap (e.g. to import from a mounted directory yourself):
-docker run -p 8090:8090 \
+docker run -p 9091:9091 \
   -v hts-data:/data \
   -e HTS_DATABASE_URL=/data/hts.db \
   -e HTS_BOOTSTRAP_DIR= \
@@ -328,7 +330,7 @@ Options:
 Start the FHIR Terminology HTTP server. This is the default command when no subcommand is given.
 
 ```bash
-# Run with default settings (R4, SQLite, port 8090)
+# Run with default settings (R4, SQLite, port 9091)
 hts run
 
 # Equivalent - run is the default
@@ -354,7 +356,7 @@ If `hts import` has not been run first, HTS creates the SQLite file (or `./data/
 Usage: hts run [OPTIONS]
 
 Options:
-      --port <PORT>                Server port [env: HTS_SERVER_PORT=] [default: 8090]
+      --port <PORT>                Server port [env: HTS_SERVER_PORT=] [default: 9091]
       --host <HOST>                Host to bind [env: HTS_SERVER_HOST=] [default: 127.0.0.1]
       --log-level <LOG_LEVEL>      Log level (error, warn, info, debug, trace)
                                    [env: HTS_LOG_LEVEL=] [default: info]
@@ -375,7 +377,7 @@ Options:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HTS_SERVER_PORT` | 8090 | Server port |
+| `HTS_SERVER_PORT` | 9091 | Server port |
 | `HTS_SERVER_HOST` | 127.0.0.1 | Host to bind |
 | `HTS_LOG_LEVEL` | info | Log level (error, warn, info, debug, trace) |
 | `HTS_DATABASE_URL` | ./data/hts.db | SQLite database file path |
@@ -424,7 +426,7 @@ The `value_set_expansions` table acts as a write-through cache: the first `$expa
 
 #### Indexing and caching
 
-Per-concept reads on the hot operation paths (`$lookup`, `$validate-code`, `$expand`) are served by dedicated indexes rather than table scans. Concept resolution uses the `UNIQUE(system_id, code)` index on `concepts` (so a separate explicit index on the same columns would be redundant), while properties and designations are keyed by `concept_id` — `concept_properties(concept_id, …)` and `concept_designations(concept_id)`. The transitive `concept_closure` table makes `$subsumes` and `is-a` filters O(1) index seeks instead of recursive traversals.
+Per-concept reads on the hot operation paths (`$lookup`, `$validate-code`, `$expand`) are served by dedicated indexes rather than table scans. Concept resolution uses the `UNIQUE(system_id, code)` index on `concepts` (so a separate explicit index on the same columns would be redundant), while properties and designations are keyed by `concept_id` — `concept_properties(concept_id, …)` and `concept_designations(concept_id)`. The transitive `concept_closure` table makes `$subsumes` and `is-a` filters O(1) index seeks instead of recursive traversals. Stored ValueSets whose compose is only `concept is-a` / `descendent-of` includes (one or many, OR'd) use the same lookup for `$validate-code`, so a large product-class set such as ACEI∪ARB∪ARNI does not have to materialise thousands of descendants to answer membership.
 
 On top of the SQL layer, the SQLite backend keeps small bounded in-memory caches of assembled `$lookup` / `$validate-code` responses and per-concept status flags, keyed on the full request. When a cache reaches its bound it evicts an existing entry (random replacement) and admits the new one, so a working set larger than the bound — e.g. diverse-code `$lookup` traffic against a 600 K-concept SNOMED system — keeps hot codes cached rather than freezing the cache at capacity and locking out every later code. Reads take a shared lock and never block each other; recency is deliberately not tracked, since bumping it on every read would require an exclusive lock and serialize lookups. Caches are flushed when the underlying data changes (import, PUT, DELETE).
 
@@ -569,10 +571,10 @@ Pagination is controlled by `_count` (page size, default 20) and `_offset` (zero
 
 ```bash
 # Search by canonical URL
-curl "http://localhost:8090/CodeSystem?url=http://loinc.org"
+curl "http://localhost:9091/CodeSystem?url=http://loinc.org"
 
 # Search by status with pagination
-curl "http://localhost:8090/ValueSet?status=active&_count=10&_offset=0"
+curl "http://localhost:9091/ValueSet?status=active&_count=10&_offset=0"
 ```
 
 ## Capabilities Endpoint
@@ -586,10 +588,10 @@ curl "http://localhost:8090/ValueSet?status=active&_count=10&_offset=0"
 
 ```bash
 # Full CapabilityStatement (default)
-curl http://localhost:8090/metadata
+curl http://localhost:9091/metadata
 
 # TerminologyCapabilities
-curl "http://localhost:8090/metadata?mode=terminology"
+curl "http://localhost:9091/metadata?mode=terminology"
 ```
 
 ## Batch Support
@@ -605,7 +607,7 @@ curl "http://localhost:8090/metadata?mode=terminology"
 Unsupported entry operations return a `400` entry-level `OperationOutcome` without failing the overall batch.
 
 ```bash
-curl -X POST http://localhost:8090/ \
+curl -X POST http://localhost:9091/ \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Bundle",
@@ -640,7 +642,7 @@ curl -X POST http://localhost:8090/ \
 ### Import a FHIR Bundle via HTTP
 
 ```bash
-curl -X POST http://localhost:8090/import \
+curl -X POST http://localhost:9091/import \
   -H "Content-Type: application/fhir+json" \
   -d @bundle.json
 ```
@@ -676,7 +678,7 @@ curl -X POST "http://localhost:8090/import?finalize=true" \
 ### Lookup a Concept
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$lookup \
+curl -X POST http://localhost:9091/CodeSystem/\$lookup \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -690,7 +692,7 @@ curl -X POST http://localhost:8090/CodeSystem/\$lookup \
 ### Validate a Code
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$validate-code \
+curl -X POST http://localhost:9091/CodeSystem/\$validate-code \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -721,7 +723,7 @@ boolean parameter downgrades that mismatch to a `warning` while keeping
 `result=true`:
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$validate-code \
+curl -X POST http://localhost:9091/CodeSystem/\$validate-code \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -746,7 +748,7 @@ curl -X POST http://localhost:8090/CodeSystem/\$validate-code \
 ### Expand a ValueSet
 
 ```bash
-curl -X POST http://localhost:8090/ValueSet/\$expand \
+curl -X POST http://localhost:9091/ValueSet/\$expand \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -759,7 +761,7 @@ curl -X POST http://localhost:8090/ValueSet/\$expand \
 Pagination is supported via `count` and `offset` parameters:
 
 ```bash
-curl -X POST http://localhost:8090/ValueSet/\$expand \
+curl -X POST http://localhost:9091/ValueSet/\$expand \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -794,7 +796,7 @@ curl -G http://localhost:8090/ValueSet/\$expand \
 
 ```bash
 # Does 73211009 (Diabetes mellitus) subsume 44054006 (Type 2 diabetes)?
-curl -X POST http://localhost:8090/CodeSystem/\$subsumes \
+curl -X POST http://localhost:9091/CodeSystem/\$subsumes \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -811,7 +813,7 @@ Returns one of: `equivalent`, `subsumes`, `subsumed-by`, or `not-subsumed`.
 ### Translate a Code
 
 ```bash
-curl -X POST http://localhost:8090/ConceptMap/\$translate \
+curl -X POST http://localhost:9091/ConceptMap/\$translate \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "Parameters",
@@ -826,7 +828,7 @@ curl -X POST http://localhost:8090/ConceptMap/\$translate \
 ### Create a CodeSystem
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem \
+curl -X POST http://localhost:9091/CodeSystem \
   -H "Content-Type: application/fhir+json" \
   -d '{
     "resourceType": "CodeSystem",
@@ -852,7 +854,7 @@ Set `HFS_TERMINOLOGY_SERVER` on the HFS process to delegate terminology operatio
 HTS_DATABASE_URL=./data/hts.db cargo run --bin hts
 
 # Start HFS with HTS delegation
-HFS_TERMINOLOGY_SERVER=http://localhost:8090 cargo run --bin hfs
+HFS_TERMINOLOGY_SERVER=http://localhost:9091 cargo run --bin hfs
 ```
 
 HFS propagates the URL to its embedded FHIRPath engine as `FHIRPATH_TERMINOLOGY_SERVER`, enabling:
@@ -972,7 +974,7 @@ per-language Description and Language-refset files are skipped without being
 parsed; English is always retained because display selection depends on it:
 
 ```bash
-curl -X POST http://localhost:8090/CodeSystem/\$lookup \
+curl -X POST http://localhost:9091/CodeSystem/\$lookup \
   -H "Content-Type: application/fhir+json" \
   -H "Accept-Language: de" \
   -d '{"resourceType":"Parameters","parameter":[{"name":"system","valueUri":"http://snomed.info/sct"},{"name":"code","valueCode":"22298006"}]}'
@@ -987,6 +989,53 @@ language (`$expand` and `$validate-code` match designations across versions
 of the canonical URL by design) — so a German term from a national edition
 is still found when a newer international release is the default. Pinning
 `version` disables the fallback.
+
+#### Extension packages: `--extends`
+
+A SNOMED **extension** release (as opposed to a full national *edition*)
+ships only its own module's components. Its `Is-a` and attribute
+relationships point at International concepts that are not in the package.
+Imported standalone, every one of those cross-package relationships has to
+be dropped — the extension becomes a set of orphaned subtrees with no path
+to the International hierarchy and no ingredient / dose-form attributes, so
+`$subsumes`, `is-a` filters and ECL from International groupers never reach
+an extension concept, and unversioned `$lookup` / `$validate-code` of an
+extension code fail because the highest version is the International one.
+
+Layer the extension **into** the base release it depends on instead:
+
+```bash
+# 1. International first (stored as version 20260501)
+hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260501T120000Z.zip --format snomed-rf2
+# 2. Extension layered onto it — same (url, version) row, hierarchy joined
+hts import ./SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260313T120000Z.zip \
+    --format snomed-rf2 --extends 20260501
+```
+
+Extension concepts are written under the base `(url, version)`; a
+relationship is kept when its destination exists in either the package or
+the base; the base closure and FTS index are rebuilt once afterwards. The
+stored CodeSystem title records both parts, e.g.
+`SNOMED CT (20260501 + IN1000189 20260313)`. This is how SNOMED itself
+defines an edition (International + extensions), and it duplicates nothing.
+
+Two diagnostics are reported as non-fatal import errors (exit code 2):
+
+- **module-dependency mismatch** — the package's
+  `der2_ssRefset_ModuleDependency*` refset declares the International
+  release it was built against; if that is not the `--extends` version, a
+  handful of destinations (concepts inactivated between the two releases)
+  will dangle. A small unresolved count with a one-release skew is normal.
+- **N active relationship(s) skipped** — destinations found in neither set.
+  A large count means the wrong base was chosen. The same message is
+  emitted for a *standalone* import of a package that looks like an
+  extension, with a hint to re-import using `--extends`.
+
+`--extends` requires a single ZIP path (not a directory) and the base
+version must already hold concepts. `--dry-run --extends` reads the base
+from the real database so the unresolved count is meaningful, but writes
+nothing. Re-running the same layered import is idempotent (upsert on
+`(url, version)` + code).
 
 ---
 

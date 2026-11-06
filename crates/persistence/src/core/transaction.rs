@@ -106,8 +106,8 @@ pub(crate) async fn prepare_bundle_patch(
             message: "entry.resource is required".to_string(),
         })
     })?;
-    let patch = super::decode_bundle_patch_resource(document, bundle_version)
-        .map_err(patch_failure_entry)?;
+    let patch =
+        super::patch::bundle_patch_format(document, bundle_version).map_err(patch_failure_entry)?;
     let candidate =
         super::apply_patch_for_version(current.content(), &patch, current.fhir_version())
             .map_err(patch_failure_entry)?;

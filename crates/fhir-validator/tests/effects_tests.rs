@@ -87,6 +87,7 @@ impl ConstraintEvaluator for ScriptedConstraints {
         _resource: &Value,
         _version: FhirVersion,
         constraints: &[DeferredConstraint<'_>],
+        _resolution_resources: &[Value],
     ) -> Vec<ConstraintOutcome> {
         let mut seen = self.seen.lock().unwrap();
         constraints

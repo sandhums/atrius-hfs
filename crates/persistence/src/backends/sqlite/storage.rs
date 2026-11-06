@@ -21,7 +21,7 @@ use crate::core::transaction::{
 use crate::core::{
     ConditionalCreateResult, ConditionalDeleteResult, ConditionalStorage, ConditionalUpdateResult,
     PurgableStorage, ResourceStorage, SearchProvider, VersionedStorage, bundle_if_match_gate,
-    if_match_field_satisfied, normalize_etag,
+    bundle_if_none_match_gate, if_match_field_satisfied, normalize_etag,
 };
 use crate::error::TransactionError;
 use crate::error::{
@@ -93,6 +93,22 @@ fn reindex_page_errors(
 
 fn serialization_error(message: String) -> StorageError {
     StorageError::Backend(BackendError::SerializationError { message })
+}
+
+/// Begin a write transaction that takes the SQLite reserved lock up front.
+///
+/// Default (DEFERRED) transactions take a read snapshot on the first SELECT,
+/// then fail the upgrade to a write with `SQLITE_BUSY_SNAPSHOT` if another
+/// connection committed in between. The busy handler is not invoked for that
+/// code, so `busy_timeout` does not cover it — concurrent bulk-submit workers
+/// then drop a resource as `processing_error`. IMMEDIATE waits on the write
+/// lock instead. Same reason as `purge_tenant_data` and FHIR `BEGIN IMMEDIATE`.
+fn begin_immediate_tx<'c>(
+    conn: &'c mut rusqlite::Connection,
+    context: &str,
+) -> StorageResult<rusqlite::Transaction<'c>> {
+    conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(|e| internal_error(format!("Failed to begin {context} transaction: {e}")))
 }
 
 /// The database-free product of indexing one resource: every `search_index`
@@ -404,6 +420,15 @@ impl ResourceStorage for SqliteBackend {
         false
     }
 
+    fn subscription_outbox_store(
+        &self,
+    ) -> Option<crate::core::subscription_outbox::DynSubscriptionOutboxStore> {
+        let source = std::env::var("HFS_BASE_URL").unwrap_or_else(|_| "hfs".to_string());
+        Some(std::sync::Arc::new(
+            crate::backends::sqlite::SqliteSubscriptionOutbox::new(self.pool(), source),
+        ))
+    }
+
     fn sof_terminology_store(
         &self,
     ) -> Option<std::sync::Arc<dyn crate::core::sof_terminology::SofTerminologyStore>> {
@@ -457,22 +482,12 @@ impl ResourceStorage for SqliteBackend {
         let prepared = (!self.is_search_offloaded())
             .then(|| self.prepare_index(tenant_id, resource_type, &id, &resource));
 
+        let now = Utc::now();
+        let last_updated = now.to_rfc3339();
         let version_id = "1";
         let fhir_version_str = fhir_version.as_mime_param();
 
-        // The resource row, its history row and its search index (with the
-        // full-text rows) are ONE transaction, as update and delete already
-        // are. This used to be ~17 auto-committed statements: each its own
-        // WAL commit (+34% WAL per create, and one fsync per statement under
-        // `synchronous=FULL`: 46 ms against 6 ms), and a failure part-way
-        // left a resource with no, or half, of its search index.
-        // IMMEDIATE takes the write lock up front, where the busy handler
-        // applies, so the existence check below cannot race another create.
-        let tx = conn
-            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
-            .map_err(|e| internal_error(format!("Failed to begin create: {}", e)))?;
-
-        // Check if resource already exists
+        let tx = begin_immediate_tx(&mut conn, "write")?;
         let exists: bool = tx
             .query_row(
                 "SELECT 1 FROM resources WHERE tenant_id = ?1 AND resource_type = ?2 AND id = ?3",
@@ -488,13 +503,6 @@ impl ResourceStorage for SqliteBackend {
             }));
         }
 
-        // Stamped with the write lock held, so a create queued behind another
-        // writer cannot commit with an earlier `last_updated` than one that
-        // committed before it (`_since`, `_lastUpdated`, bulk export).
-        let now = Utc::now();
-        let last_updated = now.to_rfc3339();
-
-        // Insert the resource
         tx.execute(
             "INSERT INTO resources (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)",
@@ -502,7 +510,6 @@ impl ResourceStorage for SqliteBackend {
         )
         .map_err(|e| internal_error(format!("Failed to insert resource: {}", e)))?;
 
-        // Insert into history
         tx.execute(
             "INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)",
@@ -510,10 +517,21 @@ impl ResourceStorage for SqliteBackend {
         )
         .map_err(|e| internal_error(format!("Failed to insert history: {}", e)))?;
 
-        // Index the resource for search
         if let Some(prepared) = prepared {
             self.write_prepared_index(&tx, tenant_id, resource_type, &id, &resource, prepared)?;
         }
+
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            &id,
+            version_id,
+            crate::core::OutboxEventType::Create,
+            Some(resource.clone()),
+            None,
+        )?;
 
         tx.commit()
             .map_err(|e| internal_error(format!("Failed to commit create: {}", e)))?;
@@ -529,7 +547,6 @@ impl ResourceStorage for SqliteBackend {
             self.tenant_registries().invalidate(tenant_id);
         }
 
-        // Return the stored resource with updated metadata
         Ok(StoredResource::from_storage(
             resource_type,
             &id,
@@ -702,6 +719,8 @@ impl ResourceStorage for SqliteBackend {
         let mut conn = self.get_connection()?;
         let tenant_id = tenant.tenant_id().as_str();
         let id = current.id();
+        let previous_resource = current.content().clone();
+        let fhir_version = current.fhir_version();
 
         // The expected version is `current`'s, and the UPDATE below only matches
         // a row that still carries it — so the new version follows from what the
@@ -815,10 +834,21 @@ impl ResourceStorage for SqliteBackend {
             self.write_prepared_index(&tx, tenant_id, resource_type, id, &resource, prepared)?;
         }
 
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Update,
+            Some(resource.clone()),
+            Some(previous_resource),
+        )?;
+
         tx.commit()
             .map_err(|e| internal_error(format!("Failed to commit update: {}", e)))?;
 
-        // A SearchParameter write invalidates this tenant's cached registry.
         if resource_type == "SearchParameter" {
             self.tenant_registries().invalidate(tenant_id);
         }
@@ -832,7 +862,7 @@ impl ResourceStorage for SqliteBackend {
             now,
             now,
             None,
-            current.fhir_version(),
+            fhir_version,
         ))
     }
 
@@ -1662,6 +1692,21 @@ impl SqliteBackend {
             .map_err(|e| internal_error(format!("Failed to delete search index: {}", e)))?;
         }
 
+        let previous_resource: Value = serde_json::from_slice(&data).unwrap_or(Value::Null);
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Delete,
+            None,
+            Some(previous_resource),
+        )?;
+
         tx.commit()
             .map_err(|e| internal_error(format!("Failed to commit delete: {}", e)))?;
 
@@ -1759,6 +1804,8 @@ impl SqliteBackend {
 
         let now = Utc::now();
         let last_updated = now.to_rfc3339();
+        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
+            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
 
         tx.execute(
             "UPDATE resources
@@ -1789,6 +1836,18 @@ impl SqliteBackend {
             self.write_prepared_index(&tx, tenant_id, resource_type, id, &resource, prepared)?;
         }
 
+        super::subscription_outbox::SqliteSubscriptionOutbox::maybe_enqueue_on_conn(
+            &tx,
+            tenant.tenant_id(),
+            fhir_version,
+            resource_type,
+            id,
+            &new_version_str,
+            crate::core::OutboxEventType::Create,
+            Some(resource.clone()),
+            None,
+        )?;
+
         tx.commit()
             .map_err(|e| internal_error(format!("Failed to commit restore: {}", e)))?;
 
@@ -1799,9 +1858,6 @@ impl SqliteBackend {
         {
             self.tenant_registries().invalidate(tenant_id);
         }
-
-        let fhir_version = FhirVersion::from_storage(&fhir_version_str)
-            .unwrap_or_else(helios_fhir::FhirVersion::default_enabled);
 
         Ok(StoredResource::from_storage(
             resource_type,
@@ -1836,7 +1892,8 @@ impl SqliteBackend {
         if self.is_search_offloaded() {
             return Ok(());
         }
-        let prepared = self.prepare_index(tenant_id, resource_type, resource_id, resource);
+        let prepared =
+            self.prepare_index_on_conn(conn, tenant_id, resource_type, resource_id, resource);
         self.write_prepared_index(
             conn,
             tenant_id,
@@ -1861,11 +1918,47 @@ impl SqliteBackend {
         resource_id: &str,
         resource: &Value,
     ) -> PreparedIndex {
+        self.prepare_index_with(
+            self.tenant_extractor(tenant_id),
+            tenant_id,
+            resource_type,
+            resource_id,
+            resource,
+        )
+    }
+
+    /// Same as [`Self::prepare_index`], but loads a missing per-tenant overlay
+    /// on `conn` so indexing inside the outbox same-TX write cannot
+    /// `SQLITE_LOCKED` against the pool and cache an empty overlay.
+    fn prepare_index_on_conn(
+        &self,
+        conn: &rusqlite::Connection,
+        tenant_id: &str,
+        resource_type: &str,
+        resource_id: &str,
+        resource: &Value,
+    ) -> PreparedIndex {
+        self.prepare_index_with(
+            self.tenant_extractor_for_indexing(conn, tenant_id),
+            tenant_id,
+            resource_type,
+            resource_id,
+            resource,
+        )
+    }
+
+    fn prepare_index_with(
+        &self,
+        extractor: crate::search::SearchParameterExtractor,
+        tenant_id: &str,
+        resource_type: &str,
+        resource_id: &str,
+        resource: &Value,
+    ) -> PreparedIndex {
         use super::search::fts::extract_searchable_content;
         use crate::search::converters::IndexValue;
 
         let _span = crate::perf::span(crate::perf::Phase::Extract);
-        let extractor = self.tenant_extractor(tenant_id);
         let rows = match extractor.extract(resource, resource_type) {
             Ok(values) => {
                 let marshal_span = crate::perf::span(crate::perf::Phase::IndexMarshal);
@@ -3788,6 +3881,16 @@ impl ConditionalStorage for SqliteBackend {
         self.find_matching_resources(tenant, resource_type, search_params)
             .await
     }
+
+    async fn conditional_matches(
+        &self,
+        tenant: &TenantContext,
+        resource_type: &str,
+        search_params: &str,
+    ) -> StorageResult<Vec<crate::types::StoredResource>> {
+        self.find_matching_resources(tenant, resource_type, search_params)
+            .await
+    }
 }
 
 impl SqliteBackend {
@@ -4184,6 +4287,12 @@ impl SqliteBackend {
                 // silently creating.
                 if let Some(failure) = bundle_if_match_gate(
                     entry.if_match.as_deref(),
+                    existing.as_ref().map(|r| r.version_id()),
+                ) {
+                    return Ok(failure);
+                }
+                if let Some(failure) = bundle_if_none_match_gate(
+                    entry.if_none_match.as_deref(),
                     existing.as_ref().map(|r| r.version_id()),
                 ) {
                     return Ok(failure);
@@ -5023,7 +5132,8 @@ impl SqliteBackend {
         // delete-first, so if that ordering ever changes this must become
         // delete-then-insert.
         let tenant_id = tenant.tenant_id().as_str();
-        let prepared = self.prepare_index(tenant_id, resource_type, resource_id, content);
+        let prepared =
+            self.prepare_index_on_conn(conn, tenant_id, resource_type, resource_id, content);
         self.write_prepared_index(
             conn,
             tenant_id,
@@ -7404,6 +7514,8 @@ mod tests {
             "bulk_provider_submissions",
             "sof_terminology_tables",
             "sof_terminology_refs",
+            "subscription_outbox",
+            "login_sessions",
         ];
         {
             let conn = backend.get_connection().unwrap();
