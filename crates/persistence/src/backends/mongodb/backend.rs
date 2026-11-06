@@ -188,6 +188,11 @@ pub struct MongoBackend {
     /// The sending half, taken by `init_schema` alongside `search_index_tx`.
     missing_index_tx:
         Arc<tokio::sync::Mutex<Option<tokio::sync::watch::Sender<Option<BuildOutcome>>>>>,
+    /// Whether the one-time normalization of `search_index.value_reference`
+    /// (#2394) is complete: set by the `search_index` builder at boot when the
+    /// completion marker already exists, or when its backfill finishes. Starts
+    /// `false`, so readers keep the legacy `_history`/absolute regex arms.
+    references_normalized: Arc<std::sync::atomic::AtomicBool>,
     /// Rayon pool for `$reindex` sub-batch extraction; built lazily and only
     /// on a multi-thread runtime (#1403). `Err` remembers a failed build so
     /// the one warning fires once.
@@ -438,6 +443,12 @@ pub struct MongoBackendConfig {
     /// when search is offloaded.
     #[serde(default = "default_reindex_prefetch")]
     pub reindex_prefetch: bool,
+    /// Wall-clock budget of one `$reindex` page's runs (#2290): no further
+    /// run starts if, taking as long as the last one, it would end past this.
+    /// Default 30 s. No `HFS_*` variable sets it; tests that count runs
+    /// against a failpoint raise it so a slow runner cannot end the page early.
+    #[serde(default = "default_reindex_page_budget")]
+    pub reindex_page_budget: Duration,
 
     /// Wall-clock budget for one transaction Bundle, replays and pauses
     /// included (#1586). When the server aborts a transaction with a
@@ -980,6 +991,10 @@ fn default_missing_metadata() -> bool {
     true
 }
 
+fn default_reindex_page_budget() -> Duration {
+    super::retry::REINDEX_PAGE_BUDGET
+}
+
 fn default_bundle_transaction_budget() -> Duration {
     super::retry::DEFAULT_BUNDLE_TRANSACTION_BUDGET
 }
@@ -1024,6 +1039,7 @@ impl Debug for MongoBackendConfig {
             reindex_overlap,
             reindex_prepare_threads,
             reindex_prefetch,
+            reindex_page_budget,
             bundle_transaction_budget,
             bundle_transaction_deadline,
             single_write_deadline,
@@ -1059,6 +1075,7 @@ impl Debug for MongoBackendConfig {
             .field("reindex_overlap", reindex_overlap)
             .field("reindex_prepare_threads", reindex_prepare_threads)
             .field("reindex_prefetch", reindex_prefetch)
+            .field("reindex_page_budget", reindex_page_budget)
             .field("bundle_transaction_budget", bundle_transaction_budget)
             .field("bundle_transaction_deadline", bundle_transaction_deadline)
             .field("single_write_deadline", single_write_deadline)
@@ -1128,6 +1145,7 @@ impl Default for MongoBackendConfig {
             reindex_overlap: default_reindex_overlap(),
             reindex_prepare_threads: 0,
             reindex_prefetch: default_reindex_prefetch(),
+            reindex_page_budget: default_reindex_page_budget(),
             bundle_transaction_budget: default_bundle_transaction_budget(),
             bundle_transaction_deadline: None,
             single_write_deadline: None,
@@ -1324,6 +1342,7 @@ impl MongoBackend {
             search_index_tx: Arc::new(tokio::sync::Mutex::new(Some(search_index_tx))),
             missing_index_rx,
             missing_index_tx: Arc::new(tokio::sync::Mutex::new(Some(missing_index_tx))),
+            references_normalized: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             prepare_pool: std::sync::OnceLock::new(),
             prepare_gate: tokio::sync::Semaphore::new(1),
             transaction_bundle_gate,
@@ -1638,8 +1657,15 @@ impl MongoBackend {
             // boot: in `background` mode the server takes writes while the build
             // runs, and those rows are not an upgrade's (#2268).
             let rows_at_boot = SearchIndexBuilder::rows_at_boot(&db).await;
+            // The marker may already be set by an earlier boot: raise the flag
+            // now so readers do not wait for the builder task to reach it.
+            if matches!(super::schema::references_normalized(&db).await, Ok(true)) {
+                self.references_normalized_flag()
+                    .store(true, std::sync::atomic::Ordering::Release);
+            }
             let builder =
-                SearchIndexBuilder::new(db.clone(), self.config.index_build, rows_at_boot);
+                SearchIndexBuilder::new(db.clone(), self.config.index_build, rows_at_boot)
+                    .with_references_flag(self.references_normalized_flag());
             let handle = tokio::spawn(async move {
                 let outcome = builder.run().await;
                 let _ = tx.send(Some(outcome));
@@ -1697,6 +1723,27 @@ impl MongoBackend {
             self.search_index_rx.borrow().as_ref(),
             Some(BuildOutcome::UpToDate | BuildOutcome::Built { .. })
         )
+    }
+
+    /// Whether the normalization of `search_index.value_reference` (#2394) is
+    /// complete (completion marker set) **and** the index behind the
+    /// `value_reference_target` arm is usable. Only then may a reader drop
+    /// the `_history` and absolute-URL regex arms for exact `$in` matches;
+    /// otherwise it must keep the legacy arms, which answer both shapes.
+    pub(super) fn references_normalized(&self) -> bool {
+        self.references_marker_set() && self.search_indexes_ready()
+    }
+
+    /// Whether the completion marker is set, regardless of index readiness.
+    /// Enough for `search_index_contained`, which has no reference index.
+    pub(super) fn references_marker_set(&self) -> bool {
+        self.references_normalized
+            .load(std::sync::atomic::Ordering::Acquire)
+    }
+
+    /// Shared handle the `search_index` builder uses to publish the marker.
+    pub(super) fn references_normalized_flag(&self) -> Arc<std::sync::atomic::AtomicBool> {
+        Arc::clone(&self.references_normalized)
     }
 
     /// `:missing=true` may use `missing_params` metadata, and hint
@@ -2982,12 +3029,14 @@ mod tests {
         assert!(default.reindex_overlap);
         assert_eq!(default.reindex_prepare_threads, 0);
         assert!(default.reindex_prefetch);
+        assert_eq!(default.reindex_page_budget, Duration::from_secs(30));
 
         let from_empty: MongoBackendConfig =
             serde_json::from_str("{}").expect("every field must have a serde default");
         assert!(from_empty.reindex_overlap);
         assert_eq!(from_empty.reindex_prepare_threads, 0);
         assert!(from_empty.reindex_prefetch);
+        assert_eq!(from_empty.reindex_page_budget, Duration::from_secs(30));
     }
 
     #[test]
