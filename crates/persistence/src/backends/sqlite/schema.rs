@@ -4145,7 +4145,8 @@ mod tests {
             )
             .unwrap();
         }
-        force_schema_version(&conn, 47).unwrap();
+        unrecord_steps_completing_after(&conn, 47);
+        set_schema_version(&conn, 47).unwrap();
         initialize_schema(&conn).unwrap();
         assert_eq!(get_schema_version(&conn).unwrap(), SCHEMA_VERSION);
         let targets = |c: &Connection| -> Vec<Option<String>> {

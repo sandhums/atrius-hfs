@@ -7930,7 +7930,16 @@ mod postgres_integration_migrations {
             )
             .await
             .expect("take v55 back out of the fixture");
-        force_schema_version(&client, 54).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'search_index_value_reference_target'",
+                &[],
+            )
+            .await
+            .expect("unrecord v55 step for replay");
+        set_schema_version(&client, 54)
+            .await
+            .expect("stamp v54 for v54→v55 migration test");
         let vectors = reference_target_vectors();
         for (i, vector) in vectors.iter().enumerate() {
             client
@@ -7948,7 +7957,6 @@ mod postgres_integration_migrations {
             .await
             .expect("migrate v54 to v55");
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
-        assert_eq!(SCHEMA_VERSION, 55);
         for (i, vector) in vectors.iter().enumerate() {
             let got: Option<String> = client
                 .query_one(
@@ -7975,7 +7983,16 @@ mod postgres_integration_migrations {
         );
 
         // A restart that kept the column and index but lost the marker.
-        force_schema_version(&client, 54).await.unwrap();
+        client
+            .execute(
+                "DELETE FROM schema_migrations WHERE name = 'search_index_value_reference_target'",
+                &[],
+            )
+            .await
+            .expect("unrecord v55 step for second replay");
+        set_schema_version(&client, 54)
+            .await
+            .expect("stamp v54 for second replay");
         initialize_schema(&mut client).await.expect("re-run v55");
         assert_eq!(get_schema_version(&client).await.unwrap(), SCHEMA_VERSION);
     }
