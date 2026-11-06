@@ -288,6 +288,12 @@ impl TenantExtractor {
             // X-Tenant-ID header or URL-path tenant here — doing so would let an
             // authenticated caller widen access to an arbitrary tenant by spoofing
             // the header.
+            if state.auth_config().require_tenant_claim {
+                return Err(RestError::Forbidden {
+                    message: "Authenticated token is missing the required tenant claim"
+                        .to_string(),
+                });
+            }
             //
             // Determine what tenant the REQUEST asked for. If the client explicitly
             // selected a specific, non-default tenant via header/URL, fail loud: a
@@ -470,6 +476,16 @@ mod tests {
         /// flag and default tenant. Routing is `HeaderOnly` so the X-Tenant-ID
         /// header is honoured by the resolver.
         fn make_state(strict: bool, default_tenant: &str) -> AppState<SqliteBackend> {
+            make_state_with_auth(strict, default_tenant, false)
+        }
+
+        fn make_state_with_auth(
+            strict: bool,
+            default_tenant: &str,
+            require_tenant_claim: bool,
+        ) -> AppState<SqliteBackend> {
+            use helios_auth::AuthConfig;
+
             let backend = Arc::new(SqliteBackend::in_memory().expect("in-memory sqlite backend"));
             let config = ServerConfig {
                 multitenancy: MultitenancyConfig {
@@ -480,7 +496,11 @@ mod tests {
                 default_tenant: default_tenant.to_string(),
                 ..ServerConfig::for_testing()
             };
-            AppState::new(backend, config)
+            let auth_config = AuthConfig {
+                require_tenant_claim,
+                ..AuthConfig::default()
+            };
+            AppState::with_auth(backend, config, auth_config, None)
         }
 
         /// Builds request `Parts` for `/Patient/123`, optionally carrying an
@@ -576,6 +596,17 @@ mod tests {
                 .expect("empty claim should fall back to default");
             assert_eq!(extractor.tenant_id(), "test-tenant");
             assert_eq!(extractor.source(), TenantSource::Default);
+        }
+
+        #[tokio::test]
+        async fn test_require_tenant_claim_rejects_claimless_token() {
+            let state = make_state_with_auth(false, "test-tenant", true);
+            let mut parts = make_parts(None, Some(make_principal(None)));
+
+            let err = TenantExtractor::from_request_parts(&mut parts, &state)
+                .await
+                .expect_err("require_tenant_claim must forbid claimless tokens");
+            assert_eq!(status(&err), StatusCode::FORBIDDEN);
         }
 
         #[tokio::test]

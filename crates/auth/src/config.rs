@@ -28,6 +28,9 @@ pub struct AuthConfig {
     pub expected_audience: Option<String>,
     /// JWT claim name used to extract the tenant ID.
     pub tenant_claim: String,
+    /// When true, an authenticated token without a usable tenant claim is
+    /// rejected (`403`) instead of falling back to `HFS_DEFAULT_TENANT`.
+    pub require_tenant_claim: bool,
     /// JWT claim carrying the SMART launch patient (`HFS_AUTH_PATIENT_CLAIM`,
     /// default `patient`).
     pub patient_claim: String,
@@ -142,6 +145,7 @@ impl std::fmt::Debug for AuthConfig {
             expected_issuer,
             expected_audience,
             tenant_claim,
+            require_tenant_claim,
             patient_claim,
             encounter_claim,
             fhir_user_claim,
@@ -173,6 +177,7 @@ impl std::fmt::Debug for AuthConfig {
             .field("expected_issuer", expected_issuer)
             .field("expected_audience", expected_audience)
             .field("tenant_claim", tenant_claim)
+            .field("require_tenant_claim", require_tenant_claim)
             .field("patient_claim", patient_claim)
             .field("encounter_claim", encounter_claim)
             .field("fhir_user_claim", fhir_user_claim)
@@ -227,6 +232,9 @@ impl AuthConfig {
             expected_audience: env::var("HFS_AUTH_AUDIENCE").ok(),
             tenant_claim: env::var("HFS_AUTH_TENANT_CLAIM")
                 .unwrap_or_else(|_| "tenant_id".to_string()),
+            require_tenant_claim: env::var("HFS_AUTH_REQUIRE_TENANT_CLAIM")
+                .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+                .unwrap_or(false),
             // A blank value falls back to the default: an empty claim name
             // would match a `""` key.
             patient_claim: claim_name_from_env("HFS_AUTH_PATIENT_CLAIM", "patient"),
@@ -363,6 +371,7 @@ impl Default for AuthConfig {
             expected_issuer: None,
             expected_audience: None,
             tenant_claim: "tenant_id".to_string(),
+            require_tenant_claim: false,
             patient_claim: "patient".to_string(),
             encounter_claim: "encounter".to_string(),
             fhir_user_claim: "fhirUser".to_string(),
@@ -447,6 +456,7 @@ mod tests {
         "HFS_AUTH_ISSUER",
         "HFS_AUTH_AUDIENCE",
         "HFS_AUTH_TENANT_CLAIM",
+        "HFS_AUTH_REQUIRE_TENANT_CLAIM",
         "HFS_AUTH_PATIENT_CLAIM",
         "HFS_AUTH_ENCOUNTER_CLAIM",
         "HFS_AUTH_FHIR_USER_CLAIM",
@@ -479,6 +489,7 @@ mod tests {
         let config = AuthConfig::from_env();
         assert!(!config.enabled);
         assert_eq!(config.tenant_claim, "tenant_id");
+        assert!(!config.require_tenant_claim);
         assert_eq!(config.patient_claim, "patient");
         assert_eq!(config.encounter_claim, "encounter");
         assert_eq!(config.fhir_user_claim, "fhirUser");
@@ -487,6 +498,21 @@ mod tests {
             config.allowed_algorithms,
             vec!["RS256", "RS384", "ES256", "ES384"]
         );
+    }
+
+    #[test]
+    fn test_from_env_require_tenant_claim() {
+        let _guard = ENV_LOCK.lock().expect("env lock poisoned");
+        clear_auth_env();
+        unsafe {
+            env::set_var("HFS_AUTH_REQUIRE_TENANT_CLAIM", "true");
+        }
+        assert!(AuthConfig::from_env().require_tenant_claim);
+        unsafe {
+            env::set_var("HFS_AUTH_REQUIRE_TENANT_CLAIM", "1");
+        }
+        assert!(AuthConfig::from_env().require_tenant_claim);
+        clear_auth_env();
     }
 
     #[test]
