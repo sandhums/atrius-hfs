@@ -290,8 +290,7 @@ impl TenantExtractor {
             // the header.
             if state.auth_config().require_tenant_claim {
                 return Err(RestError::Forbidden {
-                    message: "Authenticated token is missing the required tenant claim"
-                        .to_string(),
+                    message: "Authenticated token is missing the required tenant claim".to_string(),
                 });
             }
             //
