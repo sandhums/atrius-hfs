@@ -243,11 +243,7 @@ pub async fn track(req: Request, next: Next) -> Response {
         );
         // Join inbound W3C traceparent (BFF → HIS → HFS → CDS) when present.
         #[cfg(feature = "otel")]
-        {
-            use tracing_opentelemetry::OpenTelemetrySpanExt;
-            let parent = crate::propagation::extract_trace_context(req.headers());
-            let _ = span.set_parent(parent);
-        }
+        crate::telemetry::adopt_remote_parent(&span, req.headers());
         let response = next.run(req).instrument(span.clone()).await;
         span.record("http.status_code", response.status().as_u16());
         response

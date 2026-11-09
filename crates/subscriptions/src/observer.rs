@@ -11,8 +11,9 @@
 //! only wakes the worker.
 //!
 //! What gets announced is decided by the write path, not here: a write whose
-//! notice is `None` (for example a conditional create) is deliberately silent,
-//! and aggregate [`WriteEvent::Counts`] and purge [`WriteEvent::Erased`] events
+//! notice is `None` is deliberately silent (conditional writes are not such a
+//! case: they announce like their unconditional counterparts, #862), and
+//! aggregate [`WriteEvent::Counts`] and purge [`WriteEvent::Erased`] events
 //! never produce a notification.
 
 use std::sync::Arc;
