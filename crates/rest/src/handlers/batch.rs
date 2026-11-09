@@ -836,84 +836,24 @@ where
     resolve_conditional_references(state, &tenant, &mut indexed_entries).await?;
 
     // Write-path validation: transactions are atomic, so any invalid write
-    // entry rejects the whole bundle before anything executes.
+    // entry rejects the whole bundle before anything executes. DELETE absent
+    // targets are not preflighted — #2523 answers them as entry `204` inside
+    // the transaction; PATCH is validated via [`RestPatchValidator`] there.
     for (index, entry, _) in &indexed_entries {
-        let (resource_type, id) =
+        if !matches!(entry.method, BundleMethod::Post | BundleMethod::Put) {
+            continue;
+        }
+        let Some(resource) = &entry.resource else {
+            continue;
+        };
+        let (resource_type, _) =
             parse_request_url(&entry.url).map_err(|e| RestError::InvalidElementValue {
                 message: format!("Entry {}: {}", index, e),
             })?;
-        match entry.method {
-            BundleMethod::Post | BundleMethod::Put => {
-                let Some(resource) = &entry.resource else {
-                    continue;
-                };
-                state
-                    .validation()
-                    .check_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
-                    .await?;
-            }
-            BundleMethod::Delete => {
-                // A type-level URL with criteria is a conditional delete, resolved
-                // inside the transaction (#859). Only an unconditional delete
-                // must name an instance.
-                if entry.criteria.is_some() {
-                    continue;
-                }
-                if id.is_empty() {
-                    return Err(RestError::BadRequest {
-                        message: format!(
-                            "Entry {index}: DELETE request.url must address an instance ('[type]/[id]')"
-                        ),
-                    });
-                }
-                if state
-                    .storage()
-                    .read(tenant.context(), &resource_type, &id)
-                    .await?
-                    .is_none()
-                {
-                    return Err(RestError::NotFound { resource_type, id });
-                }
-            }
-            BundleMethod::Patch => {
-                let Some(patch_doc) = &entry.resource else {
-                    return Err(RestError::BadRequest {
-                        message: format!("Entry {index}: PATCH entry missing resource"),
-                    });
-                };
-                if id.is_empty() {
-                    // Conditional patch: the match is resolved inside the
-                    // transaction, so there is no instance to pre-validate.
-                    if entry.criteria.is_some() {
-                        continue;
-                    }
-                    return Err(RestError::BadRequest {
-                        message: format!(
-                            "Entry {index}: PATCH request.url must address an instance ('[type]/[id]')"
-                        ),
-                    });
-                }
-                // POST+PATCH in the same transaction: the target may not exist
-                // yet. Validate only when it already does.
-                if let Some(existing) = state
-                    .storage()
-                    .read(tenant.context(), &resource_type, &id)
-                    .await?
-                {
-                    let patch = bundle_patch_format(patch_doc, fhir_version)?;
-                    let patched = apply_patch_for_version(
-                        existing.content(),
-                        &patch,
-                        existing.fhir_version(),
-                    )?;
-                    state
-                        .validation()
-                        .check_write(tenant.tenant_id(), fhir_version, &resource_type, &patched)
-                        .await?;
-                }
-            }
-            BundleMethod::Get => {}
-        }
+        state
+            .validation()
+            .check_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
+            .await?;
     }
 
     // Sort by processing order: DELETE -> POST -> PUT/PATCH -> GET
