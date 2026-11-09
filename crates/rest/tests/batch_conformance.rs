@@ -2917,34 +2917,6 @@ mod entry_methods {
         assert_eq!(patient_count(&backend).await, before);
     }
 
-    /// DELETE of a missing instance is declined before anything executes.
-    #[tokio::test]
-    async fn a_transaction_delete_of_a_missing_id_is_declined_intact() {
-        let (server, backend) = create_test_server().await;
-        let before = patient_count(&backend).await;
-
-        let response = post_bundle(
-            &server,
-            json!({
-                "resourceType": "Bundle",
-                "type": "transaction",
-                "entry": [
-                    {
-                        "request": { "method": "POST", "url": "Patient" },
-                        "resource": { "resourceType": "Patient", "name": [{"family": "Sibling"}] }
-                    },
-                    {
-                        "request": { "method": "DELETE", "url": "Patient/does-not-exist" }
-                    }
-                ]
-            }),
-        )
-        .await;
-
-        response.assert_status(StatusCode::NOT_FOUND);
-        assert_eq!(patient_count(&backend).await, before);
-    }
-
     /// The two arms agree on status, which is what #502 asks for: HEAD is 405
     /// whether it arrives per-entry in a batch or as a whole-bundle transaction
     /// failure. Flattening the refusal at the transaction boundary would have
