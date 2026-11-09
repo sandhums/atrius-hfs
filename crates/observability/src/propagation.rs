@@ -1,7 +1,8 @@
 //! W3C Trace Context inject/extract helpers (feature `otel`).
 //!
-//! Used by outbound HTTP clients (inject) and by [`crate::middleware::track`]
-//! (extract) so BFF → HIS → HFS → CDS spans join into one distributed trace.
+//! Used by outbound HTTP clients (inject) so BFF → HIS → HFS → CDS spans join
+//! into one distributed trace. Inbound requests adopt the caller's
+//! `traceparent` via [`crate::telemetry::adopt_remote_parent`].
 
 use http::HeaderMap;
 
@@ -38,28 +39,4 @@ pub fn inject_trace_context(headers: &mut HeaderMap) {
     {
         let _ = headers;
     }
-}
-
-/// Extract a parent OpenTelemetry [`Context`](opentelemetry::Context) from
-/// inbound HTTP headers. Returns the current context when extraction yields
-/// nothing or when built without `otel`.
-#[cfg(feature = "otel")]
-pub(crate) fn extract_trace_context(headers: &HeaderMap) -> opentelemetry::Context {
-    use opentelemetry::propagation::Extractor;
-
-    struct HeaderExtractor<'a>(&'a HeaderMap);
-
-    impl Extractor for HeaderExtractor<'_> {
-        fn get(&self, key: &str) -> Option<&str> {
-            self.0.get(key).and_then(|v| v.to_str().ok())
-        }
-
-        fn keys(&self) -> Vec<&str> {
-            self.0.keys().map(|k| k.as_str()).collect()
-        }
-    }
-
-    opentelemetry::global::get_text_map_propagator(|propagator| {
-        propagator.extract(&HeaderExtractor(headers))
-    })
 }

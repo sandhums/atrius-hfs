@@ -10,7 +10,7 @@
 //! - [`middleware`] — per-request count/latency metrics and a tracing span.
 //! - [`telemetry`] — `tracing-subscriber` init, optionally bridged to OTLP
 //!   (feature `otel`). Honors `LOG_FORMAT=json` / `HELIOS_LOG_FORMAT=json`.
-//! - [`propagation`] — W3C Trace Context inject/extract for distributed traces.
+//! - [`propagation`] — W3C Trace Context inject on outbound HTTP calls.
 //! - [`dashboard`] — process-global provider of storage-count snapshots for the
 //!   web UI's "FHIR resources over time" chart, registered by the server.
 //! - [`dashboard_counters`] — process-local per-tenant, per-type live resource
