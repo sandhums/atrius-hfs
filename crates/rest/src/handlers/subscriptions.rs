@@ -151,12 +151,17 @@ fn snapshot_from_stored(
 /// Both numbers are received as strings (the Subscriptions Backport IG types
 /// them as `string`; R6 as `integer64`) and parsed by hand so a malformed value
 /// answers with a precise `OperationOutcome` instead of an extractor rejection.
-#[derive(Debug, Default, serde::Deserialize)]
+///
+/// `after` and `count` are the durable-outbox cursor (exclusive row id, page
+/// size 1..=200, default 50) that HIS gap recovery and the BFF send.
+#[derive(Debug, Default, Deserialize)]
 pub struct EventsParams {
     #[serde(rename = "eventsSinceNumber")]
     events_since_number: Option<String>,
     #[serde(rename = "eventsUntilNumber")]
     events_until_number: Option<String>,
+    after: Option<i64>,
+    count: Option<u32>,
 }
 
 fn parse_event_number(param: &str, raw: Option<&str>) -> RestResult<Option<u64>> {
@@ -219,6 +224,13 @@ where
     let since = parse_event_number("eventsSinceNumber", params.events_since_number.as_deref())?;
     let until = parse_event_number("eventsUntilNumber", params.events_until_number.as_deref())?;
 
+    if since.is_none()
+        && until.is_none()
+        && let Some(outbox) = engine.outbox_store()
+    {
+        return outbox_events(&state, engine, outbox, &tenant, &id, &params).await;
+    }
+
     let query = match engine
         .manager()
         .events_in_range(tenant.tenant_id(), &id, since, until)
@@ -258,6 +270,76 @@ where
     .map_err(|e| RestError::InternalError {
         message: format!("Failed to build $events response: {e}"),
     })?;
+
+    Ok((StatusCode::OK, Json(bundle)).into_response())
+}
+
+/// `$events` answered from the durable outbox: a `SubscriptionStatus` entry,
+/// then one entry per processed outbox row after `params.after` (oldest
+/// first), carrying the stored resource when the row has one. Unlike the
+/// in-memory event history this survives a restart.
+async fn outbox_events<S>(
+    state: &AppState<S>,
+    engine: &std::sync::Arc<helios_subscriptions::SubscriptionEngine>,
+    outbox: &helios_persistence::core::DynSubscriptionOutboxStore,
+    tenant: &TenantExtractor,
+    id: &str,
+    params: &EventsParams,
+) -> RestResult<Response>
+where
+    S: ResourceStorage + Send + Sync,
+{
+    let snapshot = resolve_snapshot(state, engine, tenant, id).await?;
+
+    let mut entries = vec![json!({
+        "resource": {
+            "resourceType": "SubscriptionStatus",
+            "status": snapshot.status.as_fhir_str(),
+            "type": "query-event",
+            "eventsSinceSubscriptionStart": snapshot.events_since_start,
+            "subscription": {
+                "reference": format!("Subscription/{id}")
+            },
+            "topic": snapshot.topic_url
+        }
+    })];
+
+    let limit = params.count.unwrap_or(50).clamp(1, 200);
+    let tenant_id = TenantId::new(tenant.tenant_id());
+    match outbox.list_processed(&tenant_id, params.after, limit).await {
+        Ok(rows) => {
+            for row in rows {
+                let focus = format!("{}/{}", row.resource_type, row.resource_id);
+                let mut entry = json!({
+                    "fullUrl": format!("{}/{}", state.base_url(), focus),
+                    "request": {
+                        "method": match row.event_type {
+                            helios_persistence::core::OutboxEventType::Create => "POST",
+                            helios_persistence::core::OutboxEventType::Update => "PUT",
+                            helios_persistence::core::OutboxEventType::Delete => "DELETE",
+                        },
+                        "url": focus
+                    }
+                });
+                if let Some(resource) = row.resource {
+                    entry
+                        .as_object_mut()
+                        .expect("entry object")
+                        .insert("resource".to_string(), resource);
+                }
+                entries.push(entry);
+            }
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "Failed to list outbox events for $events");
+        }
+    }
+
+    let bundle = json!({
+        "resourceType": "Bundle",
+        "type": snapshot.fhir_version.notification_bundle_type(),
+        "entry": entries
+    });
 
     Ok((StatusCode::OK, Json(bundle)).into_response())
 }
