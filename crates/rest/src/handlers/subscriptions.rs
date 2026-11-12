@@ -2,7 +2,7 @@
 //!
 //! Implements custom FHIR operations for subscription management:
 //! - `GET /Subscription/{id}/$status` — returns the current `SubscriptionStatus`
-//! - `GET /Subscription/{id}/$events` — returns recent events (R5/R6 only)
+//! - `GET /Subscription/{id}/$events` — returns the status and the events in a number range
 
 use axum::{
     Json,
@@ -146,94 +146,118 @@ fn snapshot_from_stored(
     }
 }
 
-/// Query string for `GET /Subscription/{id}/$events`.
-#[derive(Debug, Deserialize)]
-pub struct EventsQuery {
-    /// Exclusive outbox cursor (resume after this row id).
-    pub after: Option<i64>,
-    /// Max events to return (default 50, max 200).
-    pub count: Option<u32>,
+/// Query parameters of the `$events` operation.
+///
+/// Both numbers are received as strings (the Subscriptions Backport IG types
+/// them as `string`; R6 as `integer64`) and parsed by hand so a malformed value
+/// answers with a precise `OperationOutcome` instead of an extractor rejection.
+#[derive(Debug, Default, serde::Deserialize)]
+pub struct EventsParams {
+    #[serde(rename = "eventsSinceNumber")]
+    events_since_number: Option<String>,
+    #[serde(rename = "eventsUntilNumber")]
+    events_until_number: Option<String>,
+}
+
+fn parse_event_number(param: &str, raw: Option<&str>) -> RestResult<Option<u64>> {
+    match raw {
+        None => Ok(None),
+        Some(value) => {
+            value
+                .trim()
+                .parse::<u64>()
+                .map(Some)
+                .map_err(|_| RestError::InvalidParameter {
+                    param: param.to_string(),
+                    message: format!("'{value}' is not a positive integer"),
+                })
+        }
+    }
 }
 
 /// Handler for the `$events` operation on Subscription resources.
 ///
-/// Returns a notification Bundle of recent processed outbox events for the
-/// subscription, plus a `SubscriptionStatus` entry. Used for gap recovery.
+/// Returns a `history` Bundle (`subscription-notification` on R5/R6) whose
+/// first entry is the subscription status with `type = query-event`: a
+/// `Parameters` resource on R4 (Subscriptions Backport) or a
+/// `SubscriptionStatus` with `notificationEvent` on R4B and later. It is
+/// followed by one id-only entry per event in the requested range.
+///
+/// `eventsSinceNumber` defaults to the oldest retained event and
+/// `eventsUntilNumber` to the latest one. Invalid ranges (non-numeric, below 1,
+/// since after until, or entirely older than the retained history) answer `400`
+/// with an `OperationOutcome`. A `eventsSinceNumber` beyond the latest event
+/// (a client polling for the next one) returns the status with no events. A
+/// range that only partly overlaps the retained history returns the retained
+/// subset.
+///
+/// The event history is bounded (`HFS_SUBSCRIPTION_EVENT_HISTORY_SIZE`) and held
+/// in memory only, like the event counter: it is empty after a restart. A
+/// subscription the engine does not hold is answered from storage with no
+/// events and a counter of `0`; any explicit range is then a `400`.
 ///
 /// # HTTP Request
 ///
-/// `GET [base]/Subscription/{id}/$events`
+/// `GET [base]/Subscription/{id}/$events?eventsSinceNumber=1&eventsUntilNumber=3`
 pub async fn subscription_events_handler<S>(
     State(state): State<AppState<S>>,
     Path((_resource_type, id)): Path<(String, String)>,
-    Query(query): Query<EventsQuery>,
+    Query(params): Query<EventsParams>,
     tenant: TenantExtractor,
 ) -> RestResult<Response>
 where
     S: ResourceStorage + Send + Sync,
 {
+    use helios_subscriptions::manager::{EventQuery, RangeError};
+
     let engine = state
         .subscription_engine()
         .ok_or(RestError::NotImplemented {
             feature: "Subscriptions".to_string(),
         })?;
 
-    // Same storage fallback as `$status`: both handlers had the identical miss,
-    // and fixing only one would look complete in review.
-    let snapshot = resolve_snapshot(&state, engine, &tenant, &id).await?;
+    let since = parse_event_number("eventsSinceNumber", params.events_since_number.as_deref())?;
+    let until = parse_event_number("eventsUntilNumber", params.events_until_number.as_deref())?;
 
-    let bundle_type = snapshot.fhir_version.notification_bundle_type();
-    let mut entries = vec![json!({
-        "resource": {
-            "resourceType": "SubscriptionStatus",
-            "status": snapshot.status.as_fhir_str(),
-            "type": "query-event",
-            "eventsSinceSubscriptionStart": snapshot.events_since_start,
-            "subscription": {
-                "reference": format!("Subscription/{}", id)
-            },
-            "topic": snapshot.topic_url
-        }
-    })];
-
-    if let Some(outbox) = engine.outbox_store() {
-        let limit = query.count.unwrap_or(50).clamp(1, 200);
-        let tenant_id = TenantId::new(tenant.tenant_id());
-        match outbox.list_processed(&tenant_id, query.after, limit).await {
-            Ok(rows) => {
-                for row in rows {
-                    let focus = format!("{}/{}", row.resource_type, row.resource_id);
-                    let mut entry = json!({
-                        "fullUrl": format!("{}/{}", state.base_url(), focus),
-                        "request": {
-                            "method": match row.event_type {
-                                helios_persistence::core::OutboxEventType::Create => "POST",
-                                helios_persistence::core::OutboxEventType::Update => "PUT",
-                                helios_persistence::core::OutboxEventType::Delete => "DELETE",
-                            },
-                            "url": focus
-                        }
-                    });
-                    if let Some(resource) = row.resource {
-                        entry
-                            .as_object_mut()
-                            .expect("entry object")
-                            .insert("resource".to_string(), resource);
-                    }
-                    entries.push(entry);
-                }
-            }
-            Err(e) => {
-                tracing::warn!(error = %e, "Failed to list outbox events for $events");
+    let query = match engine
+        .manager()
+        .events_in_range(tenant.tenant_id(), &id, since, until)
+    {
+        Some(result) => result,
+        None => {
+            // Same storage fallback as `$status`: the engine does not hold the
+            // subscription, so there is no history to serve.
+            let snapshot = resolve_snapshot(&state, engine, &tenant, &id).await?;
+            if since.is_some() || until.is_some() {
+                Err(RangeError::NoLongerRetained { oldest: None })
+            } else {
+                Ok(EventQuery {
+                    status: snapshot.status,
+                    topic_url: snapshot.topic_url,
+                    fhir_version: snapshot.fhir_version,
+                    events_since_start: snapshot.events_since_start,
+                    oldest_retained: None,
+                    events: Vec::new(),
+                })
             }
         }
     }
+    .map_err(|e| RestError::InvalidParameter {
+        param: e.param().to_string(),
+        message: e.to_string(),
+    })?;
 
-    let bundle = json!({
-        "resourceType": "Bundle",
-        "type": bundle_type,
-        "entry": entries
-    });
+    let subscription_url = state.public_url_for_request(&tenant, ["Subscription", id.as_str()]);
+    let base_url = state.public_url_for_request(&tenant, []);
+    let bundle = helios_subscriptions::notification::build_query_events_bundle(
+        &query,
+        &id,
+        &subscription_url,
+        &base_url,
+    )
+    .map_err(|e| RestError::InternalError {
+        message: format!("Failed to build $events response: {e}"),
+    })?;
 
     Ok((StatusCode::OK, Json(bundle)).into_response())
 }
