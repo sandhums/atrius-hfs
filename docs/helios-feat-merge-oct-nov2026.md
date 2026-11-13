@@ -1,7 +1,8 @@
 # Helios follow-on sync: main → feat-clinical-reasoning (Oct–Nov 2026)
 
-Paste-ready addendum for *HELIOS vs Atrius.docx*. Three consecutive feat syncs after
-the 29 Oct entry. Authoritative detail and test counts live in
+Paste-ready addendum for *HELIOS vs Atrius.docx*. Covers feat syncs **30 Oct through
+12 Nov 2026** (the Word doc in iCloud was last saved **2 Nov 2026** — paste from here
+through Sync 8). Authoritative detail and test counts live in
 `docs/clinical-reasoning/upstream-merge.md` (*Last feat sync*).
 
 **Direction:** `upstream/main` → atrius `main` → merge `origin/main` into
@@ -181,22 +182,221 @@ production push.
   `docs/fhir-model-regen.md` into the **directory** layout — do not copy flat `r6.rs`
   beside `r6/mod.rs`.
 
+### Follow-up commit (same week, before next sync)
+
+| Ref | Value |
+|-----|--------|
+| Commit | `3f5f7cab9` — *Restore fork batch behaviour lost in the 2 Nov Helios merge* |
+
+Helios `batch.rs` had been taken whole; restored fork **`bundle_patch_format`**, transaction
+DELETE/PATCH preflight, **`check_entry_if_none_match`** (PUT `ifNoneMatch` create-if-absent),
+and the `refused_methods…` unit test. Made FHIRPath **`RequestError`** `pub`; HTS
+`token_code_system` test asserts a single cached `$expand`.
+
 ---
 
-## Cumulative ledger (after 2 Nov 2026)
+## Sync 4 — 4 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `301ad27ec` (Helios `5ec98f887`, workspace **0.2.7**) |
+| Rollback tag | `pre-merge-main-2026-11-04` → `a7fa0a007` |
+| Merge commit | `4f3b91009` |
+| Distance | 74 on `main` / **29** non-merge since `3f5f7cab9` |
+
+### Helios themes adopted
+
+- `#1654` top-level `/docs/` **gitignored on upstream** — fork keeps tracked `docs/` with
+  `git add -f`.
+- Mongo search `#2294`, ES filter-source `#2286`, reindex transient retry `#2290`,
+  FHIRPath document functions `#2245`, CI gate entries `#2173`.
+
+### Schema ledger
+
+- Unchanged **49** / **58** (Mongo metadata **16**).
+
+### Conflicts resolved
+
+| Location | Decision |
+|----------|----------|
+| `docs/` rename detection | Git tried to move Atrius docs into `crates/persistence/`; restored **`git checkout HEAD -- docs/`** + `git add -f` (196 tracked files). |
+
+### Verification (recorded)
+
+`cargo build`, `cds-server`, rest **R4,sqlite** all green (lib **1000**), hts **857**.
+
+---
+
+## Sync 5 — 6 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `c788d77b6` (Helios `be76ebead`, workspace **0.2.7**) |
+| Rollback tag | `pre-merge-main-2026-11-06` → `4f3b91009` |
+| Merge commit | `fde065ffb` |
+| Distance | 57 on `main` / **29** non-merge |
+
+### Helios themes adopted
+
+- Named step **`search_index_value_reference_target`** (Helios v47→v48 / v54→v55) for Mongo
+  reference normalize `#2394`, Postgres modifier reference search `#2494`.
+
+### Schema ledger
+
+- SQLite **50** / Postgres **59** (step inserted after `bulk_submissions_updated_at`, before
+  fork dead-letter / slot-2).
+
+### Conflicts resolved
+
+| Location | Decision |
+|----------|----------|
+| `sqlite/schema.rs`, `postgres/schema.rs` | Named ledger only. |
+
+### Verification (recorded)
+
+`cargo build`, `cds-server`, rest lib **1000**, hts **857**.
+
+---
+
+## Sync 6 — 7–9 Nov 2026 (0.2.8)
+
+| Ref | Value |
+|-----|--------|
+| 7 Nov merge | `32c183235` ← `main` `ea9d0caca` (Helios `1e6bb3013`, **0.2.7**) |
+| 9 Nov merge | `b59e4e1b4` ← `main` `b5ff5e173` (Helios `f39f48276`, **0.2.8** release) |
+| Rollback tags | `pre-merge-main-2026-11-07` → `e78d94024`; `pre-merge-main-2026-11-09` → `32c183235` |
+
+### Helios themes adopted
+
+- `#2527` batch **`If-Match`** compare-and-swap; `#862` conditional write observer;
+  `#863` PATCH format negotiation refusal; `#922` transaction entry index mapping;
+  **`#2523` delete-absent → 204** (supersedes fork “decline missing DELETE” test).
+- Traceparent propagation + tracestate cap (`helios-observability`); `#2517` versioned Location.
+- 7 Nov: SQLite transaction delete clears search index `#864` **with** fork outbox enqueue on
+  same connection.
+
+### Feat-only fixes on branch (not Helios merges)
+
+| Commit | Note |
+|--------|------|
+| `63616ed00` | Align transaction preflight with Helios **#2523** |
+| `7031004e2` | Drop fork-only missing-DELETE transaction test (upstream owns behaviour) |
+| `b877a0dec` | Remove unused fork-only **`extract_trace_context`**; keep **`inject_trace_context`** for BFF |
+
+### Conflicts resolved (9 Nov)
+
+| Location | Decision |
+|----------|----------|
+| `batch.rs` | Helios `HeldIfMatch` + **keep** `bundle_patch_format` + `check_entry_if_none_match` |
+| `observability` | Helios adopt-remote-parent + tracestate cap; keep `LOG_FORMAT` test |
+
+### HIS / pins
+
+- **`helios-observability`** (9 Nov) — refresh HIS Helios crate pins after push.
+
+### Verification (recorded)
+
+schema_ledger **39**; rest lib **1001** (7 Nov) → **1003** (9 Nov); hts **857**.
+
+---
+
+## Sync 7 — 11 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `8cf78b534` (Helios `684cae51c`, **0.2.8**) |
+| Rollback tag | `pre-merge-main-2026-11-11` → `b877a0dec` |
+| Merge commit | `dfa164904` (+ docs stamp `575d40822`) |
+| Distance | 3 on `main` / **1** non-merge |
+
+### Helios themes adopted
+
+- `#2539` fhir-benchmark every release + cross-version charts (**CI only**).
+
+### Conflicts
+
+- **0** — clean merge.
+
+### Verification (recorded)
+
+rest lib **1003**, hts **857**; no library pin move.
+
+---
+
+## Sync 8 — 12 Nov 2026 (+ audit fix)
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `eb9c746f9` (Helios `a2df4fd3a`, **0.2.8**) |
+| Rollback tag | `pre-merge-main-2026-11-12` → `575d40822` |
+| Merge commit | `5876ad96b` |
+| Post-audit fix | `6d1269fe9` — outbox **`$events`** cursor restored |
+| Feat tip (unpushed) | **`6d1269fe9`** |
+| Distance | 142 on `main` / **100** non-merge since 11 Nov tag |
+
+### Helios themes adopted
+
+- `#1941` bulk-submit throughput + reindex streams; `#869` **`ifNoneMatch` on Bundle GET**;
+  `#868` refuse operation entry URLs; **`#2547` Subscription `$events`** (IG range query over
+  in-memory history); `#514` metadata `searchRevInclude` only when storage searches; `#2510` ES
+  unevaluable parameters; `#2146` MongoDB purge transaction; deps `#2549`/`#2557`; benchmark
+  refresh `#2559`.
+
+### Conflicts resolved (high signal)
+
+| Location | Decision |
+|----------|----------|
+| `batch.rs` | **Keep** fork PUT `ifNoneMatch` + `bundle_patch_format`; **take** `bundle_read_result` for GET `#869` |
+| `bulk_submit` (sqlite) | Keep **`ingest_validation_error`** on Helios move-into-`create_prepared` path |
+| Worker / `hfs` | **Both** `with_ingest_validator` and `with_deferred_reindex_scoping` |
+| `subscriptions.rs` | Took Helios IG `$events` — **audit found regression** (see below) |
+| `SubscriptionManager` | Heartbeat map **and** `event_history_size` |
+
+### Post-merge audit (12 Nov)
+
+- One-sided files match their side; keep-list spot checks passed (`r6/` layout, Redis auth,
+  terminology client, batch fork markers).
+- **Regression:** merge resolution dropped Atrius **outbox-backed `$events`** (`after`/`count`
+  paging for HIS inbox + BFF). **Fixed** in `6d1269fe9`: when range parameters absent and an
+  outbox is attached → `outbox_events`; otherwise Helios `#2547` range query. Tests:
+  `subscription_events_outbox.rs`. Playbook verification now includes
+  `cargo test -p helios-rest --features R4,sqlite,subscriptions`.
+
+### HIS / pins
+
+- **`helios-observability`** deferred-index metrics — move pins with other Helios crates after push.
+
+### Verification (recorded)
+
+`cargo build`, `cds-server`, rest **R4,sqlite** lib **1024**; rest **+subscriptions** full suite green; hts lib **857**; persistence lib **1986** (audit pass).
+
+---
+
+## Cumulative ledger (after 12 Nov 2026)
 
 | Backend | `SCHEMA_VERSION` | Notes |
 |---------|------------------|--------|
-| SQLite | **49** | Named steps; Helios `#2280` = `bulk_submissions_updated_at`; fork outbox dead-letter step before slot-2. |
-| Postgres | **58** | Same naming discipline; no integer replay on feat. |
+| SQLite | **50** | Named steps; `search_index_value_reference_target` after `bulk_submissions_updated_at`; fork outbox dead-letter before slot-2. |
+| Postgres | **59** | Same naming discipline; no integer replay on feat. |
+
+Workspace **0.2.8**. MSRV **1.91.1**.
+
+---
+
+## Keep-list delta (paste into Word — Nov syncs)
+
+- Batch: **PUT `ifNoneMatch` create-if-absent** alongside Helios GET `#869` / CAS `#2527`; keep **`bundle_patch_format`**; missing DELETE is Helios **204** `#2523` (not fork decline).
+- Subscriptions: durable **outbox** + heartbeat + **`fhirPathCriteria`**; **`$events`** = Helios range query **or** outbox cursor when no range params (HIS/BFF).
+- Observability: **no `extract_trace_context`**; keep **`inject_trace_context`** + Helios traceparent adoption.
+- Bulk submit: **`IngestValidator`** / `ingest_validation_error` on sqlite ingest path.
+- Still: `helios-terminology-client`, **`helios-auth` + `redis`**, **`r6/`** not flat `r6.rs`, named schema ledger.
 
 ---
 
 ## Word doc — suggested section headings to paste under
 
-1. **Sync log** — three subsections (30 Oct, 31 Oct, 2 Nov) with tables above.
-2. **Keep-list delta** — bulk export jobs list; audit builder extensions; fhirpath
-   `validate_code_with_parameters`; r6/ not r6.rs; 0.2.7 workspace.
-3. **Rollback tags** — `pre-merge-main-2026-10-30`, `-10-31`, `-11-02`.
-4. **HIS pin reminders** — auth (30 Oct), auth+audit (31 Oct), full stack (2 Nov).
-5. **Operator notes** — R6 dirty tree on `main` sync; `git add -f` for R6 tests on feat merge.
+1. **Sync log** — subsections Sync 1–8 (30 Oct … 12 Nov) with tables above.
+2. **Keep-list delta** — November bullets in previous section.
+3. **Rollback tags** — through `pre-merge-main-2026-11-12`.
+4. **HIS pin reminders** — observability on 9 Nov and 12 Nov waves (after push to feat tip `6d1269fe9`).
+5. **Operator notes** — `docs/` `git add -f` on every merge (Helios `#1654`); run rest with **`subscriptions`** feature; 2 Nov batch follow-up `3f5f7cab9`.
