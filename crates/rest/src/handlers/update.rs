@@ -67,7 +67,7 @@ pub async fn update_handler<S>(
     conditional: ConditionalHeaders,
     prefer: PreferHeader,
     req_headers: HeaderMap,
-    FhirResource(resource): FhirResource,
+    FhirResource(mut resource): FhirResource,
 ) -> RestResult<Response>
 where
     S: ResourceStorage + ConditionalStorage + SearchProvider + Send + Sync + 'static,
@@ -146,10 +146,16 @@ where
         });
     }
 
-    // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
+    // Empty-element cleanup (#2554) and write-path validation
+    // (HFS_VALIDATION_MODE: off | log | enforce).
     state
         .validation()
-        .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
+        .prepare_write(
+            tenant.tenant_id(),
+            fhir_version,
+            &resource_type,
+            &mut resource,
+        )
         .await?;
 
     // #1014: an unknown ViewDefinition.resource is rejected on every write.
@@ -447,7 +453,7 @@ pub async fn conditional_update_handler<S>(
     conditional: ConditionalHeaders,
     prefer: PreferHeader,
     req_headers: HeaderMap,
-    FhirResource(resource): FhirResource,
+    FhirResource(mut resource): FhirResource,
 ) -> RestResult<Response>
 where
     S: ResourceStorage + ConditionalStorage + SearchProvider + Send + Sync + 'static,
@@ -485,10 +491,16 @@ where
         "Processing conditional update request"
     );
 
-    // Write-path validation (HFS_VALIDATION_MODE: off | log | enforce).
+    // Empty-element cleanup (#2554) and write-path validation
+    // (HFS_VALIDATION_MODE: off | log | enforce).
     state
         .validation()
-        .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
+        .prepare_write(
+            tenant.tenant_id(),
+            fhir_version,
+            &resource_type,
+            &mut resource,
+        )
         .await?;
 
     // #1014: an unknown ViewDefinition.resource is rejected on every write.

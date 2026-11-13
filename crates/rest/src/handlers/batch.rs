@@ -836,15 +836,17 @@ where
     // above, and their query strings are searches, not conditional references.
     resolve_conditional_references(state, &tenant, &mut indexed_entries).await?;
 
-    // Write-path validation: transactions are atomic, so any invalid write
-    // entry rejects the whole bundle before anything executes. DELETE absent
-    // targets are not preflighted — #2523 answers them as entry `204` inside
-    // the transaction; PATCH is validated via [`RestPatchValidator`] there.
-    for (index, entry, _) in &indexed_entries {
+    // Empty-element cleanup (#2554) and write-path validation: transactions
+    // are atomic, so any invalid write entry rejects the whole bundle before
+    // anything executes. DELETE absent targets are not preflighted — #2523
+    // answers them as entry `204` inside the transaction; PATCH is validated
+    // via [`RestPatchValidator`] there. A PATCH entry's document is not stored;
+    // its result is cleaned by the patch engine.
+    for (index, entry, _) in &mut indexed_entries {
         if !matches!(entry.method, BundleMethod::Post | BundleMethod::Put) {
             continue;
         }
-        let Some(resource) = &entry.resource else {
+        let Some(resource) = entry.resource.as_mut() else {
             continue;
         };
         let (resource_type, _) =
@@ -853,7 +855,7 @@ where
             })?;
         state
             .validation()
-            .check_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
+            .prepare_write(tenant.tenant_id(), fhir_version, &resource_type, resource)
             .await?;
     }
 
@@ -1543,7 +1545,12 @@ where
             // `processing`, which is the lossiest case in #504.
             if let Err(e) = state
                 .validation()
-                .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
+                .prepare_write(
+                    tenant.tenant_id(),
+                    fhir_version,
+                    &resource_type,
+                    &mut resource,
+                )
                 .await
             {
                 return entry_failure(e);
@@ -1629,7 +1636,7 @@ where
         }
         BundleMethod::Put => {
             // Update operation
-            let resource = match entry.get("resource") {
+            let mut resource = match entry.get("resource") {
                 Some(r) => r.clone(),
                 None => {
                     // See the POST arm: `invalid` rather than `required`,
@@ -1662,7 +1669,12 @@ where
 
                 if let Err(e) = state
                     .validation()
-                    .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
+                    .prepare_write(
+                        tenant.tenant_id(),
+                        fhir_version,
+                        &resource_type,
+                        &mut resource,
+                    )
                     .await
                 {
                     // Same funnel as the unconditional PUT below: the
@@ -1768,7 +1780,12 @@ where
             // Write-path validation (per-entry outcome in batch semantics).
             if let Err(e) = state
                 .validation()
-                .check_write(tenant.tenant_id(), fhir_version, &resource_type, &resource)
+                .prepare_write(
+                    tenant.tenant_id(),
+                    fhir_version,
+                    &resource_type,
+                    &mut resource,
+                )
                 .await
             {
                 return entry_failure(e);

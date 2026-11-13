@@ -1058,7 +1058,7 @@ impl S3Backend {
                     tenant,
                     &entry.resource_type,
                     id,
-                    entry.resource.clone(),
+                    options.content_to_write(None, &entry.resource),
                     FhirVersion::default_enabled(),
                 )
                 .await?
@@ -1094,7 +1094,8 @@ impl S3Backend {
                     }
 
                     // Update the resource, honoring the submission's import mode.
-                    let content = options.content_for_update(current.content(), &entry.resource);
+                    let content =
+                        options.content_to_write(Some(current.content()), &entry.resource);
                     if let Some(failed) = options
                         .ingest_validation_error(
                             tenant.tenant_id().as_str(),
@@ -1144,7 +1145,7 @@ impl S3Backend {
                         .create(
                             tenant,
                             &entry.resource_type,
-                            entry.resource.clone(),
+                            options.content_to_write(None, &entry.resource),
                             FhirVersion::default_enabled(),
                         )
                         .await?;
@@ -1185,7 +1186,7 @@ impl S3Backend {
                 .create(
                     tenant,
                     &entry.resource_type,
-                    entry.resource.clone(),
+                    options.content_to_write(None, &entry.resource),
                     FhirVersion::default_enabled(),
                 )
                 .await?;

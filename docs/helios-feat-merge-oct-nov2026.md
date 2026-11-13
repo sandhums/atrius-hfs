@@ -383,6 +383,35 @@ Workspace **0.2.8**. MSRV **1.91.1**.
 
 ---
 
+## Sync 9 — 13 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `6927bc473` (Helios `a547196c0`, **0.2.8**) |
+| Rollback tag | `pre-merge-main-2026-11-13` → `be4c16ab4` |
+| Merge commit | (this merge) |
+| Distance | 29 on `main` / **15** non-merge |
+
+### Helios themes adopted
+
+- REST **`$meta`**, **`$meta-add`**, **`$meta-delete`** (`#2566`); write path **`prepare_write`** / `drop_empty_elements` (`#2554`); persistence **`merge_update_meta`** on update (`#2562`).
+- Search: chain-ending **`_has`** (`#2556`); unknown nested `_has` parameters (`#2563`).
+- Bulk submit: `content_to_write` applies empty-element cleanup after merge mode.
+
+### Conflicts resolved (high signal)
+
+| Location | Decision |
+|----------|----------|
+| sqlite/postgres `storage.rs` | Helios `store_update` + **`maybe_enqueue_*`** on the same transaction |
+| S3 `bulk_submit.rs` | `content_to_write` + fork **`ingest_validation_error`** |
+| `validation.rs` | **`prepare_write`** + fork storage **`prefetch_resolve`** |
+
+### Verification (recorded)
+
+`cargo build`, `cds-server`, rest lib **1029**, rest **+subscriptions** green, hts green.
+
+---
+
 ## Keep-list delta (paste into Word — Nov syncs)
 
 - Batch: **PUT `ifNoneMatch` create-if-absent** alongside Helios GET `#869` / CAS `#2527`; keep **`bundle_patch_format`**; missing DELETE is Helios **204** `#2523` (not fork decline).
