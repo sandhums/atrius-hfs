@@ -35,7 +35,7 @@ use crate::search::reindex::{ReindexIdRange, ReindexSource, ReindexTarget, Resou
 use crate::tenant::{Operation, TenantContext};
 use crate::types::Pagination;
 use crate::types::SearchQuery;
-use crate::types::{CursorValue, Page, PageCursor, PageInfo, StoredResource};
+use crate::types::{CursorValue, Page, PageCursor, PageInfo, StoredResource, merge_update_meta};
 
 use super::PostgresBackend;
 use super::bundle_lock_plan::{BundleLockMode, MAX_BUNDLE_LOCK_KEYS, plan_bundle_locks};
@@ -1793,170 +1793,19 @@ impl ResourceStorage for PostgresBackend {
         current: &StoredResource,
         resource: Value,
     ) -> StorageResult<StoredResource> {
-        let resource_type = current.resource_type();
-        tenant.check_permission(Operation::Update, resource_type)?;
-
-        let mut client = self.guarded_client().await?;
-        let tenant_id = tenant.tenant_id().as_str();
-        let id = current.id();
-
-        // The expected version is `current`'s, and the UPDATE below only matches a
-        // row that still carries it — so the new version follows from what the
-        // caller already read, with no round trip to ask what is stored.
-        let expected_version = current.version_id().to_string();
-        let new_version: u64 = expected_version.parse().unwrap_or(0) + 1;
-        let new_version_str = new_version.to_string();
-
-        // Ensure the resource has correct type and id
+        // Tags and security labels the update leaves out are kept (#2562).
         let mut resource = resource;
-        if let Some(obj) = resource.as_object_mut() {
-            obj.insert(
-                "resourceType".to_string(),
-                Value::String(resource_type.to_string()),
-            );
-            obj.insert("id".to_string(), Value::String(id.to_string()));
-        }
+        merge_update_meta(current.content(), &mut resource);
+        self.store_update(tenant, current, resource).await
+    }
 
-        let now = Utc::now();
-        let fhir_version_str = current.fhir_version().as_mime_param();
-
-        // Version check, update and history row in one statement. The check used
-        // to be a separate `SELECT` — a round trip on every update, and a
-        // check-then-act besides: a concurrent writer could bump the version in
-        // between and this update would overwrite it while reporting success.
-        // Folding the expected version into the `WHERE` makes the two atomic.
-        //
-        // Zero rows means the update matched nothing; which of the two reasons it
-        // was costs a query, but only on the path that is already failing.
-        //
-        // Guarded foreground update: one transaction holds the advisory write
-        // lock, the resource/history write, and the search/FTS index writes.
-        // `SearchParameter` takes the exclusive tenant gate; every other type
-        // takes the shared gate plus its own resource key.
-        let transaction = client
-            .transaction()
-            .await
-            .map_err(|e| internal_error(format!("Failed to begin update: {e}")))?;
-        let write_result: StorageResult<()> = async {
-            if resource_type == "SearchParameter" {
-                acquire_exclusive_write_gate(&transaction, tenant_id).await?;
-            } else {
-                acquire_shared_write_locks(&transaction, tenant_id, &[(resource_type, id)]).await?;
-            }
-            let updated = execute_cached(
-                &transaction,
-                "WITH upd AS (
-                     UPDATE resources SET version_id = $1, data = $2, last_updated = $3
-                     WHERE tenant_id = $4 AND resource_type = $5 AND id = $6
-                       AND is_deleted = FALSE AND version_id = $7
-                     RETURNING tenant_id, resource_type, id, version_id, data, last_updated, is_deleted
-                 )
-                 INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
-                 SELECT tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, $8 FROM upd",
-                &[
-                    &new_version_str,
-                    &resource,
-                    &now,
-                    &tenant_id,
-                    &resource_type,
-                    &id,
-                    &expected_version,
-                    &fhir_version_str,
-                ],
-            )
-            .await
-            .map_err(|e| internal_error(format!("Failed to update resource: {}", e)))?;
-
-            if updated == 0 {
-                let actual = transaction
-                    .query_opt(
-                        "SELECT version_id FROM resources
-                     WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = FALSE",
-                        &[&tenant_id, &resource_type, &id],
-                    )
-                    .await
-                    .map_err(|e| internal_error(format!("Failed to get current version: {}", e)))?;
-
-                return match actual {
-                    Some(row) => Err(StorageError::Concurrency(
-                        ConcurrencyError::VersionConflict {
-                            resource_type: resource_type.to_string(),
-                            id: id.to_string(),
-                            expected_version,
-                            actual_version: row.get::<_, String>(0),
-                        },
-                    )),
-                    None => Err(StorageError::Resource(ResourceError::NotFound {
-                        resource_type: resource_type.to_string(),
-                        id: id.to_string(),
-                    })),
-                };
-            }
-
-            // Re-index the resource. `Replace` clears the old `search_index` rows
-            // inside the same statement that writes the new ones — the clearing
-            // `DELETE` used to be a `delete_search_index` call of its own here, i.e.
-            // a second statement and a second round trip binding the same three
-            // parameters. The `resource_fts` row stays either way:
-            // `index_fts_content_guarded` upserts over it on the same connection.
-            let extractor = self
-                .write_extractor(
-                    &transaction,
-                    tenant_id,
-                    !self.is_search_offloaded(),
-                    resource_type == "SearchParameter",
-                )
-                .await?;
-            self.index_resource_guarded(
-                &transaction,
-                &extractor,
-                tenant_id,
-                resource_type,
-                id,
-                now,
-                IndexWrite::Replace,
-                &resource,
-            )
-            .await
-        }
-        .await;
-        match write_result {
-            Ok(()) => {
-                transaction
-                    .commit()
-                    .await
-                    .map_err(|e| internal_error(format!("Failed to commit update: {e}")))?;
-                client.mark_settled();
-            }
-            Err(error) => {
-                transaction
-                    .rollback()
-                    .await
-                    .map_err(|e| internal_error(format!("Failed to rollback update: {e}")))?;
-                client.mark_settled();
-                return Err(error);
-            }
-        }
-        drop(client);
-
-        // A SearchParameter write invalidates the tenant overlays.
-        if resource_type == "SearchParameter" {
-            if let Err(e) = self.reload_stored_cache().await {
-                tracing::warn!("SearchParameter cache reload failed: {e}");
-            }
-        }
-
-        Ok(StoredResource::from_storage(
-            resource_type,
-            id,
-            new_version_str,
-            tenant.tenant_id().clone(),
-            resource,
-            now,
-            now,
-            None,
-            current.fhir_version(),
-        ))
+    async fn update_verbatim(
+        &self,
+        tenant: &TenantContext,
+        current: &StoredResource,
+        resource: Value,
+    ) -> StorageResult<StoredResource> {
+        self.store_update(tenant, current, resource).await
     }
 
     async fn delete(
@@ -2550,6 +2399,185 @@ impl ResourceStorage for PostgresBackend {
     }
 }
 
+impl PostgresBackend {
+    /// Stores `resource` as the next version of `current`, exactly as given.
+    ///
+    /// The body of both [`ResourceStorage::update`] (which merges `current`'s
+    /// tags and security labels in first, #2562) and
+    /// [`ResourceStorage::update_verbatim`].
+    async fn store_update(
+        &self,
+        tenant: &TenantContext,
+        current: &StoredResource,
+        resource: Value,
+    ) -> StorageResult<StoredResource> {
+        let resource_type = current.resource_type();
+        tenant.check_permission(Operation::Update, resource_type)?;
+
+        let mut client = self.guarded_client().await?;
+        let tenant_id = tenant.tenant_id().as_str();
+        let id = current.id();
+
+        // The expected version is `current`'s, and the UPDATE below only matches a
+        // row that still carries it — so the new version follows from what the
+        // caller already read, with no round trip to ask what is stored.
+        let expected_version = current.version_id().to_string();
+        let new_version: u64 = expected_version.parse().unwrap_or(0) + 1;
+        let new_version_str = new_version.to_string();
+
+        // Ensure the resource has correct type and id
+        let mut resource = resource;
+        if let Some(obj) = resource.as_object_mut() {
+            obj.insert(
+                "resourceType".to_string(),
+                Value::String(resource_type.to_string()),
+            );
+            obj.insert("id".to_string(), Value::String(id.to_string()));
+        }
+
+        let now = Utc::now();
+        let fhir_version_str = current.fhir_version().as_mime_param();
+
+        // Version check, update and history row in one statement. The check used
+        // to be a separate `SELECT` — a round trip on every update, and a
+        // check-then-act besides: a concurrent writer could bump the version in
+        // between and this update would overwrite it while reporting success.
+        // Folding the expected version into the `WHERE` makes the two atomic.
+        //
+        // Zero rows means the update matched nothing; which of the two reasons it
+        // was costs a query, but only on the path that is already failing.
+        //
+        // Guarded foreground update: one transaction holds the advisory write
+        // lock, the resource/history write, and the search/FTS index writes.
+        // `SearchParameter` takes the exclusive tenant gate; every other type
+        // takes the shared gate plus its own resource key.
+        let transaction = client
+            .transaction()
+            .await
+            .map_err(|e| internal_error(format!("Failed to begin update: {e}")))?;
+        let write_result: StorageResult<()> = async {
+            if resource_type == "SearchParameter" {
+                acquire_exclusive_write_gate(&transaction, tenant_id).await?;
+            } else {
+                acquire_shared_write_locks(&transaction, tenant_id, &[(resource_type, id)]).await?;
+            }
+            let updated = execute_cached(
+                &transaction,
+                "WITH upd AS (
+                     UPDATE resources SET version_id = $1, data = $2, last_updated = $3
+                     WHERE tenant_id = $4 AND resource_type = $5 AND id = $6
+                       AND is_deleted = FALSE AND version_id = $7
+                     RETURNING tenant_id, resource_type, id, version_id, data, last_updated, is_deleted
+                 )
+                 INSERT INTO resource_history (tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, fhir_version)
+                 SELECT tenant_id, resource_type, id, version_id, data, last_updated, is_deleted, $8 FROM upd",
+                &[
+                    &new_version_str,
+                    &resource,
+                    &now,
+                    &tenant_id,
+                    &resource_type,
+                    &id,
+                    &expected_version,
+                    &fhir_version_str,
+                ],
+            )
+            .await
+            .map_err(|e| internal_error(format!("Failed to update resource: {}", e)))?;
+
+            if updated == 0 {
+                let actual = transaction
+                    .query_opt(
+                        "SELECT version_id FROM resources
+                     WHERE tenant_id = $1 AND resource_type = $2 AND id = $3 AND is_deleted = FALSE",
+                        &[&tenant_id, &resource_type, &id],
+                    )
+                    .await
+                    .map_err(|e| internal_error(format!("Failed to get current version: {}", e)))?;
+
+                return match actual {
+                    Some(row) => Err(StorageError::Concurrency(
+                        ConcurrencyError::VersionConflict {
+                            resource_type: resource_type.to_string(),
+                            id: id.to_string(),
+                            expected_version,
+                            actual_version: row.get::<_, String>(0),
+                        },
+                    )),
+                    None => Err(StorageError::Resource(ResourceError::NotFound {
+                        resource_type: resource_type.to_string(),
+                        id: id.to_string(),
+                    })),
+                };
+            }
+
+            // Re-index the resource. `Replace` clears the old `search_index` rows
+            // inside the same statement that writes the new ones — the clearing
+            // `DELETE` used to be a `delete_search_index` call of its own here, i.e.
+            // a second statement and a second round trip binding the same three
+            // parameters. The `resource_fts` row stays either way:
+            // `index_fts_content_guarded` upserts over it on the same connection.
+            let extractor = self
+                .write_extractor(
+                    &transaction,
+                    tenant_id,
+                    !self.is_search_offloaded(),
+                    resource_type == "SearchParameter",
+                )
+                .await?;
+            self.index_resource_guarded(
+                &transaction,
+                &extractor,
+                tenant_id,
+                resource_type,
+                id,
+                now,
+                IndexWrite::Replace,
+                &resource,
+            )
+            .await
+        }
+        .await;
+        match write_result {
+            Ok(()) => {
+                transaction
+                    .commit()
+                    .await
+                    .map_err(|e| internal_error(format!("Failed to commit update: {e}")))?;
+                client.mark_settled();
+            }
+            Err(error) => {
+                transaction
+                    .rollback()
+                    .await
+                    .map_err(|e| internal_error(format!("Failed to rollback update: {e}")))?;
+                client.mark_settled();
+                return Err(error);
+            }
+        }
+        drop(client);
+
+        // A SearchParameter write invalidates the tenant overlays.
+        if resource_type == "SearchParameter" {
+            if let Err(e) = self.reload_stored_cache().await {
+                tracing::warn!("SearchParameter cache reload failed: {e}");
+            }
+        }
+
+        Ok(StoredResource::from_storage(
+            resource_type,
+            id,
+            new_version_str,
+            tenant.tenant_id().clone(),
+            resource,
+            now,
+            now,
+            None,
+            current.fhir_version(),
+        ))
+    }
+}
+
 // ============================================================================
 // Owned Reads
 // ============================================================================
@@ -3028,14 +3056,6 @@ impl PostgresBackend {
         ))
     }
 
-    /// Index a resource for search.
-    ///
-    /// This method uses the SearchParameterExtractor to dynamically extract
-    /// searchable values based on the configured SearchParameterRegistry.
-    // Eight arguments, all of them distinct identity/coordinate values the
-    // write path already has in hand; bundling them into a struct would add a
-    // move on the hottest indexing path without removing a single argument.
-    #[allow(clippy::too_many_arguments)]
     /// Indexes a mutation on its already guarded transaction connection.
     ///
     /// The caller holds the advisory write lock and an open transaction on
@@ -3043,6 +3063,9 @@ impl PostgresBackend {
     /// persisted overlay inside that same transaction (see
     /// [`PostgresBackend::authoritative_extractor`]). `index_fts_content_guarded`
     /// finishes the write on the same connection.
+    // Eight arguments, all of them distinct identity/coordinate values the
+    // write path already has in hand; bundling them into a struct would add a
+    // move on the hottest indexing path without removing a single argument.
     #[allow(clippy::too_many_arguments)]
     async fn index_resource_guarded<C>(
         &self,
