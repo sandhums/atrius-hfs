@@ -400,9 +400,9 @@ impl<'a> EsQueryBuilder<'a> {
         if param.param_type == SearchParamType::Token {
             if let Some(combined) = token::build_multi_value_clause(param) {
                 if matches!(param.modifier, Some(SearchModifier::Not)) {
-                    return Some(json!({ "bool": { "must_not": [combined] } }));
+                    return Ok(Some(json!({ "bool": { "must_not": [combined] } })));
                 }
-                return Some(combined);
+                return Ok(Some(combined));
             }
         }
 
