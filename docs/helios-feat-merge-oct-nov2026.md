@@ -412,6 +412,32 @@ Workspace **0.2.8**. MSRV **1.91.1**.
 
 ---
 
+## Sync 10 — 15 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `a19148379` (Helios `3cf136209`, **0.2.8**, MSRV **1.95**) |
+| Rollback tag | `pre-merge-main-2026-11-15` → `eab3521fe` |
+| Merge commit | `5cb8c4c60` |
+| Distance | 15 on `main` / **9** non-merge |
+
+### Helios themes adopted
+
+- Search: empty compartment refs (**#2509**), unbuildable parameter refusal (**#2508**).
+- SoF: Postgres detoast-once, projection module, golden SQL refresh (**#2574**).
+- Elasticsearch: less cloning on search hits.
+- Toolchain: **rustc 1.95** workspace floor (**#2580**).
+
+### Conflicts
+
+- **0** — automatic merge.
+
+### Verification (recorded)
+
+rest lib **1034**, rest **+subscriptions** **1046**, hts green.
+
+---
+
 ## Keep-list delta (paste into Word — Nov syncs)
 
 - Batch: **PUT `ifNoneMatch` create-if-absent** alongside Helios GET `#869` / CAS `#2527`; keep **`bundle_patch_format`**; missing DELETE is Helios **204** `#2523` (not fork decline).
