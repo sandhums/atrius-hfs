@@ -187,6 +187,11 @@ mod conditional_if_match_suite;
 #[path = "search/empty_value_suite.rs"]
 mod empty_value_suite;
 
+/// The backend-agnostic empty compartment membership suite (#2509). Same
+/// `#[path]` arrangement.
+#[path = "search/empty_compartment_suite.rs"]
+mod empty_compartment_suite;
+
 /// The backend-agnostic `_total` suite (#2283). Same `#[path]` arrangement.
 #[path = "search/total_mode_suite.rs"]
 mod total_mode_suite;
@@ -300,16 +305,23 @@ fn test_postgres_config_backend_kind() {
 
 mod query_builder_tests {
     use helios_persistence::backends::postgres::search::query_builder::{
-        PostgresQueryBuilder, SqlParam,
+        PostgresQueryBuilder, SqlFragment, SqlParam,
     };
     use helios_persistence::types::{
         SearchParamType, SearchParameter, SearchPrefix, SearchQuery, SearchValue,
     };
 
+    /// `build_search_query` for the tests below, which are about the condition
+    /// of a query the builder accepts. The builder refuses a parameter it has no
+    /// condition for (#2508); that fails these tests with its message.
+    fn build(query: &SearchQuery, offset: usize) -> Option<SqlFragment> {
+        PostgresQueryBuilder::build_search_query(query, offset).expect("the query builds")
+    }
+
     #[test]
     fn test_empty_query_returns_none() {
         let query = SearchQuery::new("Patient");
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_none());
     }
 
@@ -324,7 +336,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert_eq!(fragment.sql, "id = $3");
@@ -346,7 +358,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         // Default string search is starts-with, emitted since schema v34 as an
@@ -394,7 +406,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         // Exact match should use = not ILIKE
@@ -414,7 +426,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(
@@ -446,7 +458,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_token_display ILIKE"));
@@ -473,7 +485,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_token_display ILIKE"));
@@ -500,7 +512,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         // Accent-folded substring match against the indexed folded expression.
@@ -534,7 +546,7 @@ mod query_builder_tests {
                 chain: vec![],
                 components: vec![],
             });
-            let fragment = PostgresQueryBuilder::build_search_query(&query, 2).unwrap();
+            let fragment = build(&query, 2).unwrap();
             assert!(fragment.sql.contains("value_reference"));
             assert!(fragment.sql.contains("|| '/%'"));
         }
@@ -553,7 +565,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let fragment = PostgresQueryBuilder::build_search_query(&query, 2).unwrap();
+        let fragment = build(&query, 2).unwrap();
         // The identifier lookup drives and yields the target's `Type/id`; the
         // reference index is seeked with it. The correlated-EXISTS form this
         // replaced measured 285.6 ms against 1.4 ms on the same replica — see
@@ -581,7 +593,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_uri ILIKE"));
@@ -604,7 +616,7 @@ mod query_builder_tests {
                 components: vec![],
             });
 
-            let fragment = PostgresQueryBuilder::build_search_query(&query, 2).unwrap();
+            let fragment = build(&query, 2).unwrap();
             assert!(fragment.sql.contains("value_reference_display ILIKE"));
             // :text wraps as %John%; :code-text is starts-with John%
             assert_eq!(
@@ -627,7 +639,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_reference ILIKE"));
@@ -644,7 +656,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_token_system"));
@@ -663,7 +675,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_token_code"));
@@ -681,7 +693,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_token_system"));
@@ -708,7 +720,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_date"));
@@ -732,7 +744,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_number"));
@@ -755,7 +767,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_quantity_value"));
@@ -773,7 +785,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_reference"));
@@ -790,7 +802,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("value_uri"));
@@ -809,7 +821,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("LIKE"));
@@ -826,7 +838,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert!(fragment.sql.contains("last_updated"));
@@ -844,7 +856,7 @@ mod query_builder_tests {
             components: vec![],
         });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         assert_eq!(fragment.sql, "id IN ($3, $4)");
@@ -878,7 +890,7 @@ mod query_builder_tests {
                 components: vec![],
             });
 
-        let result = PostgresQueryBuilder::build_search_query(&query, 2);
+        let result = build(&query, 2);
         assert!(result.is_some());
         let fragment = result.unwrap();
         // Different parameters should be AND'd
@@ -917,7 +929,7 @@ mod query_builder_tests {
                 components: vec![],
             });
 
-            let result = PostgresQueryBuilder::build_search_query(&query, 0);
+            let result = build(&query, 0);
             assert!(result.is_some(), "Failed for prefix {:?}", prefix);
             let fragment = result.unwrap();
             assert!(
@@ -946,8 +958,7 @@ mod query_builder_tests {
             chain: vec![],
             components: vec![],
         });
-        let fragment = PostgresQueryBuilder::build_search_query(&query, 0)
-            .expect("full-precision instant must build");
+        let fragment = build(&query, 0).expect("full-precision instant must build");
         assert!(
             fragment.sql.contains("last_updated >= $1"),
             "second-precision gt starts at the end of the second, got SQL: {}",
@@ -10044,14 +10055,19 @@ mod postgres_integration {
                 .map(|r| r.get::<_, String>(1))
                 .collect::<Vec<_>>()
         );
-        let scoped = PostgresQueryBuilder::build_search_query(&query, 2).unwrap();
+        let scoped = PostgresQueryBuilder::build_search_query(&query, 2)
+            .unwrap()
+            .unwrap();
         let patient_query =
             SearchQuery::new("Observation").with_parameter(query.parameters[0].clone());
-        let patient = PostgresQueryBuilder::build_search_query(&patient_query, 2).unwrap();
+        let patient = PostgresQueryBuilder::build_search_query(&patient_query, 2)
+            .unwrap()
+            .unwrap();
         let composite_query =
             SearchQuery::new("Observation").with_parameter(query.parameters[1].clone());
         let composite =
             PostgresQueryBuilder::build_search_query(&composite_query, 2 + patient.params.len())
+                .unwrap()
                 .unwrap();
         let baseline = patient.and(composite);
         fn walk(plan: &serde_json::Value, nodes: &mut Vec<serde_json::Value>) {
@@ -36064,6 +36080,85 @@ mod postgres_integration {
         }
     }
 
+    /// #2508: a plain search whose only parameter is `special`-typed and has no
+    /// condition to build (`Location.near`, `_type` from R5) was answered with
+    /// every resource of the type, because the parameter built no condition and
+    /// was skipped. It is a refusal naming the parameter, for `search` and
+    /// `search_count` alike.
+    #[tokio::test]
+    async fn postgres_integration_search_refuses_a_special_parameter_it_cannot_evaluate() {
+        use helios_persistence::core::SearchProvider;
+        use helios_persistence::error::SearchError;
+        use helios_persistence::types::{
+            SearchParamType, SearchParameter, SearchQuery, SearchValue,
+        };
+
+        let backend = create_backend().await;
+        let tenant = create_tenant(&unique_base("special_param_2508"));
+        for (resource_type, resource) in [
+            (
+                "Location",
+                json!({"resourceType": "Location", "name": "Clinic"}),
+            ),
+            (
+                "Patient",
+                json!({"resourceType": "Patient", "active": true}),
+            ),
+        ] {
+            backend
+                .create(&tenant, resource_type, resource, FhirVersion::default())
+                .await
+                .unwrap();
+        }
+
+        for (resource_type, name, value) in [
+            ("Location", "near", "2|1|10|km"),
+            ("Patient", "_type", "Observation"),
+        ] {
+            // Positive control: the type is searchable and holds one resource,
+            // which is what the skipped parameter used to answer with.
+            let unfiltered = backend
+                .search(&tenant, &SearchQuery::new(resource_type))
+                .await
+                .unwrap();
+            assert_eq!(unfiltered.resources.items.len(), 1, "{resource_type}");
+
+            let query = SearchQuery::new(resource_type).with_parameter(SearchParameter {
+                name: name.to_string(),
+                param_type: SearchParamType::Special,
+                modifier: None,
+                values: vec![SearchValue::eq(value)],
+                chain: vec![],
+                components: vec![],
+            });
+            let named = |error: &StorageError| {
+                matches!(
+                    error,
+                    StorageError::Search(SearchError::QueryParseError { message })
+                        if message.contains(&format!("'{name}'"))
+                )
+            };
+
+            match backend.search(&tenant, &query).await {
+                Err(error) => assert!(
+                    named(&error),
+                    "{name}: expected a QueryParseError naming it, got {error:?}"
+                ),
+                Ok(result) => panic!(
+                    "{name}: must be refused, returned {} resource(s)",
+                    result.resources.items.len()
+                ),
+            }
+            match backend.search_count(&tenant, &query).await {
+                Err(error) => assert!(
+                    named(&error),
+                    "{name}: search_count expected a QueryParseError naming it, got {error:?}"
+                ),
+                Ok(count) => panic!("{name}: search_count must be refused, counted {count}"),
+            }
+        }
+    }
+
     /// #1315: a stored `…T09:20` is not RFC 3339, so `parse_index_date`
     /// returned `None`, the `search_index` row was skipped, and the resource
     /// could not be found by that date parameter at all.
@@ -36295,6 +36390,20 @@ mod postgres_integration {
         super::empty_value_suite::empty_values_are_rejected_on_every_path(
             &backend,
             &unique_base("empty_value"),
+        )
+        .await;
+    }
+
+    /// #2509: a compartment membership with no params or no reference matches
+    /// nothing, on the plain, `:not`/`:missing`, sorted, counted and
+    /// `_contained` paths, where it used to be read as "no compartment" and
+    /// matched every resource of the type. A real membership is the control.
+    #[tokio::test]
+    async fn postgres_integration_empty_compartment_membership_matches_nothing() {
+        let backend = create_backend().await;
+        super::empty_compartment_suite::empty_membership_matches_nothing_on_every_path(
+            &backend,
+            &unique_base("empty_compartment"),
         )
         .await;
     }
