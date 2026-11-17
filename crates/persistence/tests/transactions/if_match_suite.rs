@@ -253,3 +253,33 @@ pub async fn transaction_delete_accepts_matching_if_match<B: BundleProvider>(
         "a matching ifMatch must delete the resource in a transaction too"
     );
 }
+
+/// A later stale `ifMatch` fails the transaction, so an earlier PUT in the
+/// same bundle is not stored.
+pub async fn stale_if_match_on_a_later_entry_rolls_the_bundle_back<B: BundleProvider>(
+    backend: &B,
+    tenant: &TenantContext,
+) {
+    seed_patient(backend, tenant, "kept").await;
+
+    let result = backend
+        .process_transaction(
+            tenant,
+            vec![
+                put_entry("fresh", "New", None),
+                put_entry("kept", "Changed", Some("W/\"999\"")),
+            ],
+            FhirVersion::default(),
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "a stale ifMatch on a later entry must fail the transaction"
+    );
+    assert!(
+        !backend.exists(tenant, "Patient", "fresh").await.unwrap(),
+        "the earlier put must not remain after rollback"
+    );
+    assert_eq!(stored_family(backend, tenant, "kept").await, "Original");
+}

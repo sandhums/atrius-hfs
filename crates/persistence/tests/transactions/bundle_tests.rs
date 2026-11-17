@@ -1773,6 +1773,7 @@ sqlite_if_match_test!(multi_valued_if_match_fails_when_no_member_matches);
 sqlite_if_match_test!(strong_form_if_match_matches_weak_etag);
 sqlite_if_match_test!(transaction_delete_honors_stale_if_match);
 sqlite_if_match_test!(transaction_delete_accepts_matching_if_match);
+sqlite_if_match_test!(stale_if_match_on_a_later_entry_rolls_the_bundle_back);
 
 macro_rules! sqlite_if_none_match_test {
     ($name:ident) => {

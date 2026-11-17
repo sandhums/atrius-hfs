@@ -35233,6 +35233,10 @@ mod postgres_integration {
         postgres_integration_transaction_delete_accepts_matching_if_match,
         transaction_delete_accepts_matching_if_match
     );
+    pg_if_match_test!(
+        postgres_integration_stale_if_match_on_a_later_entry_rolls_the_bundle_back,
+        stale_if_match_on_a_later_entry_rolls_the_bundle_back
+    );
 
     macro_rules! pg_if_none_match_test {
         ($test_name:ident, $scenario:ident) => {
