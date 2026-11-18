@@ -1549,7 +1549,7 @@ dependencies = [
 
 [[package]]
 name = "cds-server"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3152,7 +3152,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "helios-audit"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "async-trait",
  "aws-config",
@@ -3172,7 +3172,7 @@ dependencies = [
 
 [[package]]
 name = "helios-auth"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3195,7 +3195,7 @@ dependencies = [
 
 [[package]]
 name = "helios-cds-hooks"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3207,7 +3207,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "chrono",
  "clap",
@@ -3226,7 +3226,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir-gen"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "chrono",
  "clap",
@@ -3239,7 +3239,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir-macro"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3249,7 +3249,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhir-validator"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "async-trait",
  "clap",
@@ -3268,7 +3268,7 @@ dependencies = [
 
 [[package]]
 name = "helios-fhirpath"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "axum",
  "axum-test",
@@ -3307,14 +3307,14 @@ dependencies = [
 
 [[package]]
 name = "helios-fhirpath-support"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "rust_decimal",
 ]
 
 [[package]]
 name = "helios-hfs"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3347,7 +3347,7 @@ dependencies = [
 
 [[package]]
 name = "helios-hts"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3392,7 +3392,7 @@ dependencies = [
 
 [[package]]
 name = "helios-hts-ui"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "askama",
  "async-trait",
@@ -3419,7 +3419,7 @@ dependencies = [
 
 [[package]]
 name = "helios-observability"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "async-trait",
  "axum",
@@ -3439,7 +3439,7 @@ dependencies = [
 
 [[package]]
 name = "helios-persistence"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "async-trait",
  "aws-config",
@@ -3498,7 +3498,7 @@ dependencies = [
 
 [[package]]
 name = "helios-rest"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "aes 0.8.4",
  "aes-gcm",
@@ -3568,7 +3568,7 @@ dependencies = [
 
 [[package]]
 name = "helios-serde"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "helios-fhir",
  "helios-fhir-macro",
@@ -3584,7 +3584,7 @@ dependencies = [
 
 [[package]]
 name = "helios-serde-support"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "erased-serde",
  "serde",
@@ -3593,7 +3593,7 @@ dependencies = [
 
 [[package]]
 name = "helios-sof"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "arrow",
  "async-trait",
@@ -3638,7 +3638,7 @@ dependencies = [
 
 [[package]]
 name = "helios-subscriptions"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3662,7 +3662,7 @@ dependencies = [
 
 [[package]]
 name = "helios-terminology-client"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "dashmap",
  "helios-observability",
@@ -3675,7 +3675,7 @@ dependencies = [
 
 [[package]]
 name = "helios-ui"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "askama",
  "async-stream",
@@ -3720,7 +3720,7 @@ dependencies = [
 
 [[package]]
 name = "helios-ui-chrome"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "askama",
  "fluent-bundle",
@@ -6076,7 +6076,7 @@ dependencies = [
 
 [[package]]
 name = "pysof"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "chrono",
  "csv",

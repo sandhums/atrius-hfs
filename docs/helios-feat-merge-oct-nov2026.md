@@ -438,6 +438,34 @@ rest lib **1034**, rest **+subscriptions** **1046**, hts green.
 
 ---
 
+## Sync 11 — 18 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `89ebf7384` (Helios `c52ff36ad`, **0.2.9**) |
+| Rollback tag | `pre-merge-main-2026-11-18` → `853013773` |
+| Distance | 9 on `main` / **4** non-merge |
+
+### Helios themes adopted
+
+- Release **0.2.9**; MongoDB create command reduction (**#2585**); CI benchmark/cache tweaks.
+
+### Conflicts resolved
+
+| Location | Decision |
+|----------|----------|
+| `hfs` / `rest` / `ui` `Cargo.toml` | **0.2.9** + **`redis`** auth + **`helios-terminology-client`** on rest/ui |
+
+### Operator note
+
+Remote `origin/main` lagged; merge used synced **local `main`**. Push `main` before the next feat sync.
+
+### Verification (recorded)
+
+rest lib **1034**, rest **+subscriptions** **1046**, hts green.
+
+---
+
 ## Keep-list delta (paste into Word — Nov syncs)
 
 - Batch: **PUT `ifNoneMatch` create-if-absent** alongside Helios GET `#869` / CAS `#2527`; keep **`bundle_patch_format`**; missing DELETE is Helios **204** `#2523` (not fork decline).
