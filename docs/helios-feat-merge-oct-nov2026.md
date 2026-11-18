@@ -1,8 +1,9 @@
 # Helios follow-on sync: main → feat-clinical-reasoning (Oct–Nov 2026)
 
 Paste-ready addendum for *HELIOS vs Atrius.docx*. Covers feat syncs **30 Oct through
-12 Nov 2026** (the Word doc in iCloud was last saved **2 Nov 2026** — paste from here
-through Sync 8). Authoritative detail and test counts live in
+18 Nov 2026** (Word doc in iCloud: auto-appended **18 Nov 2026** via
+`scripts/append-helios-docx-nov13-18.py`; prior manual save **12 Nov 2026**).
+Authoritative detail and test counts live in
 `docs/clinical-reasoning/upstream-merge.md` (*Last feat sync*).
 
 **Direction:** `upstream/main` → atrius `main` → merge `origin/main` into
@@ -372,14 +373,14 @@ rest lib **1003**, hts **857**; no library pin move.
 
 ---
 
-## Cumulative ledger (after 12 Nov 2026)
+## Cumulative ledger (after 18 Nov 2026)
 
 | Backend | `SCHEMA_VERSION` | Notes |
 |---------|------------------|--------|
 | SQLite | **50** | Named steps; `search_index_value_reference_target` after `bulk_submissions_updated_at`; fork outbox dead-letter before slot-2. |
 | Postgres | **59** | Same naming discipline; no integer replay on feat. |
 
-Workspace **0.2.8**. MSRV **1.91.1**.
+Workspace **0.2.9**. MSRV **1.95**.
 
 ---
 
@@ -478,8 +479,8 @@ rest lib **1034**, rest **+subscriptions** **1046**, hts green.
 
 ## Word doc — suggested section headings to paste under
 
-1. **Sync log** — subsections Sync 1–8 (30 Oct … 12 Nov) with tables above.
+1. **Sync log** — subsections Sync 1–11 (30 Oct … 18 Nov) with tables above.
 2. **Keep-list delta** — November bullets in previous section.
-3. **Rollback tags** — through `pre-merge-main-2026-11-12`.
-4. **HIS pin reminders** — observability on 9 Nov and 12 Nov waves (after push to feat tip `6d1269fe9`).
-5. **Operator notes** — `docs/` `git add -f` on every merge (Helios `#1654`); run rest with **`subscriptions`** feature; 2 Nov batch follow-up `3f5f7cab9`.
+3. **Rollback tags** — through `pre-merge-main-2026-11-18`.
+4. **HIS pin reminders** — persistence/rest/observability waves (see Sync 8–11).
+5. **Operator notes** — `docs/` `git add -f` on every merge (Helios `#1654`); rest with **`subscriptions`** feature; push fork **`main`** after upstream sync; ES `Ok(...)` follow-up `46e93675a`.

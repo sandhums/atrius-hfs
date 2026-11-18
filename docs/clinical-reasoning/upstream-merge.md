@@ -389,7 +389,7 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 
 ## Related docs
 
-- [*HELIOS vs Atrius.docx* addenda (paste into Word)](../helios-feat-merge-aug2026.md) — Aug 2026; [Oct–Nov 2026 (30 Oct–12 Nov feat syncs; Word doc lagged at 2 Nov)](../helios-feat-merge-oct-nov2026.md)
+- [*HELIOS vs Atrius.docx* addenda (paste into Word)](../helios-feat-merge-aug2026.md) — Aug 2026; [Oct–Nov 2026 (30 Oct–18 Nov feat syncs)](../helios-feat-merge-oct-nov2026.md); iCloud Word doc appended 18 Nov via `scripts/append-helios-docx-nov13-18.py`
 - [Clinical reasoning stack overview](./README.md)
 - [Single-engine validation cutover](../validation-cutover.md)
 - [SQL-on-FHIR layering (`persistence` vs `sof`)](../sof-layering.md)
