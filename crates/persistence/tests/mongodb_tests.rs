@@ -429,7 +429,7 @@ mod shared_mongo {
         NoAddress(testcontainers::TestcontainersError),
     }
 
-    /// Starts a mongo:7.0 single-member replica set (`rs0`) for one test or
+    /// Starts a mongo:9.0.8 single-member replica set (`rs0`) for one test or
     /// harness alone, and returns it with its URL. It has a writable primary when
     /// this returns. The container is removed when the first element is dropped.
     ///
@@ -452,12 +452,16 @@ mod shared_mongo {
             wt_cache_gb,
             "--replSet",
             "rs0",
+            // As in `shared()`: keep mongod 9.0 from dropping profiler entries.
+            "--setParameter",
+            "internalQueryGlobalProfilingLockDeadlineMs=10000",
         ]
         .into_iter()
         .chain(extra_flags.iter().copied());
         let container = super::container_cleanup::with_cleanup_label(
             Mongo::default()
-                .with_tag("7.0")
+                .with_tag("9.0.8")
+                .with_env_var("MONGO_TCMALLOC_PER_CPU_CACHE_SIZE_BYTES", "10485760")
                 .with_cmd(command)
                 .with_ulimit("nofile", 64000, Some(64000))
                 .with_startup_timeout(Duration::from_secs(120)),
@@ -497,7 +501,8 @@ mod shared_mongo {
                 // `SHARED` is a static and never dropped; the cleanup label
                 // lets the exit hook remove the container.
                 let container = super::container_cleanup::with_cleanup_label(
-                    Mongo::default().with_tag("7.0")
+                    Mongo::default().with_tag("9.0.8")
+                        .with_env_var("MONGO_TCMALLOC_PER_CPU_CACHE_SIZE_BYTES", "10485760")
                         .with_label("github.run_id", &run_id)
                         // Cap WiredTiger's cache. By default mongod sizes it to
                         // ~50% of *host* RAM (ignoring container limits), so on CI
@@ -528,6 +533,12 @@ mod shared_mongo {
                             // is only registered when test commands are enabled.
                             "--setParameter",
                             "enableTestCommands=1",
+                            // mongod 9.0 gives each profiler write 1 ms to get its
+                            // lock and silently drops the entry when it cannot;
+                            // the plan tests then read an empty system.profile
+                            // (#2636).
+                            "--setParameter",
+                            "internalQueryGlobalProfilingLockDeadlineMs=10000",
                             "--replSet",
                             "rs0",
                             "--oplogSize",
@@ -763,6 +774,39 @@ async fn mongodb_missing_sort_values_sort_last() {
         return;
     };
     sort_missing_suite::missing_sort_values_sort_last(&backend, "sort-missing-1606", true).await;
+}
+
+/// The backend-agnostic suite for paging through tied `last_updated` (#2603).
+#[path = "search/tiebreak_order_suite.rs"]
+mod tiebreak_order_suite;
+
+/// #2603: resources sharing one `last_updated` page forward and back with no
+/// gap or repeat, in the default, ascending and descending orders.
+#[tokio::test]
+async fn mongodb_tied_timestamps_page_without_gaps() {
+    let Some(backend) = create_backend_with_full_registry("tiebreak_2603").await else {
+        eprintln!("skipping: no MongoDB container available");
+        return;
+    };
+    let db = backend.get_database().await.unwrap();
+    tiebreak_order_suite::tied_timestamps_page_without_gaps(
+        &backend,
+        "tiebreak-2603",
+        async |tenant_id: &str, resource_type: &str| {
+            use mongodb::bson::{DateTime as BsonDateTime, Document, doc};
+            let at = BsonDateTime::from_millis(981_173_106_789);
+            let result = db
+                .collection::<Document>("resources")
+                .update_many(
+                    doc! { "tenant_id": tenant_id, "resource_type": resource_type },
+                    doc! { "$set": { "last_updated": at } },
+                )
+                .await
+                .unwrap();
+            assert!(result.matched_count > 0, "no {resource_type} rows to pin");
+        },
+    )
+    .await;
 }
 
 /// The backend-agnostic `_sort` suite for the `meta` parameters (#1711).
@@ -5822,6 +5866,81 @@ fn collect_index_names(doc: &Document, out: &mut Vec<String>) {
     }
 }
 
+/// #2603: checks that MongoDB serves the orders `(last_updated 1, id 1)` and
+/// `(last_updated -1, id -1)` straight from `idx_resources_type_scan`, with
+/// and without a cursor predicate, with no blocking SORT stage. The sort
+/// documents are written by hand here, so this does NOT exercise the
+/// backend's own sort; that is pinned by the unit test
+/// `last_updated_sort_document_id_follows_the_sort_direction`.
+#[tokio::test]
+async fn mongodb_last_updated_ascending_page_uses_type_scan_without_sort() {
+    let Some(backend) = create_backend("last_updated_asc_plan").await else {
+        eprintln!(
+            "Skipping mongodb_last_updated_ascending_page_uses_type_scan_without_sort (requires Docker or HFS_TEST_MONGODB_URL)"
+        );
+        return;
+    };
+    let tenant = create_tenant("tenant-last-updated-asc-plan");
+    create_cursor_paging_patients(&backend, &tenant, 9).await;
+
+    let client = raw_test_client(&backend.config().connection_string)
+        .await
+        .expect("failed to connect raw MongoDB client");
+    let database = client.database(&backend.config().database_name);
+
+    let base = doc! {
+        "tenant_id": tenant.tenant_id().as_str(),
+        "resource_type": "Patient",
+        "is_deleted": false,
+    };
+    let mut with_cursor = base.clone();
+    with_cursor.insert(
+        "$or",
+        vec![
+            mongodb::bson::Bson::Document(
+                doc! { "last_updated": { "$gt": mongodb::bson::DateTime::from_millis(0) } },
+            ),
+            mongodb::bson::Bson::Document(
+                doc! { "last_updated": mongodb::bson::DateTime::from_millis(0), "id": { "$gt": "cp-1" } },
+            ),
+        ],
+    );
+
+    for (label, filter) in [("first page", base), ("cursor page", with_cursor)] {
+        for sort in [
+            doc! { "last_updated": 1_i32, "id": 1_i32 },
+            doc! { "last_updated": -1_i32, "id": -1_i32 },
+        ] {
+            let explain = database
+                .run_command(doc! {
+                    "explain": {
+                        "find": "resources",
+                        "filter": filter.clone(),
+                        "sort": sort.clone(),
+                        "limit": 21_i32,
+                    },
+                    "verbosity": "queryPlanner",
+                })
+                .await
+                .expect("explain failed");
+            let winning_plan = explain
+                .get_document("queryPlanner")
+                .and_then(|q| q.get_document("winningPlan"))
+                .expect("explain missing winningPlan");
+            assert!(
+                !contains_stage_named(winning_plan, "SORT"),
+                "{label} {sort:?}: winning plan has a blocking SORT: {winning_plan:?}"
+            );
+            let mut index_names = Vec::new();
+            collect_index_names(winning_plan, &mut index_names);
+            assert!(
+                index_names.iter().any(|n| n == "idx_resources_type_scan"),
+                "{label} {sort:?}: expected idx_resources_type_scan, got {index_names:?}"
+            );
+        }
+    }
+}
+
 #[tokio::test]
 async fn mongodb_integration_history_delete_trial_use_not_supported() {
     let Some(backend) = create_backend("history_delete_not_supported").await else {
@@ -8600,7 +8719,8 @@ async fn mongodb_integration_param_sorted_page_is_one_result_set() {
 /// rather than a type-wide `distinct`.
 #[tokio::test]
 async fn mongodb_integration_param_sort_is_bounded_by_the_candidate_set() {
-    let Some(backend) = create_backend_with_full_registry("param_sort_bounded").await else {
+    // The plan guard below needs the bounded plan, which a timed-out probe changes.
+    let Some(backend) = create_backend_with_stable_probes("param_sort_bounded").await else {
         eprintln!(
             "Skipping mongodb_integration_param_sort_is_bounded_by_the_candidate_set (requires Docker or HFS_TEST_MONGODB_URL)"
         );
@@ -19558,8 +19678,10 @@ async fn seed_generation1_indexes(db: &mongodb::Database) {
 /// Generation 4: `idx_search_date_v3` replaces `idx_search_date_v2` (#1391).
 /// Generation 5: `idx_search_reference_target_v2` is added (#2394).
 /// Generation 6: `idx_search_composite_tuple_qty` (token+quantity composites).
-const CURRENT_BACKGROUND_NAMES: [&str; 11] = [
+/// Generation 7: `idx_search_date_end` (descending date sorts, #2588).
+const CURRENT_BACKGROUND_NAMES: [&str; 12] = [
     "idx_search_composite_tuple_qty",
+    "idx_search_date_end",
     "idx_search_date_v3",
     "idx_search_identifier_type_v2",
     "idx_search_number_v2",
@@ -19701,7 +19823,7 @@ async fn mongodb_integration_builder_fresh_database_ends_with_generation2_set() 
             .get_document("search_indexes")
             .unwrap()
             .get_i32("generation"),
-        Ok(6)
+        Ok(7)
     );
 }
 
@@ -19826,7 +19948,7 @@ async fn mongodb_integration_builder_upgrades_a_generation3_database_and_drops_d
             .get_document("search_indexes")
             .unwrap()
             .get_i32("generation"),
-        Ok(6)
+        Ok(7)
     );
 }
 
@@ -19914,7 +20036,7 @@ async fn mongodb_integration_builder_moves_contained_rows_and_drops_the_old_part
         .unwrap()
         .unwrap();
     let si = sv.get_document("search_indexes").unwrap();
-    assert_eq!(si.get_i32("generation"), Ok(6));
+    assert_eq!(si.get_i32("generation"), Ok(7));
     assert_eq!(si.get_bool("contained_rows_moved"), Ok(true));
 
     // Second boot: nothing to move, nothing to build.
@@ -23940,9 +24062,9 @@ async fn mongodb_predicate_plans_preserve_dates_live_scope_and_cursor_pages() {
                     };
                     let expected_total = (total_mode != TotalMode::None).then_some(expected_count);
                     expected.sort();
-                    if sort != "_id" {
+                    if sort != "_id" && sort != "_lastUpdated" {
                         expected.reverse();
-                    } // Timestamp ties use descending ID.
+                    } // Timestamp ties follow the sort direction (ID ascending for `_lastUpdated`).
                     let mut request = query.clone();
                     let mut pages = Vec::new();
                     let mut previous = loop {

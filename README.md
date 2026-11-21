@@ -284,7 +284,7 @@ compressed when the client sends `Accept-Encoding`.
 | `HFS_DEFAULT_TENANT` | `default` | Default tenant ID for requests without an `X-Tenant-ID` header |
 | `HFS_TENANT_ROUTING_MODE` | `header_only` | Tenant routing: `header_only`, `url_path`, or `both` |
 | `HFS_TENANT_STRICT_VALIDATION` | `false` | Error if URL and header tenant disagree |
-| `HFS_JWT_TENANT_CLAIM` | `tenant_id` | JWT claim name for tenant |
+| `HFS_AUTH_TENANT_CLAIM` | `tenant_id` | JWT claim carrying the tenant id when authentication is enabled (see [crates/auth/README.md](crates/auth/README.md#tenant-resolution)) |
 
 **Terminology**
 
@@ -405,9 +405,9 @@ for the full `HFS_EXPORT_*` table.
 |---|---|---|
 | `HFS_SOF_ENABLED` | `true` | Master switch for SQL-on-FHIR operations (`$sql-run`, `$sql-export`); requires a `sqlite`/`postgres` backend |
 | `HFS_SOF_SQLQUERY_MAX_ROWS` | `100000` | Maximum rows in a SQL Query's own result (`$sql-run`, `$sql-export`); rows beyond it are silently dropped, not an error |
-| `HFS_SOF_SQLQUERY_MAX_SOURCE_ROWS_PER_VD` | `1000000` | Maximum rows materialized per SQL Query dependency (a `depends-on` ViewDefinition or SQL View). Each dependency is materialized in full before the query's `WHERE` runs; one that produces more fails the request with a `422` naming it. Narrow it with a ViewDefinition `where`, or raise this limit |
+| `HFS_SOF_SQLQUERY_MAX_SOURCE_ROWS_PER_VD` | `1000000` | Maximum rows materialized per SQL Query dependency (a `depends-on` ViewDefinition or SQL View). Each dependency is materialized before the query's `WHERE` runs; one that produces more fails the request with a `422` naming it. A plain `column = literal` / `<>` / `IS [NOT] NULL` filter of a single-table query on a typed top-level column is pushed into the view first, so only the rows it keeps count. Otherwise narrow the view with its own `where`, or raise this limit |
 | `HFS_SOF_SQLQUERY_MAX_VDS` | `16` | Maximum nodes in a SQL Query's resolved dependency graph: every ViewDefinition and SQL View reached, not just the direct `depends-on` entries |
-| `HFS_SOF_SQLQUERY_TIMEOUT_SECS` | `30` | Timeout, seconds, for each SQL statement a SQL Query runs (its own SQL and each SQL View's); does not cover materializing a dependency |
+| `HFS_SOF_SQLQUERY_TIMEOUT_SECS` | `30` | Timeout, seconds, for each SQL statement a SQL Query runs: its own SQL, each SQL View's, and the materialization of each ViewDefinition it depends on (on PostgreSQL under `SET LOCAL statement_timeout`, so `HFS_PG_STATEMENT_TIMEOUT_MS` does not cut it short); exceeding it answers `504` with code `timeout`. A `$sql-export` job bounds each statement the same way but not the read of a dependency as a whole, and a job that runs out of the limit fails with `504` / `timeout`. |
 | `HFS_EXPORT_SINK` | `fs` | Output sink for finished shards: `fs` (local filesystem) or `s3`. Any other value fails startup; `s3` fails startup on a build without the `s3` feature. Not checked when `HFS_SOF_ENABLED=false` |
 | `HFS_EXPORT_DIR` | `./exports` | Root directory for the `fs` export sink |
 | `HFS_EXPORT_S3_BUCKET` | *(none)* | S3 bucket for the `s3` sink; required when `HFS_EXPORT_SINK=s3` |
@@ -445,7 +445,9 @@ JWT/bearer auth (`HFS_AUTH_*`, e.g. `HFS_AUTH_ENABLED`, `HFS_AUTH_JWKS_URL`, `HF
 | `HFS_SUBSCRIPTIONS_ENABLED` | `false` | Enable the subscription engine when HFS is built with the `subscriptions` feature |
 | `HFS_SUBSCRIPTION_MESSAGING_ENABLED` | `false` | Enable the FHIR Messaging subscription channel |
 | `HFS_SUBSCRIPTION_MESSAGE_SOURCE_ENDPOINT` | `HFS_BASE_URL` | Source endpoint URL used in outbound FHIR message headers |
-| `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS` | `false` | Allow subscription deliveries to private or loopback endpoints; intended for local development and CI only |
+| `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS` | `false` | Allow rest-hook and FHIR Messaging deliveries to endpoints that are, or resolve to, private or loopback addresses; intended for local development and CI only. Redirects are never followed |
+| `HFS_SUBSCRIPTION_MESSAGING_CREDENTIAL_HOSTS` | *(none)* | Comma-separated receivers (`host` or `host:port`) that may be sent the server credential on FHIR Messaging deliveries; unset means no receiver gets it |
+| `HFS_SUBSCRIPTION_MESSAGING_BEARER_TOKEN` | *(none)* | Bearer token sent to the listed messaging receivers; unset falls back to `HFS_OUTBOUND_BEARER_TOKEN`, the credential the server's own self-calls use |
 | `HFS_SUBSCRIPTION_REHYDRATE` | `true` | Reload stored `Subscription`/`SubscriptionTopic` resources into the engine at startup, so subscriptions keep delivering across a restart |
 | `HFS_SUBSCRIPTION_REHYDRATE_HANDSHAKE` | `true` | Re-run the activation handshake for stored `requested` subscriptions during rehydration |
 | `HFS_SUBSCRIPTION_EVENT_HISTORY_SIZE` | `100` | Events remembered per subscription for `GET Subscription/{id}/$events` (in memory, lost on restart); `0` disables the history |

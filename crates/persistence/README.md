@@ -419,10 +419,12 @@ For a capability-by-capability narrative of FHIR Search against the [spec](https
   search-parameter sort with `_id`/`_lastUpdated`/`_score` or with cursor pagination, hence ◐ for
   multiple fields. A MongoDB search-parameter sort with no filter asks the server for only the
   first `offset + _count + 1` ids, so memory follows the page, not the size of the type; it
-  answers 422 when `offset + _count` exceeds 300,000. A MongoDB `:not` or `:missing=true` search
-  with no positive parameter (or with only a compartment) reads the type in batches instead of
-  loading every id; past 300,000 matching ids it falls back to the query plan when one applies,
-  and otherwise answers 422.
+  answers 422 when `offset + _count` exceeds 300,000. A filtered single-parameter sort whose
+  matches exceed 300,000 reads the parameter's rows in sort order and checks them against the
+  search in batches, instead of answering 422; see `mongodb/search-indexes.md`. A MongoDB
+  `:not` or `:missing=true` search with no positive parameter (or with only a compartment) reads
+  the type in batches instead of loading every id; past 300,000 matching ids it falls back to the
+  query plan when one applies, and otherwise answers 422.
 - **`:above` / `:below`** — two mechanisms (◐ = both, conditional on context): (1) hierarchical
   **URI** prefix matching is native to SQLite, PostgreSQL, and Elasticsearch (no external service);
   (2) **token/code** hierarchy (e.g. `code:below=http://snomed.info/sct|73211009`) is resolved at
@@ -862,6 +864,29 @@ MongoDB provides document-centric primary storage with full FHIR capabilities in
   indexes are described in [MongoDB history indexes](mongodb/history-indexes.md)
 - Transaction bundles with urn:uuid reference resolution (requires replica set; see
   [cache sizing](#sizing-the-wiredtiger-cache-for-transaction-bundles))
+- Server version: CI, the benchmark and the tests run MongoDB 9.0.8 (`mongo:9.0.8`). The minimum
+  patch levels are 7.0.48, 8.0.37, 8.3.16 or 9.0.7 on their lines (CVE-2026-118383, a
+  pre-authentication use-after-free in replication, is fixed in those releases).
+  - **Allocator setting for 8.x and 9.x in a container.** mongod 8.x and 9.x size tcmalloc's
+    per-CPU caches from the container's memory limit. In a container started without one
+    (Docker's default) `/sys/fs/cgroup/memory.max` holds the text `max`, mongod does not parse it,
+    and the caches get capacity 0, so every allocation takes one shared lock: in the benchmark
+    search ran up to 31% and sql-run up to 65% slower than on 7.0.48
+    ([SERVER-109273](https://jira.mongodb.org/browse/SERVER-109273), open, no fix version). A
+    memory limit (`--memory 16g` gave 32 MB per CPU on 9.0.8) or
+    `-e MONGO_TCMALLOC_PER_CPU_CACHE_SIZE_BYTES=10485760`, as every example here and CI do, avoids
+    it. The official images' `GLIBC_TUNABLES=glibc.pthread.rseq=0` is not the cause; starting with
+    `-e GLIBC_TUNABLES=` (set empty) only works around it, by moving tcmalloc to per-thread
+    caches, and makes mongod log an rseq warning. With the setting, 8.3.17 and 9.0.8 reached or
+    passed 7.0.48 on search and sql-run in the benchmark (single runs). Check it with
+    `db.serverStatus({ tcmalloc: 2 }).tcmalloc.maxPerCPUCacheSizeBytes`, which must be above 0.
+    7.0 uses the older tcmalloc and is not affected.
+  - **Large imports on 8.3 and 9.0.** With default WiredTiger pages an import stalled for 60 s or
+    more several times; starting mongod with
+    `--wiredTigerCollectionConfigString memory_page_max=16MB --wiredTigerIndexConfigString memory_page_max=16MB`
+    (what the benchmark does) removed the stalls with no insert p99 penalty. These strings apply
+    to collections and indexes created after mongod starts with them: a database created earlier keeps its
+    page size and its stalls, and there is no tested migration yet (recreate it and import again).
 - Native search (string, token, reference, date, number, quantity, URI and composite parameters;
   `_text`/`_content` and most modifiers beyond `:exact`/`:contains` are not yet supported;
   chained/`_has` work via the REST-layer resolver)
@@ -887,9 +912,13 @@ To roll back to an older build on purpose, follow [Rolling back to an older buil
 # Build with MongoDB support
 cargo build --bin hfs --features mongodb --release
 
-# Start MongoDB (example using Docker)
+# Start MongoDB (example using Docker): a single-member replica set, which
+# transaction Bundles need (a standalone server answers them with 501)
 docker run -d --name mongo -p 27017:27017 \
-  mongo:8.0
+  -e MONGO_TCMALLOC_PER_CPU_CACHE_SIZE_BYTES=10485760 \
+  mongo:9.0.8 --replSet rs0 --bind_ip_all
+docker exec mongo mongosh --quiet --eval \
+  'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
 
 # Start the server
 HFS_STORAGE_BACKEND=mongodb \
@@ -1763,7 +1792,7 @@ cargo test -p helios-persistence --features mongodb --test mongodb_tests \
 ```
 
 To find where a lone Bundle aborts on your own hardware and cache size, run the ceiling harness
-(#1976, #2252, #2350). It starts its own `mongo:7.0` replica set with the cache you name and prints
+(#1976, #2252, #2350). It starts its own `mongo:9.0.8` replica set with the cache you name and prints
 `V1_CEILING_*` lines: the abort entry, the dirty bytes per entry, the BSON and JSON bytes of a
 Bundle (`V1_CEILING_PAYLOAD`) and, for a control Bundle you give it, whether it commits and where
 it aborts. The knobs are listed at the top of
@@ -1796,9 +1825,13 @@ MongoDB remains the canonical write/read store while Elasticsearch owns delegate
 # Build with MongoDB and Elasticsearch support
 cargo build --bin hfs --features mongodb,elasticsearch --release
 
-# Start MongoDB (example using Docker)
+# Start MongoDB (example using Docker): a single-member replica set, which
+# transaction Bundles need (a standalone server answers them with 501)
 docker run -d --name mongo -p 27017:27017 \
-  mongo:8.0
+  -e MONGO_TCMALLOC_PER_CPU_CACHE_SIZE_BYTES=10485760 \
+  mongo:9.0.8 --replSet rs0 --bind_ip_all
+docker exec mongo mongosh --quiet --eval \
+  'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
 
 # Start Elasticsearch (example using Docker)
 docker run -d --name es -p 9200:9200 \
@@ -2403,7 +2436,7 @@ first attempt had already deleted the resources. Calling `purge_tenant_data` aga
 the deferral. A Bundle whose resources and history alone do not fit in the cache still fails with
 `500` `too-costly`, as described above.
 
-**Ceiling test.** An ignored test starts its own `mongo:7.0` replica set with a small WiredTiger
+**Ceiling test.** An ignored test starts its own `mongo:9.0.8` replica set with a small WiredTiger
 cache and sends one lone synthetic Bundle (`COPIES` copies of a 267-entry fixture, so 15 copies are
 4,005 entries) through one backend per variant, each on a database of its own:
 

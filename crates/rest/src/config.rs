@@ -30,7 +30,7 @@
 //! | `HFS_TENANT_ROUTING_MODE` | header_only | Tenant routing mode (header_only, url_path, both) |
 //! | `HFS_TENANT_STRICT_VALIDATION` | false | Error if URL and header tenant disagree |
 //! | `HFS_TENANT_REQUIRE_PROVISIONED` | false | Reject tenants not provisioned via the admin API (registry backends only) |
-//! | `HFS_JWT_TENANT_CLAIM` | tenant_id | JWT claim name for tenant (future use) |
+//! | `HFS_AUTH_TENANT_CLAIM` | tenant_id | JWT claim carrying the tenant id when authentication is enabled (read by `helios-auth`) |
 //! | `HFS_TERMINOLOGY_SERVER` | (none) | HTS base URL for `:in`/`:not-in` search and FHIRPath terminology functions |
 //! | `HFS_VALIDATION_MODE` | off | Write-path validation: off, log, or enforce (422 on invalid) |
 //! | `HFS_VALIDATION_META_PROFILES` | true | Validate against `meta.profile` claims |
@@ -234,8 +234,6 @@ pub struct MultitenancyConfig {
     pub routing_mode: TenantRoutingMode,
     /// If true, error when URL path and header specify different tenants.
     pub strict_validation: bool,
-    /// JWT claim name containing tenant ID (for future JWT-based tenant resolution).
-    pub jwt_tenant_claim: String,
     /// If true, only tenants provisioned through the admin API are valid: a
     /// request resolving to a tenant absent from the registry is rejected rather
     /// than implicitly created. The default (`"default"`) tenant is
@@ -252,10 +250,25 @@ impl Default for MultitenancyConfig {
         Self {
             routing_mode: TenantRoutingMode::HeaderOnly,
             strict_validation: false,
-            jwt_tenant_claim: "tenant_id".to_string(),
             require_provisioned_tenant: false,
         }
     }
+}
+
+/// The startup error for a set `HFS_JWT_TENANT_CLAIM`.
+///
+/// The variable was read into a field nothing consumed; the claim the bearer
+/// provider reads is `HFS_AUTH_TENANT_CLAIM`. A deployment that named its
+/// claim through the dead variable kept reading `tenant_id`, so every token
+/// without that exact claim was served from the default tenant, silently.
+/// Refusing to start is the only answer that cannot be missed.
+pub(crate) fn dead_tenant_claim_variable(value: Option<std::ffi::OsString>) -> Option<String> {
+    value.map(|_| {
+        "HFS_JWT_TENANT_CLAIM is set but is not read by any component; the JWT tenant claim is \
+         configured with HFS_AUTH_TENANT_CLAIM (default tenant_id). Set that and unset \
+         HFS_JWT_TENANT_CLAIM."
+            .to_string()
+    })
 }
 
 impl MultitenancyConfig {
@@ -270,9 +283,6 @@ impl MultitenancyConfig {
             .map(|s| s.to_lowercase() == "true" || s == "1")
             .unwrap_or(false);
 
-        let jwt_tenant_claim =
-            std::env::var("HFS_JWT_TENANT_CLAIM").unwrap_or_else(|_| "tenant_id".to_string());
-
         let require_provisioned_tenant = std::env::var("HFS_TENANT_REQUIRE_PROVISIONED")
             .map(|s| s.to_lowercase() == "true" || s == "1")
             .unwrap_or(false);
@@ -280,7 +290,6 @@ impl MultitenancyConfig {
         Self {
             routing_mode,
             strict_validation,
-            jwt_tenant_claim,
             require_provisioned_tenant,
         }
     }
@@ -787,6 +796,15 @@ pub struct BulkSubmitConfig {
     /// `Range` request, in seconds (#1127). Set with
     /// `HFS_BULK_SUBMIT_FETCH_READ_TIMEOUT`.
     pub fetch_read_timeout_secs: u64,
+    /// Ceiling, in decoded bytes, on a Bulk Export manifest the worker
+    /// fetches; the manifest is read whole. Set with
+    /// `HFS_BULK_SUBMIT_MAX_MANIFEST_BYTES`.
+    pub max_manifest_bytes: u64,
+    /// Ceiling, in decoded bytes, on a JWE-encrypted input file; encrypted
+    /// files are read whole, since the authentication tag trails the
+    /// ciphertext. Unencrypted NDJSON streams and has no ceiling. Set with
+    /// `HFS_BULK_SUBMIT_MAX_ENCRYPTED_FILE_BYTES`.
+    pub max_encrypted_file_bytes: u64,
     /// Leave an existing resource untouched when a submitted resource is
     /// identical to it (ignoring `meta.versionId`/`meta.lastUpdated`), so
     /// replaying a manifest writes no new versions (#1127). Off by default.
@@ -836,6 +854,10 @@ pub struct BulkSubmitConfig {
     pub decryption_key: Option<String>,
     /// Read scope requested for the outbound file-retrieval token.
     pub outbound_scope: String,
+    /// Origins (`scheme://host[:port]`) trusted as Data Providers: where the
+    /// client assertion may be presented and where a token obtained there may
+    /// be sent. Empty confines each token to its token endpoint's origin.
+    pub trusted_providers: Vec<String>,
     /// `Retry-After` (seconds) advertised on an in-progress status poll once
     /// ingestion is under way.
     pub retry_after_secs: u64,
@@ -881,6 +903,8 @@ impl fmt::Debug for BulkSubmitConfig {
             batch_size,
             batch_writers,
             fetch_read_timeout_secs,
+            max_manifest_bytes,
+            max_encrypted_file_bytes,
             skip_unchanged,
             index_queue,
             index_concurrency,
@@ -896,6 +920,7 @@ impl fmt::Debug for BulkSubmitConfig {
             signing_alg,
             decryption_key,
             outbound_scope,
+            trusted_providers,
             retry_after_secs,
             pre_ingest_retry_after_secs,
             manifest_page_size,
@@ -921,6 +946,8 @@ impl fmt::Debug for BulkSubmitConfig {
             .field("batch_size", batch_size)
             .field("batch_writers", batch_writers)
             .field("fetch_read_timeout_secs", fetch_read_timeout_secs)
+            .field("max_manifest_bytes", max_manifest_bytes)
+            .field("max_encrypted_file_bytes", max_encrypted_file_bytes)
             .field("skip_unchanged", skip_unchanged)
             .field("index_queue", index_queue)
             .field("index_concurrency", index_concurrency)
@@ -939,6 +966,7 @@ impl fmt::Debug for BulkSubmitConfig {
                 &decryption_key.as_ref().map(|_| "[redacted]"),
             )
             .field("outbound_scope", outbound_scope)
+            .field("trusted_providers", trusted_providers)
             .field("retry_after_secs", retry_after_secs)
             .field("pre_ingest_retry_after_secs", pre_ingest_retry_after_secs)
             .field("manifest_page_size", manifest_page_size)
@@ -969,6 +997,8 @@ impl Default for BulkSubmitConfig {
             batch_size: 1000,
             batch_writers: 4,
             fetch_read_timeout_secs: 60,
+            max_manifest_bytes: crate::bulk_submit_fetcher::DEFAULT_MAX_MANIFEST_BYTES,
+            max_encrypted_file_bytes: crate::bulk_submit_fetcher::DEFAULT_MAX_ENCRYPTED_FILE_BYTES,
             skip_unchanged: false,
             index_queue: 16,
             index_concurrency: 4,
@@ -984,6 +1014,7 @@ impl Default for BulkSubmitConfig {
             signing_alg: "ES384".to_string(),
             decryption_key: None,
             outbound_scope: "system/*.rs".to_string(),
+            trusted_providers: Vec::new(),
             retry_after_secs: 120,
             pre_ingest_retry_after_secs: 10,
             manifest_page_size: 1000,
@@ -1132,6 +1163,11 @@ impl BulkSubmitConfig {
                 "HFS_BULK_SUBMIT_FETCH_READ_TIMEOUT",
                 d.fetch_read_timeout_secs,
             ),
+            max_manifest_bytes: env_u64("HFS_BULK_SUBMIT_MAX_MANIFEST_BYTES", d.max_manifest_bytes),
+            max_encrypted_file_bytes: env_u64(
+                "HFS_BULK_SUBMIT_MAX_ENCRYPTED_FILE_BYTES",
+                d.max_encrypted_file_bytes,
+            ),
             skip_unchanged: env_bool("HFS_BULK_SUBMIT_SKIP_UNCHANGED", d.skip_unchanged),
             index_queue: env_u32("HFS_BULK_SUBMIT_INDEX_QUEUE", d.index_queue),
             index_concurrency: env_u32("HFS_BULK_SUBMIT_INDEX_CONCURRENCY", d.index_concurrency),
@@ -1159,6 +1195,15 @@ impl BulkSubmitConfig {
                 .filter(|s| !s.trim().is_empty()),
             outbound_scope: std::env::var("HFS_BULK_SUBMIT_OUTBOUND_SCOPE")
                 .unwrap_or(d.outbound_scope),
+            trusted_providers: std::env::var("HFS_BULK_SUBMIT_TRUSTED_PROVIDERS")
+                .map(|s| {
+                    s.split(',')
+                        .map(str::trim)
+                        .filter(|s| !s.is_empty())
+                        .map(String::from)
+                        .collect()
+                })
+                .unwrap_or(d.trusted_providers),
             retry_after_secs: env_u64("HFS_BULK_SUBMIT_RETRY_AFTER", d.retry_after_secs),
             pre_ingest_retry_after_secs: env_u64(
                 "HFS_BULK_SUBMIT_PRE_INGEST_RETRY_AFTER",
@@ -1231,6 +1276,12 @@ impl BulkSubmitConfig {
         if self.fetch_read_timeout_secs == 0 {
             errors.push("HFS_BULK_SUBMIT_FETCH_READ_TIMEOUT must be > 0".to_string());
         }
+        if self.max_manifest_bytes == 0 {
+            errors.push("HFS_BULK_SUBMIT_MAX_MANIFEST_BYTES must be > 0".to_string());
+        }
+        if self.max_encrypted_file_bytes == 0 {
+            errors.push("HFS_BULK_SUBMIT_MAX_ENCRYPTED_FILE_BYTES must be > 0".to_string());
+        }
         if self.index_queue == 0 {
             errors.push("HFS_BULK_SUBMIT_INDEX_QUEUE must be >= 1".to_string());
         }
@@ -1266,6 +1317,9 @@ impl BulkSubmitConfig {
             if let Err(e) = crate::jwe::load_private_keys(material) {
                 errors.push(format!("HFS_BULK_SUBMIT_DECRYPTION_KEY is invalid: {e}"));
             }
+        }
+        if let Err(e) = crate::bulk_submit_oauth::TrustedProviders::parse(&self.trusted_providers) {
+            errors.push(format!("HFS_BULK_SUBMIT_TRUSTED_PROVIDERS is invalid: {e}"));
         }
         if errors.is_empty() {
             Ok(())
@@ -2410,6 +2464,10 @@ impl ServerConfig {
     pub fn validate(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
 
+        if let Some(error) = dead_tenant_claim_variable(std::env::var_os("HFS_JWT_TENANT_CLAIM")) {
+            errors.push(error);
+        }
+
         if self.port == 0 {
             errors.push("Port cannot be 0".to_string());
         }
@@ -3193,7 +3251,17 @@ mod tests {
         let config = MultitenancyConfig::default();
         assert_eq!(config.routing_mode, TenantRoutingMode::HeaderOnly);
         assert!(!config.strict_validation);
-        assert_eq!(config.jwt_tenant_claim, "tenant_id");
+    }
+
+    /// `HFS_JWT_TENANT_CLAIM` never reached the bearer provider; a deployment
+    /// that set it to name its claim kept reading `tenant_id`, and every token
+    /// without that claim landed in the default tenant. Refused at startup.
+    #[test]
+    fn a_set_dead_tenant_claim_variable_is_a_startup_error() {
+        assert_eq!(dead_tenant_claim_variable(None), None);
+        let error = dead_tenant_claim_variable(Some("org".into())).expect("refused");
+        assert!(error.contains("HFS_JWT_TENANT_CLAIM"), "{error}");
+        assert!(error.contains("HFS_AUTH_TENANT_CLAIM"), "{error}");
     }
 
     // ── validate() – max_body_size == 0 ───────────────────────────
@@ -3802,12 +3870,10 @@ mod tests {
         let config = MultitenancyConfig {
             routing_mode: TenantRoutingMode::UrlPath,
             strict_validation: true,
-            jwt_tenant_claim: "custom_claim".to_string(),
             ..Default::default()
         };
         assert_eq!(config.routing_mode, TenantRoutingMode::UrlPath);
         assert!(config.strict_validation);
-        assert_eq!(config.jwt_tenant_claim, "custom_claim");
     }
 
     #[test]
@@ -3968,6 +4034,33 @@ mod tests {
         };
         let errs = cfg.validate().unwrap_err();
         assert!(errs.iter().any(|e| e.contains("SIGNING_ALG")));
+    }
+
+    #[test]
+    fn test_bulk_submit_config_trusted_providers_must_be_origins() {
+        let cfg = BulkSubmitConfig {
+            trusted_providers: vec![
+                "https://auth.example.org".to_string(),
+                "https://files.example.org/bulk".to_string(),
+            ],
+            ..BulkSubmitConfig::default()
+        };
+        let errs = cfg.validate().unwrap_err();
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("HFS_BULK_SUBMIT_TRUSTED_PROVIDERS")
+                    && e.contains("https://files.example.org/bulk")),
+            "{errs:?}"
+        );
+
+        let cfg = BulkSubmitConfig {
+            trusted_providers: vec![
+                "https://auth.example.org".to_string(),
+                "https://files.example.org:8443".to_string(),
+            ],
+            ..BulkSubmitConfig::default()
+        };
+        assert!(cfg.validate().is_ok());
     }
 
     #[test]
