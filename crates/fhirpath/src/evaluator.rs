@@ -1159,6 +1159,7 @@ pub fn evaluate(
                 | EvaluationResult::Integer(_, _, _)
                 | EvaluationResult::Integer64(_, _, _)
                 | EvaluationResult::Decimal(_, _, _)
+                | EvaluationResult::OutOfRangeDecimal(_, _, _)
                 | EvaluationResult::Date(_, _, _)
                 | EvaluationResult::DateTime(_, _, _)
                 | EvaluationResult::Time(_, _, _)
@@ -1206,6 +1207,7 @@ pub fn evaluate(
                         | EvaluationResult::Integer(_, _, _)
                         | EvaluationResult::Integer64(_, _, _)
                         | EvaluationResult::Decimal(_, _, _)
+                        | EvaluationResult::OutOfRangeDecimal(_, _, _)
                         | EvaluationResult::Date(_, _, _)
                         | EvaluationResult::DateTime(_, _, _)
                         | EvaluationResult::Time(_, _, _)
@@ -1255,6 +1257,7 @@ pub fn evaluate(
                         | EvaluationResult::Integer(_, _, _)
                         | EvaluationResult::Integer64(_, _, _)
                         | EvaluationResult::Decimal(_, _, _)
+                        | EvaluationResult::OutOfRangeDecimal(_, _, _)
                         | EvaluationResult::Date(_, _, _)
                         | EvaluationResult::DateTime(_, _, _)
                         | EvaluationResult::Time(_, _, _)
@@ -2381,6 +2384,7 @@ fn evaluate_invocation(
                 | EvaluationResult::Integer(_, _, _)
                 | EvaluationResult::Integer64(_, _, _)
                 | EvaluationResult::Decimal(_, _, _)
+                | EvaluationResult::OutOfRangeDecimal(_, _, _)
                 | EvaluationResult::Date(_, _, _)
                 | EvaluationResult::DateTime(_, _, _)
                 | EvaluationResult::Time(_, _, _)
@@ -3615,6 +3619,11 @@ fn call_function(
     } else {
         (invocation_base, args)
     };
+    if let Some(result) =
+        crate::out_of_range::call_function_on_out_of_range(name, invocation_base, args)
+    {
+        return Ok(result);
+    }
     match name {
         "is" | "as" => {
             if args.len() != 1 {
@@ -4016,6 +4025,7 @@ fn call_function(
                 | EvaluationResult::String(_, _, _)
                 | EvaluationResult::Integer(_, _, _)
                 | EvaluationResult::Decimal(_, _, _)
+                | EvaluationResult::OutOfRangeDecimal(_, _, _)
                 | EvaluationResult::Date(_, _, _)
                 | EvaluationResult::DateTime(_, _, _)
                 | EvaluationResult::Time(_, _, _)
@@ -4064,9 +4074,14 @@ fn call_function(
                 // A complex value has no string representation, so the result is
                 // empty -- except a FHIR Quantity, which converts like System.Quantity.
                 EvaluationResult::Object { map, type_info } => {
-                    match fhir_quantity_from_object(map, type_info.as_ref()) {
-                        Some(quantity) => EvaluationResult::string(quantity.to_string_value()),
-                        None => EvaluationResult::Empty,
+                    if let Some(text) = crate::out_of_range::quantity_to_string(invocation_base) {
+                        // Value beyond rust_decimal's range: `1E+999999999 'kg'` (#2716)
+                        EvaluationResult::string(text)
+                    } else {
+                        match fhir_quantity_from_object(map, type_info.as_ref()) {
+                            Some(quantity) => EvaluationResult::string(quantity.to_string_value()),
+                            None => EvaluationResult::Empty,
+                        }
                     }
                 }
                 single_item => EvaluationResult::string(single_item.to_string_value()),
@@ -7290,7 +7305,7 @@ fn to_decimal(value: &EvaluationResult) -> Result<Decimal, EvaluationError> {
 }
 
 /// Normalizes units for equality comparison, handling both word and UCUM brace formats
-fn normalize_unit_for_equality(unit: &str) -> String {
+pub(crate) fn normalize_unit_for_equality(unit: &str) -> String {
     // Only remove curly braces for comparison, but don't change the unit otherwise
     // This allows "{day}" and "day" to be considered equal without changing existing behavior
     let cleaned = unit.trim_start_matches('{').trim_end_matches('}');
@@ -7431,6 +7446,11 @@ fn evaluate_indexer(
 fn apply_polarity(op: char, value: &EvaluationResult) -> Result<EvaluationResult, EvaluationError> {
     // A primitive element with extensions but no value has no system value.
     let value = valueless_element_as_empty(value);
+    if op == '-'
+        && let Some(negated) = crate::out_of_range::negate(value)
+    {
+        return Ok(negated);
+    }
     match op {
         '+' => Ok(value.clone()), // Unary plus doesn't change the value
         '-' => {
@@ -7469,6 +7489,12 @@ fn apply_multiplicative(
     // arithmetic treats it as an empty operand.
     let left = valueless_element_as_empty(left);
     let right = valueless_element_as_empty(right);
+
+    // Arithmetic on a decimal beyond rust_decimal's range (`1e999999999`) would
+    // mean expanding it, so the result is empty (#2716).
+    if crate::out_of_range::is_out_of_range(left) || crate::out_of_range::is_out_of_range(right) {
+        return Ok(EvaluationResult::Empty);
+    }
     match op {
         "*" => {
             // Handle multiplication: Int * Int = Int, Quantity * Quantity = Quantity with combined units
@@ -7761,6 +7787,16 @@ pub fn apply_additive(
     // arithmetic treats it as an empty operand.
     let left = valueless_element_as_empty(left);
     let right = valueless_element_as_empty(right);
+
+    // Arithmetic on a decimal beyond rust_decimal's range (`1e999999999`) would
+    // mean expanding it, so the result is empty (#2716). String concatenation
+    // (`&`) uses the exponent form instead.
+    if op != "&"
+        && (crate::out_of_range::is_out_of_range(left)
+            || crate::out_of_range::is_out_of_range(right))
+    {
+        return Ok(EvaluationResult::Empty);
+    }
 
     match op {
         "+" => {
@@ -8495,6 +8531,12 @@ fn compare_inequality(
         )));
     }
 
+    // A decimal beyond rust_decimal's range (`1e999999999`), alone or as a
+    // Quantity's value, orders by magnitude without being expanded (#2716).
+    if let Some(result) = crate::out_of_range::compare(left, op, right) {
+        return Ok(result);
+    }
+
     // First, check if both values are date/time types
     match crate::datetime_impl::compare_date_time_values(left, right) {
         Some(ordering) => {
@@ -8786,6 +8828,12 @@ pub(crate) fn compare_equality(
     } else {
         r_cmp
     };
+
+    // A decimal beyond rust_decimal's range (`1e999999999`), alone or as a
+    // Quantity's value, compares by magnitude without being expanded (#2716).
+    if let Some(result) = crate::out_of_range::compare(&l_cmp, op, &r_cmp) {
+        return Ok(result);
+    }
 
     // Helper function for string equivalence normalization
     fn normalize_string(s: &str) -> String {
@@ -9584,16 +9632,7 @@ fn fhir_quantity_from_object(
     map: &HashMap<String, EvaluationResult>,
     type_info: Option<&TypeInfoResult>,
 ) -> Option<EvaluationResult> {
-    const QUANTITY_TYPES: &[&str] = &[
-        "Quantity",
-        "Age",
-        "Count",
-        "Distance",
-        "Duration",
-        "SimpleQuantity",
-        "MoneyQuantity",
-    ];
-    if !type_info.is_some_and(|t| QUANTITY_TYPES.contains(&t.name.as_str())) {
+    if !crate::out_of_range::is_fhir_quantity_type(type_info) {
         return None;
     }
     let value = match map.get("value")? {

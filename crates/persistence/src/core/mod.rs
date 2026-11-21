@@ -161,7 +161,8 @@ pub use bulk_submit::{
     SubmissionStatus, SubmissionSummary, UnindexedEntry, merge_resource,
 };
 pub use bulk_submit_input::{
-    FileTokenProvider, RemoteFile, RemoteManifest, SubmitInputFetcher, submission_output_job_id,
+    FileTokenError, FileTokenProvider, RemoteFile, RemoteManifest, SubmitInputFetcher,
+    submission_output_job_id,
 };
 pub use bulk_submit_output::{submit_artifact_key, submit_artifact_locator};
 pub use bulk_submit_publication::{ManifestPublicationResult, ManifestPublicationStatus};

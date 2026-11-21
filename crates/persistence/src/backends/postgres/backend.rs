@@ -1656,10 +1656,9 @@ impl PostgresBackend {
                     message: "connection pool exhausted".to_string(),
                 })
             }
-            other => crate::error::StorageError::Backend(BackendError::ConnectionFailed {
-                backend_name: "postgres".to_string(),
-                message: other.to_string(),
-            }),
+            other => crate::error::StorageError::Backend(crate::error::connection_failed(
+                "postgres", &other,
+            )),
         })
     }
 
@@ -1761,10 +1760,7 @@ impl Backend for PostgresBackend {
             .pool
             .get()
             .await
-            .map_err(|e| BackendError::ConnectionFailed {
-                backend_name: "postgres".to_string(),
-                message: e.to_string(),
-            })?;
+            .map_err(|e| crate::error::connection_failed("postgres", &e))?;
         Ok(PostgresConnection(client))
     }
 

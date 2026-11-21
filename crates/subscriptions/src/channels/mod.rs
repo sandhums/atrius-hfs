@@ -8,6 +8,7 @@
 //! dispatchers by subscription channel type instead of hardcoding a match —
 //! future broker/custom channels (e.g. Kafka) register the same way.
 
+mod egress;
 pub mod email;
 pub mod messaging;
 pub mod rest_hook;

@@ -12,7 +12,7 @@ Use this when working in `helios-subscriptions`, the FHIR topic-based Subscripti
 - Enable with `HFS_SUBSCRIPTIONS_ENABLED=true`.
 - Channels: rest-hook (HTTP callback), websocket, email, and messaging.
 - The messaging channel is separately gated by `HFS_SUBSCRIPTION_MESSAGING_ENABLED`.
-- Endpoint safety: rest-hook delivery to private/loopback endpoints is blocked unless `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS=true`.
+- Endpoint safety (`channels/egress.rs`, rest-hook and messaging): endpoints that are, or resolve to, private/loopback addresses are refused unless `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS=true`, and redirects are never followed (a `3xx` is a permanent error). Tests that deliver to a loopback receiver set `SubscriptionConfig::allow_private_endpoints`.
 - Notification bundles follow the topic-based subscription spec; delivery failures retry with backoff (`engine/retry.rs`).
 - WebSocket subscriptions use binding tokens (`ws_token`) managed per connection (`ws_manager`).
 - **Durable outbox**: SQL backends (Postgres/SQLite) expose `SubscriptionOutboxStore`. Write handlers enqueue events; a background worker claims and dispatches. Non-SQL backends fall back to in-process `tokio::spawn`. After max process-timeout retries a row is tombstoned (`dead_at` / `mark_dead`) rather than retried hourly. Completing evaluation with zero successful channel deliveries still `mark_processed` (to avoid duplicate `event_number`) and logs `Subscription event processed with zero successful deliveries`.
@@ -29,10 +29,13 @@ Use this when working in `helios-subscriptions`, the FHIR topic-based Subscripti
 |---|---|
 | `HFS_SUBSCRIPTIONS_ENABLED` | Master switch for the subscriptions engine |
 | `HFS_SUBSCRIPTION_MESSAGING_ENABLED` | Enable the messaging channel |
-| `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS` | Allow rest-hook delivery to private/loopback URLs (opt-in) |
+| `HFS_SUBSCRIPTION_ALLOW_PRIVATE_ENDPOINTS` | Allow rest-hook and messaging delivery to private/loopback addresses (opt-in; local dev and CI) |
+| `HFS_SUBSCRIPTION_MESSAGING_CREDENTIAL_HOSTS` | Receivers (`host` or `host:port`, comma-separated) that may be sent the server credential on messaging deliveries; unset means none |
+| `HFS_SUBSCRIPTION_MESSAGING_BEARER_TOKEN` | Bearer for the listed messaging receivers; unset falls back to `HFS_OUTBOUND_BEARER_TOKEN` |
 | `HFS_SUBSCRIPTION_MAX_RETRIES` / `RETRY_*` / `ERROR_THRESHOLD` / `OFF_THRESHOLD` | Delivery retry and status thresholds |
 | `HFS_SUBSCRIPTION_OUTBOX_*` | Outbox poll interval, batch size, claim lease, process timeout |
-| `HFS_BASE_URL` | Base URL used in notification links / CloudEvents `source` || `HFS_SUBSCRIPTION_PERSIST_STATUS` | Write server-driven status transitions back into the stored `Subscription` (default `true`) |
+| `HFS_BASE_URL` | Base URL used in notification links / CloudEvents `source` |
+| `HFS_SUBSCRIPTION_PERSIST_STATUS` | Write server-driven status transitions back into the stored `Subscription` (default `true`) |
 | `HFS_SUBSCRIPTION_STATUS_WRITE_TIMEOUT_MS` | Per-write timeout for that write-back (default `5000`) |
 | `HFS_SUBSCRIPTION_EVENT_HISTORY_SIZE` | Events remembered per subscription for `$events` (default `100`, `0` disables; in memory only, empty after a restart) |
 | `HFS_SUBSCRIPTION_REHYDRATE` | Replay stored topics/subscriptions into the engine at startup (default `true`) |
