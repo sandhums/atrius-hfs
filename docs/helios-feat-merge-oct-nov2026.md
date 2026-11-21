@@ -467,6 +467,33 @@ rest lib **1034**, rest **+subscriptions** **1046**, hts green.
 
 ---
 
+## Sync 12 — 21 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `1f5b886a5` (Helios `1fa9a352b`, **0.2.9**) |
+| Rollback tag | `pre-merge-main-2026-11-21` → `62e7fe42f` |
+| Distance | 116 on `main` / **68** non-merge |
+
+### Helios themes adopted
+
+- FHIRPath **#2716** decimals beyond `rust_decimal`; curated **503** connection/unavailable text; search **tiebreak** on `_lastUpdated` + `_id`; Patient **`$export` `_type`** compartment gating; subscription **egress** hardening + messaging bearer allowlist; bulk-submit OAuth cache/`CREATE` scope, manifest/body ceilings, kickoff ownership; chain-hop confinement; Docker **`/data`** writable paths + hadolint CI.
+
+### Conflicts resolved
+
+| Location | Decision |
+|----------|----------|
+| Subscription + docker skills (mirrored) | Helios messaging env vars + fork **outbox** settings; Helios volume paths + **`CDS_SERVER_HOST`** |
+| `auth/README.md` | `HFS_TENANT_STRICT_VALIDATION` + fork **`HFS_AUTH_REQUIRE_TENANT_CLAIM`** |
+| `persistence/error.rs` | Helios `connection_failed` / `*_unavailable` + fork **`postgres_error_chain`** |
+| `bulk_submit_oauth.rs` / `bulk_submit.rs` | `Result` cached token; **`SmartPermissions::CREATE`** on submit scope |
+
+### Verification (recorded)
+
+rest lib **1086**, rest **+subscriptions** **1098**, hts lib **857** green.
+
+---
+
 ## Keep-list delta (paste into Word — Nov syncs)
 
 - Batch: **PUT `ifNoneMatch` create-if-absent** alongside Helios GET `#869` / CAS `#2527`; keep **`bundle_patch_format`**; missing DELETE is Helios **204** `#2523` (not fork decline).
@@ -479,8 +506,8 @@ rest lib **1034**, rest **+subscriptions** **1046**, hts green.
 
 ## Word doc — suggested section headings to paste under
 
-1. **Sync log** — subsections Sync 1–11 (30 Oct … 18 Nov) with tables above.
+1. **Sync log** — subsections Sync 1–12 (30 Oct … 21 Nov) with tables above.
 2. **Keep-list delta** — November bullets in previous section.
-3. **Rollback tags** — through `pre-merge-main-2026-11-18`.
+3. **Rollback tags** — through `pre-merge-main-2026-11-21`.
 4. **HIS pin reminders** — persistence/rest/observability waves (see Sync 8–11).
 5. **Operator notes** — `docs/` `git add -f` on every merge (Helios `#1654`); rest with **`subscriptions`** feature; push fork **`main`** after upstream sync; ES `Ok(...)` follow-up `46e93675a`.
