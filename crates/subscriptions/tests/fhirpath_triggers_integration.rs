@@ -205,6 +205,7 @@ async fn activate_engine(
     let engine = SubscriptionEngine::new(
         SubscriptionConfig {
             max_retries: 1,
+            allow_private_endpoints: true, // wiremock binds to 127.0.0.1 (#2685 egress guard)
             ..Default::default()
         },
         "http://localhost:8080".into(),
