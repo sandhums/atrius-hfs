@@ -494,6 +494,35 @@ rest lib **1086**, rest **+subscriptions** **1098**, hts lib **857** green.
 
 ---
 
+## Sync 13 — 22 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `cd5ed3a01` (Helios `e9fd09de3`, **0.2.9**) |
+| Rollback tag | `pre-merge-main-2026-11-22` → `3c29d4bd9` |
+| Distance | 48 on `main` / **25** non-merge |
+
+### Helios themes adopted
+
+- **#2602** quantity interval indexing (`value_quantity_high`, range partial indexes, Postgres trigger on upgrade).
+- **#2689** JWKS cache coalesces concurrent unknown-`kid` refreshes.
+- **#2649** tenant claim must be string or null.
+- MongoDB quantity comparators **#2730**; FHIRPath UCUM bump; assorted CI/Inferno.
+
+### Conflicts resolved
+
+| Location | Decision |
+|----------|----------|
+| Subscription skills (mirrored) | Helios WebSocket backpressure + fork **outbox** bullets |
+| `auth/README.md` | Fork JTI/Redis **and** Helios JWKS + tenant-type docs + **`HFS_AUTH_REQUIRE_TENANT_CLAIM`** |
+| sqlite/postgres `schema.rs` | Named ledger kept; add `search_index_quantity_high` (sqlite **51** / postgres **60**) |
+
+### Verification (recorded)
+
+rest lib **1090**, rest **+subscriptions** **1102**, hts lib **857**, `fhirpath_triggers_integration` green.
+
+---
+
 ## Keep-list delta (paste into Word — Nov syncs)
 
 - Batch: **PUT `ifNoneMatch` create-if-absent** alongside Helios GET `#869` / CAS `#2527`; keep **`bundle_patch_format`**; missing DELETE is Helios **204** `#2523` (not fork decline).
@@ -506,8 +535,8 @@ rest lib **1086**, rest **+subscriptions** **1098**, hts lib **857** green.
 
 ## Word doc — suggested section headings to paste under
 
-1. **Sync log** — subsections Sync 1–12 (30 Oct … 21 Nov) with tables above.
+1. **Sync log** — subsections Sync 1–13 (30 Oct … 22 Nov) with tables above.
 2. **Keep-list delta** — November bullets in previous section.
-3. **Rollback tags** — through `pre-merge-main-2026-11-21`.
+3. **Rollback tags** — through `pre-merge-main-2026-11-22`.
 4. **HIS pin reminders** — persistence/rest/observability waves (see Sync 8–11).
 5. **Operator notes** — `docs/` `git add -f` on every merge (Helios `#1654`); rest with **`subscriptions`** feature; push fork **`main`** after upstream sync; ES `Ok(...)` follow-up `46e93675a`.
