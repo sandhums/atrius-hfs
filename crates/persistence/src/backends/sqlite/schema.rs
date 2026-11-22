@@ -16,7 +16,7 @@ use crate::core::schema_ledger::{
 use crate::error::StorageResult;
 
 /// Current schema version. Derived stamp: `SQLITE_STEPS.len() + 1`.
-pub const SCHEMA_VERSION: i32 = 50;
+pub const SCHEMA_VERSION: i32 = 51;
 
 pub use crate::core::schema_ledger::SCHEMA_FLAVOUR;
 
@@ -105,6 +105,7 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_token_code_first", migrate_v45_to_v46),
     ("bulk_submissions_updated_at", migrate_v46_to_v47),
     ("search_index_value_reference_target", migrate_v47_to_v48),
+        ("search_index_quantity_high", migrate_v48_to_v49),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 
@@ -129,7 +130,7 @@ const _: () = assert!(SQLITE_STEPS.len() + 1 == SCHEMA_VERSION as usize);
 ///
 /// Keep each entry's SQL byte-for-byte what the migration ladder creates,
 /// normalised to one line, so the self-heal on startup and the ladder agree.
-pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 18] = [
+pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 22] = [
     (
         "idx_search_string",
         "CREATE INDEX IF NOT EXISTS idx_search_string ON search_index(tenant_id, resource_type, param_name, value_string) WHERE value_string IS NOT NULL",
@@ -181,6 +182,22 @@ pub(crate) const SEARCH_VALUE_INDEXES: [(&str, &str); 18] = [
     (
         "idx_search_quantity_canonical",
         "CREATE INDEX IF NOT EXISTS idx_search_quantity_canonical ON search_index(tenant_id, resource_type, param_name, value_quantity_canonical_unit, value_quantity_canonical_value) WHERE value_quantity_canonical_value IS NOT NULL",
+    ),
+    (
+        "idx_search_quantity_high",
+        "CREATE INDEX IF NOT EXISTS idx_search_quantity_high ON search_index(tenant_id, resource_type, param_name, value_quantity_high, value_quantity_value, resource_key) WHERE value_quantity_high IS NOT NULL",
+    ),
+    (
+        "idx_search_quantity_canonical_high",
+        "CREATE INDEX IF NOT EXISTS idx_search_quantity_canonical_high ON search_index(tenant_id, resource_type, param_name, value_quantity_canonical_unit, value_quantity_canonical_high, value_quantity_canonical_value) WHERE value_quantity_canonical_high IS NOT NULL",
+    ),
+    (
+        "idx_search_quantity_range",
+        "CREATE INDEX IF NOT EXISTS idx_search_quantity_range ON search_index(tenant_id, resource_type, param_name, value_quantity_high, value_quantity_value, value_quantity_unit, resource_key) WHERE value_quantity_high > value_quantity_value",
+    ),
+    (
+        "idx_search_quantity_canonical_range",
+        "CREATE INDEX IF NOT EXISTS idx_search_quantity_canonical_range ON search_index(tenant_id, resource_type, param_name, value_quantity_canonical_unit, value_quantity_canonical_high, value_quantity_canonical_value, resource_key) WHERE value_quantity_canonical_high > value_quantity_canonical_value",
     ),
     (
         "idx_search_string_folded",
@@ -2896,6 +2913,78 @@ fn migrate_v47_to_v48(conn: &Connection) -> StorageResult<()> {
         if name == "idx_search_reference_target" {
             conn.execute(sql, [])
                 .map_err(|e| migration_err(format!("v48 create {name}: {e}")))?;
+        }
+    }
+    Ok(())
+}
+
+/// Migrate from schema version 48 to version 49 (#2602): the upper bound of
+/// a quantity row. A `Range` is indexed as the closed interval `[low, high]`
+/// — `value_quantity_value` stays the lower end — and a `Quantity`/`Age` as a
+/// point, so every existing quantity row gets `high = value` (raw and
+/// canonical). Rows of a stored `Range` were never indexed and need
+/// `POST /$reindex`. The backfill runs in rowid batches of one transaction
+/// each; the high-leading partial indexes are built afterwards over final data.
+/// The two `_range` indexes hold only proper Ranges (`high > value`), which
+/// no database held before this version, so they need no backfill: `ap` reads
+/// the points from the value index and the Ranges from them.
+fn migrate_v48_to_v49(conn: &Connection) -> StorageResult<()> {
+    let columns = table_columns(conn, "search_index")?;
+    for column in ["value_quantity_high", "value_quantity_canonical_high"] {
+        if !columns.iter().any(|c| c == column) {
+            conn.execute(
+                &format!("ALTER TABLE search_index ADD COLUMN {column} REAL"),
+                [],
+            )
+            .map_err(|e| migration_err(format!("v49 add {column}: {e}")))?;
+        }
+    }
+
+    const BATCH: i64 = 10_000;
+    let mut after = 0_i64;
+    loop {
+        let tx = conn
+            .unchecked_transaction()
+            .map_err(|e| migration_err(format!("v49 begin backfill batch: {e}")))?;
+        // Last rowid of the next batch of rows still without a high bound.
+        let last: Option<i64> = tx
+            .query_row(
+                "SELECT MAX(rowid) FROM (
+                     SELECT rowid FROM search_index
+                      WHERE rowid > ?1 AND value_quantity_value IS NOT NULL
+                        AND value_quantity_high IS NULL
+                      ORDER BY rowid LIMIT ?2)",
+                rusqlite::params![after, BATCH],
+                |row| row.get(0),
+            )
+            .map_err(|e| migration_err(format!("v49 read quantity rows: {e}")))?;
+        let Some(last) = last else {
+            break;
+        };
+        tx.execute(
+            "UPDATE search_index
+                SET value_quantity_high = value_quantity_value,
+                    value_quantity_canonical_high = value_quantity_canonical_value
+              WHERE rowid > ?1 AND rowid <= ?2
+                AND value_quantity_value IS NOT NULL AND value_quantity_high IS NULL",
+            rusqlite::params![after, last],
+        )
+        .map_err(|e| migration_err(format!("v49 backfill value_quantity_high: {e}")))?;
+        after = last;
+        tx.commit()
+            .map_err(|e| migration_err(format!("v49 commit backfill batch: {e}")))?;
+    }
+
+    for (name, sql) in SEARCH_VALUE_INDEXES {
+        if matches!(
+            name,
+            "idx_search_quantity_high"
+                | "idx_search_quantity_canonical_high"
+                | "idx_search_quantity_range"
+                | "idx_search_quantity_canonical_range"
+        ) {
+            conn.execute(sql, [])
+                .map_err(|e| migration_err(format!("v49 create {name}: {e}")))?;
         }
     }
     Ok(())
