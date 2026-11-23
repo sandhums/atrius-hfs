@@ -91,6 +91,7 @@ mod sof_terminology;
 mod storage;
 mod subscription_outbox;
 mod sync_failures;
+pub mod tls;
 mod transaction;
 mod user_settings;
 
@@ -101,4 +102,5 @@ pub use backend::{PostgresBackend, PostgresConfig};
 pub use deadpool_postgres::Status as PoolStatus;
 pub use schema::SCHEMA_VERSION;
 pub use subscription_outbox::PostgresSubscriptionOutbox;
+pub use tls::{PostgresSslMode, PostgresTlsSettings};
 pub use transaction::PostgresTransaction;
