@@ -67,8 +67,11 @@ patient() {
   jq -n --arg id "$1" --arg birth "${2:-1960-01-01}" '{
     resourceType: "Patient", id: $id, gender: "unknown", birthDate: $birth,
     meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
-    identifier: [{system: "https://atrius.in/smoke", value: $id}],
-    name: [{family: "Smoke", given: [$id]}]
+    identifier: [{
+      type: {coding: [{system: "http://terminology.hl7.org/CodeSystem/v2-0203", code: "MR", display: "Medical record number"}]},
+      system: "https://atrius.in/smoke", value: $id
+    }],
+    name: [{text: ($id + " Smoke"), family: "Smoke", given: [$id]}]
   }'
 }
 
