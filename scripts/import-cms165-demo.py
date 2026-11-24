@@ -2,7 +2,7 @@
 """Seed CMS165 demo clinical chart for ``cms165-demo`` (Atrius India path).
 
 Atrius CMS165 / AdultOutpatientEncounters now use Atrius ValueSets
-(``atrius-vs-*``) with SNOMED / ICD-10-CM — not VSAC CPT. The demo Encounter
+(``atrius-in-*``) with SNOMED / ICD-10-CM — not VSAC CPT. The demo Encounter
 uses SNOMED ``185349003`` (in ``atrius-in-office-visit``; must exist in HTS SNOMED).
 
 Optional ``--seed-cpt`` remains for legacy VSAC/eCQM evaluation only (HTS does
