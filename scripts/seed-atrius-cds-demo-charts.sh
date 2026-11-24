@@ -84,7 +84,7 @@ put "Encounter/dyspnea-smoke-enc" "$(jq -n '{
   subject:{reference:"Patient/dyspnea-smoke"},
   reasonCode:[{
     coding:[
-      {system:"https://atrius.in/fhir/r4/atrius-in/CodeSystem/atrius-in-reason-for-encounter-cs", code:"dyspnea", display:"Dyspnea"},
+      {system:"https://atrius.in/fhir/r4/atrius-in/CodeSystem/atrius-in-reason-for-encounter", code:"dyspnea", display:"Dyspnea"},
       {system:"http://snomed.info/sct", code:"267036007", display:"Dyspnea"}
     ],
     text:"Dyspnea"

@@ -48,7 +48,7 @@ same symptom. If they did, drop ours and note it here.
 | 2 | Unbounded hierarchical `$expand` covering a SNOMED mutual parent/child pair (`310387003` ⇄ `707221002`) **aborts the process** (stack overflow). CMS165 `is-a` ValueSets (e.g. pregnancy, 39 ICD-10 blocks) default to tree mode when `$expand` omits `count`/`excludeNested`, which is how the sidecar evaluates measures. | **Dropped 2026-10-19 — adopted upstream.** Helios #2125 (`8c1ce8fc8`) plus cycle-root promotion (`74fc74a80`) live in `backends/hierarchy.rs` (`nest_expansion`). Path-local cycle skip, poly-hierarchy copies kept, rootless cycles rooted at the source component rather than the lowest unplaced code. |
 | 3 | Chunked `POST /import` of a CodeSystem into a *running* server leaves `concept_closure` empty. `$subsumes` returns `not-subsumed` for a genuine parent/child; `is-a` `$expand` still works (it walks `concept_hierarchy`). Split-brain. | **Dropped 2026-10-19 — adopted upstream.** Helios #2125 (`dfdde6eb5`) plus timeout/background `202` (`d0263e724`), rebuild on every import (`146d54558`), `?defer_closure=true` (`4511edf9c`), and isolated PG tests (`43de1754d`). Chunked loaders must pass `defer_closure=true` on non-final chunks and poll `finalize=true` until `closures_rebuild` is no longer `"pending"`. |
 | 4 | `DELETE /CodeSystem/{id}` of a resource imported via `/import` returns **HTTP 500** `resource not found`. Imported content is permanently undeletable; `/import` only upserts, so retired codes linger forever. | **Dropped 2026-10-25 — adopted upstream.** Helios HTS instance identity and transactional CRUD (`crud_transaction`, `current_resource`) materialize import-only content as version 1, then soft-delete it and its normalized identity in one transaction (204). A repeat DELETE of an id that exists nowhere is now Helios's 404, not our 204; FHIR allows either, and no Atrius loader depends on it. |
-| 5 | HFS `Condition?code:in=…/atrius-vs-diabetes` returns **total=0** even though `$validate-code` for `44054006` is true and GET `$expand?count=10000` lists all 546 codes. CMS951 (and any retrieve on a ValueSet larger than the HTS default page) scores IP empty. Essential Hypertension is 16 codes and still works, which is how this looked like a measure/CQL flake. | `crates/terminology-client` `expand_value_set` (page `$expand`) and `crates/persistence` SQLite token OR chunking. **Keep ours.** HTS paging when `count` is omitted is FHIR-legal; the client must walk `expansion.total`. |
+| 5 | HFS `Condition?code:in=…/atrius-in-diabetes` returns **total=0** even though `$validate-code` for `44054006` is true and GET `$expand?count=10000` lists all 546 codes. CMS951 (and any retrieve on a ValueSet larger than the HTS default page) scores IP empty. Essential Hypertension is 16 codes and still works, which is how this looked like a measure/CQL flake. | `crates/terminology-client` `expand_value_set` (page `$expand`) and `crates/persistence` SQLite token OR chunking. **Keep ours.** HTS paging when `count` is omitted is FHIR-legal; the client must walk `expansion.total`. |
 
 A related behaviour is **not a code change** and will not show up in the diff,
 but it is the thing most likely to look like a regression after a
@@ -154,7 +154,7 @@ specifically to stop that:
 
 **Count trap when re-verifying:** unbounded hierarchical `$expand` nests a
 concept under every parent, so node count ≫ distinct `(system, code)`.
-`atrius-vs-diabetes` is 546 distinct concepts across 5,427 nodes. Compare
+`atrius-in-diabetes` is 546 distinct concepts across 5,427 nodes. Compare
 sets, never lengths. `verify-icd-load.py` §8 does this.
 
 ---
@@ -258,10 +258,10 @@ the operator is stuck with the old CodeSystem.
 `code=system\|c1,system\|c2,…` after `POST /ValueSet/$expand` with only a
 `url` parameter. Atrius HTS, when `count` is omitted, returns a **16-code
 page** and still sets `expansion.total` to the full size (546 for
-`atrius-vs-diabetes`). The client treated that page as the whole set.
+`atrius-in-diabetes`). The client treated that page as the whole set.
 
 `44054006` (fixture type 2 diabetes) is not among those 16, so
-`Condition?code:in=…/atrius-vs-diabetes` is empty. CMS951 IP is then false
+`Condition?code:in=…/atrius-in-diabetes` is empty. CMS951 IP is then false
 for every patient who should qualify. CMS165 still passed because Essential
 Hypertension expands to exactly 16 codes.
 
@@ -300,7 +300,7 @@ CMS951 fixture seed):
 
 ```text
 # must be 1, not 0 — 44054006 is in the VS and on the patient
-GET /Condition?patient=cms951-numerator-panel&code:in=https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-vs-diabetes
+GET /Condition?patient=cms951-numerator-panel&code:in=https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-diabetes
 
 python3 scripts/measure-eval-runner.py --measure cms951
 ```
@@ -341,7 +341,7 @@ Manual smoke, if you do not want the Python harness:
 
 ```text
 # 1. dotted is-a, no count — must not 400
-GET /ValueSet/$expand?url=…/atrius-vs-diabetes
+GET /ValueSet/$expand?url=…/atrius-in-diabetes
 
 # 2. $subsumes on a bundle-imported system — must be "subsumes", not "not-subsumed"
 GET /CodeSystem/$subsumes?system=http://hl7.org/fhir/sid/icd-10&codeA=E11&codeB=E11.3
@@ -351,7 +351,7 @@ GET /CodeSystem/$subsumes?system=http://id.who.int/icd/release/11/mms&codeA=5A13
 DELETE /CodeSystem/icd-10          # then re-import; do not leave this down
 
 # 4. HFS :in must see codes past the first $expand page (needs HFS + seeded fixture)
-GET HFS /Condition?patient=cms951-numerator-panel&code:in=…/atrius-vs-diabetes
+GET HFS /Condition?patient=cms951-numerator-panel&code:in=…/atrius-in-diabetes
 # total=1, id cms951-numerator-panel-dm — not total=0
 ```
 

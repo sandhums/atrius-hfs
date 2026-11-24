@@ -3,7 +3,7 @@
 
 Atrius CMS165 / AdultOutpatientEncounters now use Atrius ValueSets
 (``atrius-vs-*``) with SNOMED / ICD-10-CM — not VSAC CPT. The demo Encounter
-uses SNOMED ``185349003`` (in ``atrius-vs-office-visit``; must exist in HTS SNOMED).
+uses SNOMED ``185349003`` (in ``atrius-in-office-visit``; must exist in HTS SNOMED).
 
 Optional ``--seed-cpt`` remains for legacy VSAC/eCQM evaluation only (HTS does
 not ship CPT; AMA license).
@@ -40,7 +40,7 @@ HTS_DB_DEFAULT = REPO_ROOT / "data/hts.db"
 CPT_SYSTEM = "http://www.ama-assn.org/go/cpt"
 
 ATRIUS_OFFICE_VISIT_VS = (
-    "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-vs-office-visit"
+    "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-office-visit"
 )
 
 # Must match clinical HFS `HFS_DEFAULT_TENANT` when callers omit `X-Tenant-ID` (sidecar).
@@ -271,7 +271,7 @@ def verify(
         )
     except json.JSONDecodeError:
         total = 0
-    print(f"HTS expand atrius-vs-office-visit codes: {total}")
+    print(f"HTS expand atrius-in-office-visit codes: {total}")
 
     enc_search = (
         f"{clinical_hfs_url.rstrip('/')}/Encounter?subject=Patient/{patient}"
