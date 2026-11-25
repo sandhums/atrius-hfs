@@ -558,6 +558,38 @@ rest lib **1089**, rest **+subscriptions** **1101**, hts lib **857**, `fhirpath_
 
 ---
 
+## Sync 15 — 25 Nov 2026
+
+| Ref | Value |
+|-----|--------|
+| atrius `main` | `a118f9feb` (Helios `7ade40f51`, **0.2.10**) |
+| Rollback tag | `pre-merge-main-2026-11-25` → `8c5ca9cef` |
+| Merge commit | `7b48a630f` |
+| Distance | 11 on `main` / **5** non-merge |
+
+### Helios themes adopted
+
+- **#2593** `/metadata` lists only SearchParameters storage actually serves (`serves_search_param` on each backend + composite).
+- **#2781** HTS import authority — refuse replace of owner-ranked content.
+- **#2777** HTS UI cross-site guard on import POST.
+- **cookie** 0.18.3 (RUSTSEC-2026-0594).
+
+### Conflicts resolved
+
+| Location | Decision |
+|----------|----------|
+| *(none)* | Clean ort merge |
+
+### Schema ledger
+
+- SQLite **51**, Postgres **60** (unchanged).
+
+### Verification (recorded)
+
+rest lib **1092**, rest **+subscriptions** **1104**, hts lib **857**, `fhirpath_triggers_integration` **4/4**.
+
+---
+
 ## Keep-list delta (paste into Word — Nov syncs)
 
 - Batch: **PUT `ifNoneMatch` create-if-absent** alongside Helios GET `#869` / CAS `#2527`; keep **`bundle_patch_format`**; missing DELETE is Helios **204** `#2523` (not fork decline).
@@ -570,8 +602,8 @@ rest lib **1089**, rest **+subscriptions** **1101**, hts lib **857**, `fhirpath_
 
 ## Word doc — suggested section headings to paste under
 
-1. **Sync log** — subsections Sync 1–14 (30 Oct … 23 Nov) with tables above.
+1. **Sync log** — subsections Sync 1–15 (30 Oct … 25 Nov) with tables above.
 2. **Keep-list delta** — November bullets in previous section.
-3. **Rollback tags** — through `pre-merge-main-2026-11-23`.
+3. **Rollback tags** — through `pre-merge-main-2026-11-25`.
 4. **HIS pin reminders** — persistence/rest/observability waves (see Sync 8–11).
 5. **Operator notes** — `docs/` `git add -f` on every merge (Helios `#1654`); rest with **`subscriptions`** feature; push fork **`main`** after upstream sync; ES `Ok(...)` follow-up `46e93675a`.
