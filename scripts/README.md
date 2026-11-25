@@ -44,7 +44,6 @@ Production systemd uses the same env templates under `/etc/atrius/` — see
 |--------|------|
 | `import-cms165-demo.py` | Seed `cms165-demo` chart + sidecar verify |
 | `import-synthea-atrius.py` | Bulk Synthea → clinical HFS |
-| `purge-kr-ecqm-artifacts.py` | Delete leftover CMS Libraries / synthesized PlanDefinitions from KR |
 | `setup-plandefinition-cds-catalog.sh` | **Orchestrator**: import Atrius IG → KR if needed, then regenerate catalog |
 | `generate-cds-hooks-manifest.py` | **Writer**: KR PlanDefinitions → `manifests/cds-services-kr.json` |
 | `validate-manifest-kr-pins.sh` | Check manifest pins exist on KR |
