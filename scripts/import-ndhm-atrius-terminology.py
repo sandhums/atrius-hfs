@@ -3,30 +3,36 @@
 
 Loads published NDHM 6.5.0 terminology from a local ndhm.in mirror and Atrius-owned
 CodeSystem/ValueSet JSON from the built IG output directory, then POSTs them to HTS
-``/import`` in chunked Bundles.
-
-After this script, run ``atrius-his/scripts/seed-atrius-terminology.py`` for HL7 +
-Atrius encounter/composition ValueSets used by HIS smoke tests.
+``/import`` in chunked Bundles. HL7 core and THO terminology come from the HTS
+bootstrap packages (``HTS_BOOTSTRAP_DIR``), SNOMED CT / LOINC / ICD from their
+own loaders; this script does not stub any of them.
 
 Usage:
   python3 scripts/import-ndhm-atrius-terminology.py \\
     --hts-url http://127.0.0.1:9091 \\
-    --ndhm-dir /Users/sandhu/Downloads/ndhm \\
-    --atrius-ig-output /Users/sandhu/AtriusIGDraft/output
+    --ndhm-dir ~/Downloads/ndhm \\
+    --atrius-ig-output ../../AtriusIGDraft/output
+
+``--fhir-version`` (default r4) checks that HTS reports the matching
+``fhirVersion``; one HTS database holds one FHIR version.
 """
 
 from __future__ import annotations
 
 import argparse
-import glob
 import json
+import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 ATRIUS_IN = "https://atrius.in/fhir/r4/atrius-in"
 NDHM = "https://nrces.in/ndhm/fhir/r4"
+EXPECTED_FHIR_PREFIX = {"r4": "4.0", "r5": "5.0"}
+DEFAULT_NDHM_DIR = Path.home() / "Downloads" / "ndhm"
+DEFAULT_IG_OUTPUT = Path(__file__).resolve().parents[2].parent / "AtriusIGDraft" / "output"
 
 
 def load_json(path: Path) -> dict:
@@ -34,7 +40,10 @@ def load_json(path: Path) -> dict:
         return json.load(handle)
 
 
-def post_bundle(hts_url: str, entries: list[dict]) -> None:
+def post_bundle(hts_url: str, entries: list[dict], *, finalize: bool = False) -> str:
+    """POST one chunk. Non-final chunks defer the concept-closure rebuild; the
+    final one (``finalize``) rebuilds every closure left missing, which on a
+    large HTS outlasts its 30 s request timeout if done per chunk."""
     bundle = {
         "resourceType": "Bundle",
         "type": "collection",
@@ -42,7 +51,7 @@ def post_bundle(hts_url: str, entries: list[dict]) -> None:
     }
     payload = json.dumps(bundle).encode("utf-8")
     request = urllib.request.Request(
-        f"{hts_url.rstrip('/')}/import",
+        f"{hts_url.rstrip('/')}/import?{'finalize' if finalize else 'defer_closure'}=true",
         data=payload,
         headers={"Content-Type": "application/fhir+json"},
         method="POST",
@@ -58,6 +67,22 @@ def post_bundle(hts_url: str, entries: list[dict]) -> None:
 
     if body.strip():
         print(body[:500])
+    return body
+
+
+def finalize_closures(hts_url: str) -> None:
+    """Re-send ``finalize=true`` with an empty Bundle until HTS stops reporting
+    the closure rebuild as pending."""
+    for _ in range(60):
+        body = post_bundle(hts_url, [], finalize=True)
+        try:
+            pending = json.loads(body).get("closures_rebuild") == "pending"
+        except (ValueError, AttributeError):
+            pending = False
+        if not pending:
+            return
+        time.sleep(5)
+    raise SystemExit("HTS closure rebuild still pending after 5 minutes")
 
 
 def collect_terminology(directory: Path, prefix: str) -> list[dict]:
@@ -68,6 +93,23 @@ def collect_terminology(directory: Path, prefix: str) -> list[dict]:
             continue
         resources.append(resource)
     return resources
+
+
+def require_hts_fhir_version(hts_url: str, fhir_version: str) -> None:
+    request = urllib.request.Request(
+        f"{hts_url.rstrip('/')}/metadata", headers={"Accept": "application/fhir+json"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            reported = json.loads(response.read().decode("utf-8")).get("fhirVersion")
+    except urllib.error.URLError as exc:
+        raise SystemExit(f"HTS not reachable at {hts_url}: {exc}") from exc
+    prefix = EXPECTED_FHIR_PREFIX[fhir_version]
+    if not isinstance(reported, str) or not reported.startswith(prefix):
+        raise SystemExit(
+            f"HTS reports fhirVersion {reported!r}; --fhir-version {fhir_version} expects "
+            f"{prefix}.x (one HTS database per FHIR version)"
+        )
 
 
 def chunked(items: list[dict], size: int) -> list[list[dict]]:
@@ -114,20 +156,32 @@ def main() -> int:
     parser.add_argument("--hts-url", default="http://127.0.0.1:9091")
     parser.add_argument(
         "--ndhm-dir",
-        default="/Users/sandhu/Downloads/ndhm",
-        help="Local ndhm.in 6.5.0 package mirror",
+        default=os.environ.get("ATRIUS_NDHM_DIR", str(DEFAULT_NDHM_DIR)),
+        help="Local ndhm.in 6.5.0 package mirror (env ATRIUS_NDHM_DIR)",
     )
     parser.add_argument(
         "--atrius-ig-output",
-        default="/Users/sandhu/AtriusIGDraft/output",
-        help="Built Atrius IG output/ directory",
+        default=os.environ.get("ATRIUS_IG_OUTPUT", str(DEFAULT_IG_OUTPUT)),
+        help="Built Atrius IG output/ directory (env ATRIUS_IG_OUTPUT)",
     )
-    parser.add_argument("--chunk-size", type=int, default=25)
+    parser.add_argument(
+        "--fhir-version",
+        choices=sorted(EXPECTED_FHIR_PREFIX),
+        default="r4",
+        help="FHIR version the target HTS was built and bootstrapped for",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=10,
+        help="Resources per /import request; each CodeSystem costs ~1.5 s on a "
+        "SNOMED-sized HTS, and the request timeout is 30 s",
+    )
     parser.add_argument("--skip-verify", action="store_true")
     args = parser.parse_args()
 
-    ndhm_dir = Path(args.ndhm_dir)
-    ig_output = Path(args.atrius_ig_output)
+    ndhm_dir = Path(args.ndhm_dir).expanduser()
+    ig_output = Path(args.atrius_ig_output).expanduser()
     if not ndhm_dir.is_dir():
         raise SystemExit(f"NDHM directory not found: {ndhm_dir}")
     if not ig_output.is_dir():
@@ -151,6 +205,8 @@ def main() -> int:
                 atrius_cs = authored_cs or atrius_cs
                 atrius_vs = authored_vs
 
+    require_hts_fhir_version(args.hts_url, args.fhir_version)
+
     all_resources = ndhm_cs + ndhm_vs + atrius_cs + atrius_vs
     print(
         f"Importing {len(ndhm_cs)} NDHM CodeSystems, {len(ndhm_vs)} NDHM ValueSets, "
@@ -161,6 +217,8 @@ def main() -> int:
     for index, batch in enumerate(chunked(all_resources, args.chunk_size), start=1):
         print(f"  batch {index}: {len(batch)} resources")
         post_bundle(args.hts_url, batch)
+    print("  rebuilding concept closures")
+    finalize_closures(args.hts_url)
 
     if args.skip_verify:
         return 0
@@ -176,7 +234,6 @@ def main() -> int:
         print("  ok")
 
     print("NDHM + Atrius terminology import complete.")
-    print("Next: python3 ../atrius-his/scripts/seed-atrius-terminology.py --hts-url", args.hts_url)
     return 0
 
 

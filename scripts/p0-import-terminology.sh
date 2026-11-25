@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# P0 #4 — import NDHM + Atrius terminology into HTS, then seed HIS encounter ValueSets.
+# P0 #4 — import NDHM + Atrius IG terminology into HTS.
 #
 # Prerequisites:
-#   - HTS running (default http://127.0.0.1:9091)
-#   - Atrius IG built: cd "$ATRIUS_IG_DRAFT" && ./_build.sh
-#   - Local NDHM mirror at NDHM_DIR (default ~/Downloads/package_ndhm)
+#   - HTS running (default http://127.0.0.1:9091), bootstrapped with the HL7 core
+#     and THO packages (HTS_BOOTSTRAP_DIR)
+#   - Atrius IG built: cd AtriusIGDraft && ./scripts/ci-ig-build.sh
+#   - Local NDHM mirror (default ~/Downloads/ndhm, or ATRIUS_NDHM_DIR)
 #
 # Usage:
 #   export HTS_URL=http://127.0.0.1:9091
-#   ./scripts/p0-import-terminology.sh
+#   ./scripts/p0-import-terminology.sh [--fhir-version r4|r5]
+#
+# ATRIUS_IG_OUTPUT overrides the IG output directory (default ../../AtriusIGDraft/output).
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HTS_URL="${HTS_URL:-http://127.0.0.1:9091}"
-NDHM_DIR="${NDHM_DIR:-/Users/sandhu/Downloads/package_ndhm}"
-ATRIUS_IG_DRAFT="${ATRIUS_IG_DRAFT:-/Users/sandhu/AtriusIGDraft}"
-HIS_ROOT="${ATRIUS_HIS_ROOT:-$(cd "${ROOT}/../atrius-his" 2>/dev/null && pwd || true)}"
 
 echo "P0 terminology import → ${HTS_URL}"
 curl -sf "${HTS_URL}/health" >/dev/null || {
@@ -24,16 +24,7 @@ curl -sf "${HTS_URL}/health" >/dev/null || {
   exit 1
 }
 
-python3 "${ROOT}/scripts/import-ndhm-atrius-terminology.py" \
-  --hts-url "${HTS_URL}" \
-  --ndhm-dir "${NDHM_DIR}" \
-  --atrius-ig-output "${ATRIUS_IG_DRAFT}/output"
-
-if [[ -n "${HIS_ROOT}" && -f "${HIS_ROOT}/scripts/seed-atrius-terminology.py" ]]; then
-  python3 "${HIS_ROOT}/scripts/seed-atrius-terminology.py" --hts-url "${HTS_URL}"
-else
-  echo "Skip seed-atrius-terminology.py (atrius-his not found at ${HIS_ROOT})"
-fi
+python3 "${ROOT}/scripts/import-ndhm-atrius-terminology.py" --hts-url "${HTS_URL}" "$@"
 
 echo "Done. Set HFS_TERMINOLOGY_SERVER=${HTS_URL} on clinical HFS."
 echo "Then run ./scripts/setup-atrius-profile-registry.sh to seed the FHIR package"
