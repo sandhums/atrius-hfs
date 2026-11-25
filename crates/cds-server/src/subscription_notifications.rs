@@ -15,6 +15,9 @@ use serde_json::{Value, json};
 use tracing::{debug, info, warn};
 
 use crate::AppState;
+use crate::canonicals::{
+    ATRIUS_IN_FLAG_PROFILE, CDS_FLAG_SYSTEM, CDS_SUBSCRIPTION_SOURCE_EXTENSION,
+};
 use crate::fhir_write_auth::{FhirWriteAuth, authorize_request};
 
 const CRITICAL_LABS_SERVICE_ID: &str = "atrius-critical-labs";
@@ -243,7 +246,7 @@ async fn post_flag(
         "resourceType": "Flag",
         "id": flag_id,
         "meta": {
-            "profile": ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-flag"]
+            "profile": [ATRIUS_IN_FLAG_PROFILE]
         },
         "status": "active",
         "category": [{
@@ -255,7 +258,7 @@ async fn post_flag(
         }],
         "code": {
             "coding": [{
-                "system": "https://atrius.in/fhir/CodeSystem/cds-flag",
+                "system": CDS_FLAG_SYSTEM,
                 "code": code,
                 "display": card.summary
             }],
@@ -264,7 +267,7 @@ async fn post_flag(
         "subject": { "reference": format!("Patient/{patient_id}") },
         "period": { "start": period_start },
         "extension": [{
-            "url": "https://atrius.in/fhir/StructureDefinition/cds-subscription-source",
+            "url": CDS_SUBSCRIPTION_SOURCE_EXTENSION,
             "valueReference": { "reference": format!("Observation/{observation_id}") }
         }]
     });

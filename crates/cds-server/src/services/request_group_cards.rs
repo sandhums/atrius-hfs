@@ -24,9 +24,6 @@ use serde_json::Value;
 
 const SOURCE_LABEL: &str = "Atrius clinical reasoning";
 const CQF_MESSAGES_URL: &str = "http://hl7.org/fhir/StructureDefinition/cqf-messages";
-/// Override reason codes offered on warning/critical cards (CDS Hooks feedback).
-const OVERRIDE_REASON_SYSTEM: &str = "https://atrius.in/fhir/CodeSystem/cds-override-reason";
-
 fn source() -> Source {
     Source {
         label: SOURCE_LABEL.into(),
@@ -50,7 +47,7 @@ fn default_override_reasons() -> Vec<Coding> {
     .into_iter()
     .map(|(code, display)| Coding {
         code: code.into(),
-        system: OVERRIDE_REASON_SYSTEM.into(),
+        system: crate::canonicals::CDS_OVERRIDE_REASON_SYSTEM.into(),
         display: Some(display.into()),
     })
     .collect()

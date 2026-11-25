@@ -17,6 +17,7 @@
 
 pub mod analytics;
 pub mod apply_context;
+pub mod canonicals;
 pub mod clinical_reasoning;
 pub mod config;
 pub mod cr_error;

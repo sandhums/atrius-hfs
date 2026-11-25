@@ -267,7 +267,7 @@ check "hf-admission: active HF fires bundle + BNP cards" \
    and (map(.summary) | any(test("HF admission bundle"; "i")))
    and (map(.summary) | any(test("natriuretic|BNP"; "i")))' "$resp"
 check "hf-admission: CarePlan shipped in response extension" \
-  '.extension["https://atrius.in/fhir/extension/care-plan"].resourceType == "CarePlan"' "$resp"
+  '.extension["https://atrius.in/fhir/r4/atrius-in/cds-hooks/extension/care-plan"].resourceType == "CarePlan"' "$resp"
 
 # --- 6. Imaging appropriateness ---------------------------------------------
 pt=img-smoke

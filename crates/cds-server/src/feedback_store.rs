@@ -14,12 +14,8 @@ use helios_cds_hooks::{Feedback, FeedbackOutcome, FeedbackRequest};
 use serde_json::{Value, json};
 use tracing::{debug, error};
 
+use crate::canonicals::{CDS_FEEDBACK_EXTENSION, CDS_HOOKS_CARD_IDENTIFIER_SYSTEM};
 use crate::fhir_write_auth::{FhirWriteAuth, authorize_request};
-
-/// Extension carrying the structured CDS Hooks feedback payload on the GuidanceResponse.
-const FEEDBACK_EXTENSION_URL: &str = "https://atrius.in/fhir/StructureDefinition/cds-feedback";
-/// Identifier system for CDS card uuids.
-const CARD_IDENTIFIER_SYSTEM: &str = "https://atrius.in/fhir/cds-hooks/card";
 
 /// Writes feedback GuidanceResponses to a clinical FHIR base.
 #[derive(Clone)]
@@ -157,13 +153,13 @@ fn guidance_response_for_feedback(
         "resourceType": "GuidanceResponse",
         "status": "success",
         "requestIdentifier": {
-            "system": CARD_IDENTIFIER_SYSTEM,
+            "system": CDS_HOOKS_CARD_IDENTIFIER_SYSTEM,
             "value": feedback.card
         },
         "occurrenceDateTime": feedback.outcome_timestamp.to_rfc3339(),
         "note": [{ "text": note_lines.join("\n") }],
         "extension": [{
-            "url": FEEDBACK_EXTENSION_URL,
+            "url": CDS_FEEDBACK_EXTENSION,
             "valueString": serde_json::to_string(&json!({
                 "serviceId": service_id,
                 "card": feedback.card,
@@ -201,7 +197,7 @@ mod tests {
             override_reason: Some(OverrideReason {
                 reason: Some(Coding {
                     code: "clinical-judgment".into(),
-                    system: "https://atrius.in/fhir/CodeSystem/cds-override-reason".into(),
+                    system: crate::canonicals::CDS_OVERRIDE_REASON_SYSTEM.into(),
                     display: Some("Clinical judgment".into()),
                 }),
                 user_comment: Some("Not applicable for this patient".into()),

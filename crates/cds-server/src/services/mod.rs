@@ -47,8 +47,7 @@ use cards::{cards_from_normalized, demo_card_for_patient};
 use request_group_cards::cards_from_request_group;
 use tracing::debug;
 
-/// CDS response extension key carrying the `$apply` CarePlan for client-side persistence.
-pub const CARE_PLAN_EXTENSION_KEY: &str = "https://atrius.in/fhir/extension/care-plan";
+use crate::canonicals::{APPLY_TIMING_EXTENSION_KEY, CARE_PLAN_EXTENSION_KEY};
 
 /// Shared evaluation backend for all manifest-defined services.
 #[derive(Debug, Clone)]
@@ -281,7 +280,7 @@ impl SidecarEvalService {
                                 );
                             }
                             ext.insert(
-                                "https://atrius.in/fhir/extension/cds-apply-timing".to_string(),
+                                APPLY_TIMING_EXTENSION_KEY.to_string(),
                                 serde_json::json!({
                                     "applyMs": apply_ms,
                                     "serviceId": self.definition.id,

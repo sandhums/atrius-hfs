@@ -5,9 +5,8 @@ use serde_json::{Value, json};
 
 use crate::clinical_reasoning::NormalizedSidecarResult;
 
-pub const ATRIUS_IN_GROUP_PROFILE: &str =
-    "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-group";
-pub const COHORT_IDENTIFIER_SYSTEM: &str = "https://atrius.in/fhir/r4/identifier/cql-cohort";
+use crate::canonicals::{ATRIUS_IN_GROUP_PROFILE, CQL_COHORT_IDENTIFIER_SYSTEM};
+
 pub const MAX_COHORT_PATIENTS: usize = 200;
 pub const DEFAULT_COHORT_CONCURRENCY: usize = 8;
 
@@ -95,7 +94,7 @@ pub fn group_resource(
             "profile": [ATRIUS_IN_GROUP_PROFILE]
         },
         "identifier": [{
-            "system": COHORT_IDENTIFIER_SYSTEM,
+            "system": CQL_COHORT_IDENTIFIER_SYSTEM,
             "value": criterion
         }],
         "type": "person",
