@@ -41,8 +41,10 @@
 //! | `HFS_VALIDATION_TERMINOLOGY_TIMEOUT_MS` | 3000 | Per-check terminology timeout |
 //! | `HFS_VALIDATION_TERMINOLOGY_FAIL` | open | Terminology outage posture: open (warn) or closed (error) |
 //! | `HFS_VALIDATION_STORED_PROFILES` | true | Maintain per-tenant profile registries from stored StructureDefinitions |
-//! | `HFS_FHIR_PACKAGE_CACHE` | (none) | Curated FHIR NPM package cache root (offline materialization) |
-//! | `HFS_FHIR_PACKAGES` | (none) | Comma-separated `name@version` packages to overlay (listed packages only) |
+//! | `HFS_FHIR_PACKAGE_CACHE` | (none) | Curated FHIR NPM package cache root (offline materialization and terminology) |
+//! | `HFS_FHIR_PACKAGES` | (none) | Comma-separated `name@version` packages to overlay (listed packages only). Their terminology joins the FHIR versions in each `package.json` |
+//! | `HFS_TERMINOLOGY_PACKAGES` | (none) | Comma-separated `name@version` packages whose ValueSets join the FHIR versions declared in `package.json`. Requires `HFS_FHIR_PACKAGE_CACHE` |
+//! | `HFS_TERMINOLOGY_PACKAGES_<VER>` | (none) | Same list, attached to one FHIR version (`R4`, `R4B`, `R5`, `R6`) even when the package does not declare it |
 //! | `HFS_PROFILE_MANIFEST` / `HFS_PROFILE_VALIDATION_MODE` / `HFS_PROFILE_VALIDATION_ADDONS` | removed | Startup fails if set; use `HFS_VALIDATION_MODE` + `HFS_FHIR_PACKAGES`. `HFS_PROFILE_CORPUS` is unrelated (search profiling) and still valid. |
 //!
 //! # Example
@@ -535,7 +537,14 @@ pub struct ValidationConfig {
     /// Comma-separated `name@version` packages (`HFS_FHIR_PACKAGES`).
     /// Requires [`Self::package_cache`]. Resolution is offline against the
     /// cache only and does not walk `package.json` dependencies.
+    /// Terminology in these packages joins the FHIR versions they declare.
     pub packages: Vec<String>,
+    /// `HFS_TERMINOLOGY_PACKAGES`: extra terminology packages, joined to the
+    /// FHIR versions declared in each `package.json`.
+    pub terminology_packages: Vec<String>,
+    /// `HFS_TERMINOLOGY_PACKAGES_<VER>`: terminology packages pinned to one
+    /// FHIR version, ignoring `package.json` `fhirVersions`.
+    pub terminology_packages_pinned: Vec<(FhirVersion, Vec<String>)>,
 }
 
 impl Default for ValidationConfig {
@@ -552,6 +561,8 @@ impl Default for ValidationConfig {
             stored_profiles: true,
             package_cache: None,
             packages: Vec::new(),
+            terminology_packages: Vec::new(),
+            terminology_packages_pinned: Vec::new(),
         }
     }
 }
@@ -601,15 +612,9 @@ impl ValidationConfig {
                 .ok()
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty()),
-            packages: std::env::var("HFS_FHIR_PACKAGES")
-                .map(|s| {
-                    s.split(',')
-                        .map(str::trim)
-                        .filter(|s| !s.is_empty())
-                        .map(str::to_string)
-                        .collect()
-                })
-                .unwrap_or_default(),
+            packages: package_list_var("HFS_FHIR_PACKAGES"),
+            terminology_packages: package_list_var("HFS_TERMINOLOGY_PACKAGES"),
+            terminology_packages_pinned: pinned_terminology_packages(),
         }
     }
 
@@ -656,12 +661,81 @@ impl ValidationConfig {
                 ));
             }
         }
+        self.check_terminology_packages(&mut errors);
         if errors.is_empty() {
             Ok(())
         } else {
             Err(errors)
         }
     }
+
+    fn check_terminology_packages(&self, errors: &mut Vec<String>) {
+        let mut any = !self.terminology_packages.is_empty();
+        check_package_refs(
+            "HFS_TERMINOLOGY_PACKAGES",
+            &self.terminology_packages,
+            errors,
+        );
+        for (version, packages) in &self.terminology_packages_pinned {
+            if packages.is_empty() {
+                continue;
+            }
+            any = true;
+            check_package_refs(
+                &format!("HFS_TERMINOLOGY_PACKAGES_{}", version.as_str()),
+                packages,
+                errors,
+            );
+        }
+        if any && self.package_cache.is_none() {
+            errors.push(
+                "HFS_TERMINOLOGY_PACKAGES is set but HFS_FHIR_PACKAGE_CACHE is unset".to_string(),
+            );
+        }
+    }
+}
+
+fn package_list_var(key: &str) -> Vec<String> {
+    std::env::var(key)
+        .map(|raw| {
+            raw.split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn check_package_refs(label: &str, packages: &[String], errors: &mut Vec<String>) {
+    for pkg in packages {
+        if helios_fhir_validator::PackageRef::parse(pkg).is_err() {
+            errors.push(format!(
+                "{label} entry '{pkg}' invalid (expected name@version)"
+            ));
+        }
+    }
+}
+
+fn pinned_terminology_packages() -> Vec<(FhirVersion, Vec<String>)> {
+    let mut pinned = Vec::new();
+    let specs: &[(FhirVersion, &str)] = &[
+        #[cfg(feature = "R4")]
+        (FhirVersion::R4, "HFS_TERMINOLOGY_PACKAGES_R4"),
+        #[cfg(feature = "R4B")]
+        (FhirVersion::R4B, "HFS_TERMINOLOGY_PACKAGES_R4B"),
+        #[cfg(feature = "R5")]
+        (FhirVersion::R5, "HFS_TERMINOLOGY_PACKAGES_R5"),
+        #[cfg(feature = "R6")]
+        (FhirVersion::R6, "HFS_TERMINOLOGY_PACKAGES_R6"),
+    ];
+    for (version, key) in specs {
+        let packages = package_list_var(key);
+        if !packages.is_empty() {
+            pinned.push((*version, packages));
+        }
+    }
+    pinned
 }
 
 /// Bulk Data **Submit** (`$bulk-submit`) configuration, loaded from
@@ -4508,6 +4582,37 @@ mod tests {
 
         server.terminology_server = Some("http://127.0.0.1:9091".into());
         server.validate().unwrap();
+    }
+
+    #[test]
+    fn terminology_packages_require_a_cache_and_exact_refs() {
+        let mut cfg = ValidationConfig::default();
+        cfg.terminology_packages = vec!["ndhm.in@6.5.0".into()];
+        let errs = cfg.validate().unwrap_err();
+        assert!(
+            errs.iter().any(|e| e.contains("HFS_FHIR_PACKAGE_CACHE")),
+            "{errs:?}"
+        );
+
+        cfg.package_cache = Some("/tmp/fhir-packages".into());
+        cfg.validate().unwrap();
+
+        cfg.terminology_packages_pinned = vec![(FhirVersion::R4, vec!["not-a-ref".into()])];
+        let errs = cfg.validate().unwrap_err();
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("HFS_TERMINOLOGY_PACKAGES_R4")),
+            "{errs:?}"
+        );
+
+        cfg.terminology_packages = vec!["hl7.terminology.r4@7.2.0".into(), "missing".into()];
+        cfg.terminology_packages_pinned.clear();
+        let errs = cfg.validate().unwrap_err();
+        assert!(
+            errs.iter()
+                .any(|e| e.contains("HFS_TERMINOLOGY_PACKAGES entry 'missing'")),
+            "{errs:?}"
+        );
     }
 
     #[test]
