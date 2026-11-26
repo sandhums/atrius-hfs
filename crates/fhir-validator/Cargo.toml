@@ -69,3 +69,8 @@ required-features = ["gen-packs"]
 name = "validator-cli"
 path = "src/bin/validator_cli.rs"
 required-features = ["cli"]
+
+[[bin]]
+name = "package-terminology"
+path = "src/bin/package_terminology.rs"
+required-features = ["cli"]
