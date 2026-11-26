@@ -258,6 +258,7 @@ impl ValidationService {
             profiles,
             use_meta_profiles,
             unknown_profile: self.unknown_profile,
+            slice_terminology: self.offline_by_version.get(&version).cloned(),
             slice_binding_version: Some(version),
             resolution_resources,
             ..Default::default()

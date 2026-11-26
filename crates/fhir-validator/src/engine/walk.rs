@@ -93,8 +93,8 @@ pub(super) struct WalkCtx<'a> {
     /// Opt-in extension-context warnings (#615).
     check_extension_context: bool,
     enforce_refers: bool,
-    /// Embedded core ValueSets for binding discriminators at mark time.
-    pub(super) terminology: Option<std::sync::Arc<crate::terminology::CoreTerminology>>,
+    /// Package layers, then embedded core, for binding discriminators at mark time.
+    pub(super) terminology: Option<Arc<crate::OfflineTerminology>>,
 }
 
 impl WalkCtx<'_> {
@@ -132,9 +132,14 @@ pub(super) fn validate(
         path: PathTracker::new(resource_type),
         check_extension_context: opts.check_extension_context,
         enforce_refers: opts.enforce_refers,
-        terminology: opts
-            .slice_binding_version
-            .map(crate::terminology::core_terminology),
+        terminology: opts.slice_terminology.clone().or_else(|| {
+            opts.slice_binding_version.map(|version| {
+                Arc::new(crate::OfflineTerminology {
+                    packages: Vec::new(),
+                    core: Some(crate::terminology::core_terminology(version)),
+                })
+            })
+        }),
     };
 
     // Root schema-set: resourceType, then meta.profile claims, then

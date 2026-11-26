@@ -22,8 +22,8 @@
 //! Match types: `pattern` (partial deep equality), `type` (JSON/FHIR type
 //! codes), `profile` (meta.profile claim or resolvable schema type),
 //! `binding` (coded value equals the match payload when it is an inline
-//! code; a ValueSet canonical is expanded against embedded core terminology
-//! when `ValidationOptions::slice_binding_version` is set),
+//! code; a ValueSet canonical is expanded against `slice_terminology`, or
+//! the embedded core pack when only `slice_binding_version` is set),
 //! `exists` (presence/absence of each `{path, exists}` entry, with
 //! `{extension: url}` path steps and choice-key prefixes), `extension`
 //! (a `{url, pattern | extension}` chain matched against extension arrays
@@ -609,9 +609,9 @@ fn profile_matches(ctx: Option<&WalkCtx<'_>>, item: &Value, profile: &str) -> bo
 }
 
 /// Binding discriminator: an inline code matches Coding / code / CodeableConcept
-/// as before. A ValueSet canonical expands against embedded core terminology
-/// when the walk has a version; otherwise only a literal URL on the instance
-/// matches (extended-fixture contract).
+/// as before. A ValueSet canonical expands against the walk's offline
+/// terminology; otherwise only a literal URL on the instance matches
+/// (extended-fixture contract).
 fn binding_matches(ctx: Option<&WalkCtx<'_>>, item: &Value, needle: &str) -> bool {
     if needle.contains('/') {
         if let Some(tx) = ctx.and_then(|c| c.terminology.as_deref())
@@ -832,6 +832,119 @@ mod slice_match_tests {
             with.errors.is_empty(),
             "core terminology must match laboratory: {:?}",
             with.errors
+        );
+    }
+
+    #[test]
+    fn package_value_set_binding_accepts_in_set_and_rejects_out_of_set() {
+        use crate::OfflineTerminology;
+        use crate::engine::{ErrorKind, ValidationOptions, Validator};
+        use crate::packages::{PackageCache, PackageId, PackageTerminology};
+        use crate::resolver::SchemaRegistry;
+        use crate::schema::FhirSchema;
+
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let dir = tmp.path().join("example.term").join("1.0.0");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("package.json"),
+            r#"{"name":"example.term","version":"1.0.0","fhirVersions":["4.0.1"]}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("cs.json"),
+            serde_json::to_string(&json!({
+                "resourceType": "CodeSystem",
+                "url": "http://example/demo-cs",
+                "version": "1.0.0",
+                "content": "complete",
+                "concept": [
+                    { "code": "in-set", "display": "In" },
+                    { "code": "also", "display": "Also" }
+                ]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("vs.json"),
+            serde_json::to_string(&json!({
+                "resourceType": "ValueSet",
+                "url": "http://example/demo-vs",
+                "version": "1.0.0",
+                "name": "Demo",
+                "compose": { "include": [{ "system": "http://example/demo-cs" }] }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let cache = PackageCache::new(tmp.path());
+        let (terminology, _) =
+            PackageTerminology::from_packages(&cache, &[PackageId::new("example.term", "1.0.0")])
+                .unwrap();
+        let offline = Arc::new(OfflineTerminology {
+            packages: vec![Arc::new(terminology)],
+            core: None,
+        });
+
+        let primitive = json!({ "kind": "primitive-type" });
+        let schema: FhirSchema = serde_json::from_value(json!({
+            "elements": {
+                "resourceType": { "type": "string" },
+                "category": {
+                    "array": true,
+                    "elements": {
+                        "system": { "type": "uri" },
+                        "code": { "type": "code" }
+                    },
+                    "slicing": {
+                        "slices": {
+                            "fromVs": {
+                                "match": {
+                                    "type": "binding",
+                                    "value": "http://example/demo-vs"
+                                },
+                                "min": 1
+                            }
+                        }
+                    }
+                }
+            }
+        }))
+        .unwrap();
+        let mut registry = SchemaRegistry::new();
+        registry.insert_named("Obs", schema);
+        registry.insert_named("string", serde_json::from_value(primitive.clone()).unwrap());
+        registry.insert_named("uri", serde_json::from_value(primitive.clone()).unwrap());
+        registry.insert_named("code", serde_json::from_value(primitive).unwrap());
+        let validator = Validator::new(Arc::new(registry));
+        let opts = ValidationOptions {
+            slice_terminology: Some(offline),
+            ..Default::default()
+        };
+        let resource = |code: &str| {
+            json!({
+                "resourceType": "Obs",
+                "category": [{
+                    "system": "http://example/demo-cs",
+                    "code": code
+                }]
+            })
+        };
+        let inside = validator.validate_sync(&resource("in-set"), &opts);
+        assert!(
+            inside.errors.is_empty(),
+            "in-set code must match the package ValueSet: {:?}",
+            inside.errors
+        );
+        let outside = validator.validate_sync(&resource("nope"), &opts);
+        assert!(
+            outside
+                .errors
+                .iter()
+                .any(|e| e.kind == ErrorKind::SliceCardinality),
+            "out-of-set code must miss the slice: {:?}",
+            outside.errors
         );
     }
 

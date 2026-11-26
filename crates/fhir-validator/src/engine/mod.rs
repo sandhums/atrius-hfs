@@ -69,7 +69,11 @@ pub struct ValidationOptions {
     /// Off by default to preserve upstream conformance-suite parity.
     pub enforce_refers: bool,
     /// When set, binding discriminators that name a ValueSet canonical consult
-    /// the embedded core terminology for this version at slice mark time.
+    /// this terminology at slice mark time. Package layers answer before the
+    /// embedded core pack.
+    pub slice_terminology: Option<Arc<crate::OfflineTerminology>>,
+    /// When set and [`Self::slice_terminology`] is absent, binding
+    /// discriminators consult the embedded core pack for this version.
     /// Unset (default) leaves ValueSet URLs unmatched unless the instance
     /// literally carries the URL, which is what the extended fixtures pin.
     pub slice_binding_version: Option<FhirVersion>,
@@ -88,6 +92,7 @@ impl Default for ValidationOptions {
             check_extension_context: false,
             unknown_profile: UnknownProfilePolicy::default(),
             enforce_refers: false,
+            slice_terminology: None,
             slice_binding_version: None,
             resolution_resources: Vec::new(),
         }

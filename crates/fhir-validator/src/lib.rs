@@ -49,8 +49,10 @@
 //!   `ValidationOptions::resolution_resources` (store prefetch from REST). An
 //!   unresolved reference does not match. The engine never hits storage itself.
 //!   Binding discriminators that name a ValueSet canonical expand against
-//!   embedded core terminology when `ValidationOptions::slice_binding_version`
-//!   is set (HFS write/`$validate` always sets it). Mixed-kind discriminator
+//!   `ValidationOptions::slice_terminology` (package layers, then core). With
+//!   only `slice_binding_version` set, the walk uses that version's embedded
+//!   core pack. HFS write/`$validate` passes the request version's offline
+//!   terminology. Mixed-kind discriminator
 //!   sets AND as `type: "all"`. `resolve()` is in-scope plus optional store prefetch.
 //! - `refers` (reference target types) is enforced when
 //!   `ValidationOptions::enforce_refers` is set (off by default for suite parity).

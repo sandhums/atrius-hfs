@@ -268,6 +268,15 @@ pub struct OfflineTerminology {
     pub core: Option<Arc<CoreTerminology>>,
 }
 
+impl std::fmt::Debug for OfflineTerminology {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OfflineTerminology")
+            .field("packages", &self.packages.len())
+            .field("core", &self.core.is_some())
+            .finish()
+    }
+}
+
 impl OfflineTerminology {
     pub fn member(&self, value_set: &str, coded: &CodedValue) -> Option<bool> {
         for pkg in &self.packages {

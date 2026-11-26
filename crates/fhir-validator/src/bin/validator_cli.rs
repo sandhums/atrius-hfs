@@ -53,6 +53,15 @@ struct Args {
     #[arg(long)]
     no_meta_profiles: bool,
 
+    /// Package cache for slice binding discriminators.
+    #[arg(long)]
+    package_cache: Option<String>,
+
+    /// Terminology package `name@version` (repeatable). Loaded ahead of the
+    /// embedded core pack for slice binding discriminators of `--fhir-version`.
+    #[arg(long = "terminology-package")]
+    terminology_packages: Vec<String>,
+
     /// Output format.
     #[arg(long, value_enum, default_value_t = Output::Text)]
     output: Output,
@@ -130,10 +139,18 @@ fn main() -> ExitCode {
     };
 
     let validator = Validator::new(resolver);
+    let slice_terminology = match load_slice_terminology(&args) {
+        Ok(terminology) => terminology,
+        Err(message) => {
+            eprintln!("error: {message}");
+            return ExitCode::from(2);
+        }
+    };
     let opts = ValidationOptions {
         profiles: args.profiles.clone(),
         use_meta_profiles: !args.no_meta_profiles,
         unknown_profile: UnknownProfilePolicy::Warn,
+        slice_terminology,
         slice_binding_version: Some(args.fhir_version),
         ..Default::default()
     };
@@ -186,4 +203,34 @@ fn main() -> ExitCode {
     } else {
         ExitCode::SUCCESS
     }
+}
+
+/// Package layers for slice binding discriminators. Empty when no
+/// `--terminology-package` is set, so the walk falls back to core for
+/// `--fhir-version`.
+fn load_slice_terminology(
+    args: &Args,
+) -> Result<Option<Arc<helios_fhir_validator::OfflineTerminology>>, String> {
+    if args.terminology_packages.is_empty() {
+        return Ok(None);
+    }
+    let cache_path = args
+        .package_cache
+        .as_deref()
+        .ok_or_else(|| "--terminology-package requires --package-cache".to_string())?;
+    let cache = helios_fhir_validator::PackageCache::new(cache_path);
+    let mut ids = Vec::new();
+    for raw in &args.terminology_packages {
+        let id = helios_fhir_validator::PackageRef::parse(raw)
+            .map_err(|e| format!("--terminology-package '{raw}': {e}"))?;
+        if !ids.contains(&id) {
+            ids.push(id);
+        }
+    }
+    let (terminology, _) = helios_fhir_validator::PackageTerminology::from_packages(&cache, &ids)
+        .map_err(|e| format!("package terminology failed: {e}"))?;
+    Ok(Some(Arc::new(helios_fhir_validator::OfflineTerminology {
+        packages: vec![Arc::new(terminology)],
+        core: Some(helios_fhir_validator::core_terminology(args.fhir_version)),
+    })))
 }
