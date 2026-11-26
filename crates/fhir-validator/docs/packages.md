@@ -54,10 +54,38 @@ The registry is keyed without the `|version` suffix.
 
 Only **StructureDefinition** resources become schemas. Abstract infrastructure
 roots (`Element`, `BackboneElement`, `Resource`, `DomainResource`) are skipped.
-CodeSystem / ValueSet files are discovered for operators but must be imported
-via HTS, not the schema registry.
+CodeSystem / ValueSet resources are not part of the schema registry.
+
+## Terminology
+
+Closed ValueSet expansions from the configured packages are loaded at startup
+for required-binding checks and for slice binding discriminators. Lookup order
+for one FHIR version is the package layers (first listed wins), then the
+embedded core pack for that version, then HTS when
+`HFS_VALIDATION_TERMINOLOGY=tiered` and neither offline layer expanded the
+ValueSet. A filter, an incomplete CodeSystem, a missing dependency, or
+`valueset-unclosed` is not expanded: the code is not disproved offline, so
+tiered mode asks HTS.
+
+| Variable | Purpose |
+|----------|---------|
+| `HFS_FHIR_PACKAGES` | These packages contribute terminology for the FHIR versions in their `package.json` |
+| `HFS_TERMINOLOGY_PACKAGES` | Extra `name@version` packages, joined the same way. Requires `HFS_FHIR_PACKAGE_CACHE`. A missing package fails startup |
+| `HFS_TERMINOLOGY_PACKAGES_<VER>` | Attaches packages to one version (`R4`, `R4B`, `R5`, `R6`) even when `package.json` does not declare it |
+
+`HFS_FHIR_PACKAGE_CACHE` is required whenever either package list is set.
+Validation never fetches packages from the network.
+
+The `package-terminology` binary (feature `cli`) writes the same expansions
+as a gzipped JSON pack: `fhirVersion`, the `name@version` list, and each
+expanded ValueSet's url, version, name, and codes. `--bound-by` keeps only
+ValueSets reachable from that package's StructureDefinition bindings,
+including nested `include` / `exclude` value sets. At runtime the core pack
+stays the embedded one; the CLI accepts `hl7.fhir.r4.core@4.0.1` like any
+other package so a caller can put core codes in the file.
 
 ## Library API
 
 See `helios_fhir_validator::packages`: `PackageCache`, `resolve_packages`,
-`materialize_package`, `materialize_package_layers`.
+`materialize_package`, `materialize_package_layers`, `PackageTerminology`,
+`OfflineTerminology`.

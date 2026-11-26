@@ -100,6 +100,20 @@ are compressed when the client sends `Accept-Encoding`.
 | `HFS_ENABLE_VERSIONING` | `true` | Enable ETag versioning |
 | `HFS_REQUIRE_IF_MATCH` | `false` | Require `If-Match` header for updates and deletes |
 
+## Validation and terminology packages
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HFS_VALIDATION_TERMINOLOGY` | `embedded` | Required-binding checks: `off`, `embedded` (offline), `remote` (`$validate-code` against `HFS_TERMINOLOGY_SERVER`), or `tiered` (offline hit or miss, HTS when the ValueSet was not expanded) |
+| `HFS_FHIR_PACKAGE_CACHE` | *(unset)* | Curated FHIR NPM package cache. Required when `HFS_FHIR_PACKAGES` or `HFS_TERMINOLOGY_PACKAGES` is set |
+| `HFS_FHIR_PACKAGES` | *(unset)* | Comma-separated `name@version` packages whose StructureDefinitions overlay validation. Their terminology joins the FHIR versions in each `package.json` |
+| `HFS_TERMINOLOGY_PACKAGES` | *(unset)* | Extra `name@version` terminology packages, joined the same way. A package missing from the cache fails startup |
+| `HFS_TERMINOLOGY_PACKAGES_<VER>` | *(unset)* | Same list, attached to one version (`R4`, `R4B`, `R5`, `R6`) even when the package does not declare it |
+
+Offline lookup is the package layers for the request's FHIR version, then
+that version's embedded core pack. The first package that expanded a ValueSet
+answers. Filters and other open compositions are not expanded.
+
 ## Natural-Language Search
 
 Translates plain-language descriptions into FHIR search queries. Off unless an
