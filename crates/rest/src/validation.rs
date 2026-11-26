@@ -26,10 +26,11 @@ use dashmap::DashMap;
 use helios_fhir::FhirVersion;
 use helios_fhir_validator::fhirpath_effects::FhirPathConstraintEvaluator;
 use helios_fhir_validator::{
-    CodedValue, CompositeResolver, CoreTerminology, EffectHandlers, ErrorKind, PackageCache,
-    PackageRef, SchemaRegistry, SchemaResolver, Severity, TerminologyError, TerminologyProvider,
-    UnknownProfilePolicy, ValidationError, ValidationOptions, Validator, dotted_to_fhirpath,
-    materialize_package_layers,
+    CodedValue, CompositeResolver, EffectHandlers, ErrorKind, OfflineTerminology, PackageCache,
+    PackageId, PackageManifest, PackageRef, PackageTerminology, SchemaRegistry, SchemaResolver,
+    Severity, TerminologyError, TerminologyProvider, UnknownProfilePolicy, ValidationError,
+    ValidationOptions, Validator, dotted_to_fhirpath, materialize_package_layers,
+    terminology_layers,
 };
 use helios_persistence::core::ResourceStorage;
 use helios_persistence::core::bulk_submit_input::redact_urls_in;
@@ -39,6 +40,7 @@ use helios_persistence::sof::reference_resolver::{
 };
 use helios_persistence::tenant::{TenantContext, TenantId, TenantPermissions};
 use serde_json::{Value, json};
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tracing::{debug, info, warn};
@@ -64,7 +66,15 @@ pub enum ValidationMode {
 pub struct ValidationService {
     mode: ValidationMode,
     constraint_evaluator: Option<FhirPathConstraintEvaluator>,
-    terminology: Option<Arc<dyn TerminologyProvider>>,
+    /// `remote` mode: every version uses the terminology server.
+    terminology_remote: Option<Arc<dyn TerminologyProvider>>,
+    /// `embedded` and `tiered`: one provider per enabled FHIR version.
+    terminology_by_version: HashMap<FhirVersion, Arc<dyn TerminologyProvider>>,
+    /// Package layers then the core pack, per FHIR version. Slice
+    /// discriminators and embedded/tiered binding checks share these.
+    offline_by_version: HashMap<FhirVersion, Arc<OfflineTerminology>>,
+    /// Test override from [`Self::with_terminology`], used for every version.
+    terminology_override: Option<Arc<dyn TerminologyProvider>>,
     /// Constraint ids never evaluated (default: `dom-6`, the narrative
     /// warning that fires on almost every machine-generated resource).
     suppress_constraints: Vec<String>,
@@ -90,7 +100,10 @@ impl Default for ValidationService {
         Self {
             mode: ValidationMode::Off,
             constraint_evaluator: Some(FhirPathConstraintEvaluator::new()),
-            terminology: None,
+            terminology_remote: None,
+            terminology_by_version: HashMap::new(),
+            offline_by_version: HashMap::new(),
+            terminology_override: None,
             suppress_constraints: vec!["dom-6".to_string()],
             terminology_fail_closed: false,
             use_meta_profiles: true,
@@ -132,50 +145,33 @@ impl ValidationService {
             "ignore" => UnknownProfilePolicy::Ignore,
             _ => UnknownProfilePolicy::Warn,
         };
-        let terminology: Option<Arc<dyn TerminologyProvider>> =
-            match (config.terminology.as_str(), terminology_server) {
-                ("remote", Some(base)) => Some(Arc::new(RemoteTerminologyProvider::new(
-                    base.to_string(),
-                    Duration::from_millis(config.terminology_timeout_ms),
-                ))),
-                ("remote", None) => {
-                    return Err(
-                        "HFS_VALIDATION_TERMINOLOGY=remote requires HFS_TERMINOLOGY_SERVER"
-                            .to_string(),
-                    );
-                }
-                ("tiered", Some(base)) => {
-                    let remote = RemoteTerminologyProvider::new(
-                        base.to_string(),
-                        Duration::from_millis(config.terminology_timeout_ms),
-                    );
-                    Some(Arc::new(TieredTerminologyProvider::new(
-                        helios_fhir_validator::core_terminology(version),
-                        Arc::new(remote),
-                    )))
-                }
-                ("tiered", None) => {
-                    return Err(
-                        "HFS_VALIDATION_TERMINOLOGY=tiered requires HFS_TERMINOLOGY_SERVER"
-                            .to_string(),
-                    );
-                }
-                // Offline required-binding checks against the FHIR core value
-                // sets embedded in helios-fhir-validator (no server needed).
-                ("embedded", _) => {
-                    let provider: Arc<dyn TerminologyProvider> =
-                        helios_fhir_validator::core_terminology(version);
-                    Some(provider)
-                }
-                _ => None,
-            };
+        if matches!(config.terminology.as_str(), "remote" | "tiered")
+            && terminology_server.is_none()
+        {
+            return Err(format!(
+                "HFS_VALIDATION_TERMINOLOGY={} requires HFS_TERMINOLOGY_SERVER",
+                config.terminology
+            ));
+        }
 
         let package_layers = load_package_layers(config)?;
+        let offline_by_version = load_offline_terminology(config)?;
+        let (terminology_remote, terminology_by_version) =
+            bind_terminology(config, terminology_server, &offline_by_version)?;
+        info!(
+            default_fhir_version = %version.as_str(),
+            terminology = %config.terminology,
+            versions = offline_by_version.len(),
+            "validation terminology is keyed by FHIR version"
+        );
 
         Ok(Self {
             mode,
             constraint_evaluator: config.constraints.then(FhirPathConstraintEvaluator::new),
-            terminology,
+            terminology_remote,
+            terminology_by_version,
+            offline_by_version,
+            terminology_override: None,
             suppress_constraints: config.suppress_constraints.clone(),
             terminology_fail_closed: config.terminology_fail == "closed",
             use_meta_profiles: config.meta_profiles,
@@ -196,10 +192,23 @@ impl ValidationService {
         self
     }
 
-    /// Replace the terminology provider (bindings stay unchecked without one).
+    /// Replace the terminology provider for every FHIR version (bindings stay
+    /// unchecked without one).
     pub fn with_terminology(mut self, provider: Arc<dyn TerminologyProvider>) -> Self {
-        self.terminology = Some(provider);
+        self.terminology_override = Some(provider);
+        self.terminology_remote = None;
+        self.terminology_by_version.clear();
         self
+    }
+
+    fn terminology_for(&self, version: FhirVersion) -> Option<Arc<dyn TerminologyProvider>> {
+        if let Some(provider) = &self.terminology_override {
+            return Some(Arc::clone(provider));
+        }
+        if let Some(provider) = &self.terminology_remote {
+            return Some(Arc::clone(provider));
+        }
+        self.terminology_by_version.get(&version).cloned()
     }
 
     /// The configured write-path mode.
@@ -244,6 +253,7 @@ impl ValidationService {
         };
         let resolver = self.resolver_for(version, tenant);
         let validator = Validator::new(resolver);
+        let terminology = self.terminology_for(version);
         let opts = ValidationOptions {
             profiles,
             use_meta_profiles,
@@ -257,7 +267,7 @@ impl ValidationService {
                 .constraint_evaluator
                 .as_ref()
                 .map(|e| e as &dyn helios_fhir_validator::ConstraintEvaluator),
-            terminology: self.terminology.as_deref(),
+            terminology: terminology.as_deref(),
             suppress_constraints: &self.suppress_constraints,
             terminology_fail_closed: self.terminology_fail_closed,
             check_extensible_bindings: false,
@@ -485,6 +495,222 @@ fn load_package_layers(config: &ValidationConfig) -> Result<Vec<Arc<SchemaRegist
     Ok(out)
 }
 
+fn enabled_fhir_versions() -> Vec<FhirVersion> {
+    let versions: &[FhirVersion] = &[
+        #[cfg(feature = "R4")]
+        FhirVersion::R4,
+        #[cfg(feature = "R4B")]
+        FhirVersion::R4B,
+        #[cfg(feature = "R5")]
+        FhirVersion::R5,
+        #[cfg(feature = "R6")]
+        FhirVersion::R6,
+    ];
+    versions.to_vec()
+}
+
+fn load_offline_terminology(
+    config: &ValidationConfig,
+) -> Result<HashMap<FhirVersion, Arc<OfflineTerminology>>, String> {
+    let needs_cache = !config.packages.is_empty()
+        || !config.terminology_packages.is_empty()
+        || config
+            .terminology_packages_pinned
+            .iter()
+            .any(|(_, packages)| !packages.is_empty());
+    let cache = if needs_cache {
+        let root = config.package_cache.as_deref().ok_or_else(|| {
+            "terminology packages are set but HFS_FHIR_PACKAGE_CACHE is unset".to_string()
+        })?;
+        Some(PackageCache::new(root))
+    } else {
+        None
+    };
+
+    if let Some(cache) = &cache {
+        warn_unattached_packages(config, cache)?;
+    }
+    let mut by_version = HashMap::new();
+    for version in enabled_fhir_versions() {
+        let ids = match &cache {
+            Some(cache) => packages_for_version(config, cache, version)?,
+            None => Vec::new(),
+        };
+        let packages = if ids.is_empty() {
+            Vec::new()
+        } else {
+            let cache = cache.as_ref().ok_or_else(|| {
+                "terminology packages are set but HFS_FHIR_PACKAGE_CACHE is unset".to_string()
+            })?;
+            let (terminology, report) = PackageTerminology::from_packages(cache, &ids)
+                .map_err(|e| format!("package terminology failed: {e}"))?;
+            for package in &report.packages {
+                info!(
+                    fhir_version = %version.as_str(),
+                    package = %package.package,
+                    expanded = package.expanded.len(),
+                    skipped = package.skipped.len(),
+                    "loaded package terminology"
+                );
+                if !package.skipped.is_empty() {
+                    let skipped = package
+                        .skipped
+                        .iter()
+                        .map(|skipped| format!("{} ({})", skipped.url, skipped.reason))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    info!(
+                        fhir_version = %version.as_str(),
+                        package = %package.package,
+                        skipped,
+                        "package terminology skipped ValueSets"
+                    );
+                }
+            }
+            vec![Arc::new(terminology)]
+        };
+        by_version.insert(
+            version,
+            Arc::new(OfflineTerminology {
+                packages,
+                core: Some(helios_fhir_validator::core_terminology(version)),
+            }),
+        );
+    }
+    Ok(by_version)
+}
+
+fn packages_for_version(
+    config: &ValidationConfig,
+    cache: &PackageCache,
+    version: FhirVersion,
+) -> Result<Vec<PackageId>, String> {
+    let mut ids = Vec::new();
+    let mut push = |raw: &str, source: &str| -> Result<(), String> {
+        let id = PackageRef::parse(raw).map_err(|e| format!("{source} entry '{raw}': {e}"))?;
+        if !ids.contains(&id) {
+            ids.push(id);
+        }
+        Ok(())
+    };
+    for raw in &config.packages {
+        let id =
+            PackageRef::parse(raw).map_err(|e| format!("HFS_FHIR_PACKAGES entry '{raw}': {e}"))?;
+        if manifest_targets(cache, &id)?.contains(&version) {
+            push(raw, "HFS_FHIR_PACKAGES")?;
+        }
+    }
+    for raw in &config.terminology_packages {
+        let id = PackageRef::parse(raw)
+            .map_err(|e| format!("HFS_TERMINOLOGY_PACKAGES entry '{raw}': {e}"))?;
+        let targets = manifest_targets(cache, &id)?;
+        if targets.contains(&version) {
+            push(raw, "HFS_TERMINOLOGY_PACKAGES")?;
+        }
+    }
+    for (pinned, packages) in &config.terminology_packages_pinned {
+        if *pinned != version {
+            continue;
+        }
+        for raw in packages {
+            push(
+                raw,
+                &format!("HFS_TERMINOLOGY_PACKAGES_{}", version.as_str()),
+            )?;
+        }
+    }
+    Ok(ids)
+}
+
+fn manifest_targets(cache: &PackageCache, id: &PackageId) -> Result<Vec<FhirVersion>, String> {
+    let path = cache
+        .get(id)
+        .map_err(|e| format!("package {id} not found in cache: {e}"))?;
+    let manifest = PackageManifest::load(&path.join("package.json"))
+        .map_err(|e| format!("package {id}: {e}"))?;
+    Ok(terminology_layers(&manifest.fhir_versions, None))
+}
+
+fn warn_unattached_packages(config: &ValidationConfig, cache: &PackageCache) -> Result<(), String> {
+    let mut listed = config.packages.clone();
+    listed.extend(config.terminology_packages.iter().cloned());
+    for raw in listed {
+        let id = match PackageRef::parse(&raw) {
+            Ok(id) => id,
+            Err(_) => continue,
+        };
+        let pinned = config
+            .terminology_packages_pinned
+            .iter()
+            .any(|(_, packages)| {
+                packages
+                    .iter()
+                    .any(|pkg| PackageRef::parse(pkg).ok().as_ref() == Some(&id))
+            });
+        if pinned {
+            continue;
+        }
+        if manifest_targets(cache, &id)?.is_empty() {
+            warn!(
+                package = %id,
+                "package declares no FHIR version this build enables; its terminology is not loaded"
+            );
+        }
+    }
+    Ok(())
+}
+
+type BoundProviders = (
+    Option<Arc<dyn TerminologyProvider>>,
+    HashMap<FhirVersion, Arc<dyn TerminologyProvider>>,
+);
+
+fn bind_terminology(
+    config: &ValidationConfig,
+    terminology_server: Option<&str>,
+    offline: &HashMap<FhirVersion, Arc<OfflineTerminology>>,
+) -> Result<BoundProviders, String> {
+    match config.terminology.as_str() {
+        "remote" => {
+            let base = terminology_server.ok_or_else(|| {
+                "HFS_VALIDATION_TERMINOLOGY=remote requires HFS_TERMINOLOGY_SERVER".to_string()
+            })?;
+            let remote: Arc<dyn TerminologyProvider> = Arc::new(RemoteTerminologyProvider::new(
+                base.to_string(),
+                Duration::from_millis(config.terminology_timeout_ms),
+            ));
+            Ok((Some(remote), HashMap::new()))
+        }
+        "tiered" => {
+            let base = terminology_server.ok_or_else(|| {
+                "HFS_VALIDATION_TERMINOLOGY=tiered requires HFS_TERMINOLOGY_SERVER".to_string()
+            })?;
+            let remote: Arc<dyn TerminologyProvider> = Arc::new(RemoteTerminologyProvider::new(
+                base.to_string(),
+                Duration::from_millis(config.terminology_timeout_ms),
+            ));
+            let mut by_version = HashMap::new();
+            for (version, offline) in offline {
+                let provider: Arc<dyn TerminologyProvider> = Arc::new(
+                    TieredTerminologyProvider::new(Arc::clone(offline), Arc::clone(&remote)),
+                );
+                by_version.insert(*version, provider);
+            }
+            Ok((None, by_version))
+        }
+        "embedded" => {
+            let mut by_version = HashMap::new();
+            for (version, offline) in offline {
+                let offline = Arc::clone(offline);
+                let provider: Arc<dyn TerminologyProvider> = offline;
+                by_version.insert(*version, provider);
+            }
+            Ok((None, by_version))
+        }
+        _ => Ok((None, HashMap::new())),
+    }
+}
+
 /// Resolver adapter over a shared, mutable registry.
 struct LockedRegistryResolver(Arc<RwLock<SchemaRegistry>>);
 
@@ -501,21 +727,22 @@ impl SchemaResolver for LockedRegistryResolver {
 // Tiered terminology provider
 // ---------------------------------------------------------------------
 
-/// Embedded FHIR-core pack first; HTS `$validate-code` only when the ValueSet
-/// is not in the pack (`CoreTerminology::member` returns `None`).
+/// Offline package layers and the embedded core pack first; HTS
+/// `$validate-code` only when neither knows the ValueSet
+/// ([`OfflineTerminology::member`] returns `None`).
 ///
-/// A definite pack hit (`Some(true)`) or miss (`Some(false)`) never calls HTS.
-/// That is the original Atrius local-then-remote posture: core enums stay
-/// offline; SNOMED/LOINC/NDHM/Atrius bindings go to the terminology server.
+/// A definite hit (`Some(true)`) or miss (`Some(false)`) never calls HTS.
+/// The service keeps one of these per FHIR version, so an R5 request is not
+/// judged by the R4 pack.
 pub struct TieredTerminologyProvider {
-    core: Arc<CoreTerminology>,
+    offline: Arc<OfflineTerminology>,
     remote: Arc<dyn TerminologyProvider>,
 }
 
 impl TieredTerminologyProvider {
     /// `remote` is typically [`RemoteTerminologyProvider`].
-    pub fn new(core: Arc<CoreTerminology>, remote: Arc<dyn TerminologyProvider>) -> Self {
-        Self { core, remote }
+    pub fn new(offline: Arc<OfflineTerminology>, remote: Arc<dyn TerminologyProvider>) -> Self {
+        Self { offline, remote }
     }
 }
 
@@ -526,7 +753,7 @@ impl TerminologyProvider for TieredTerminologyProvider {
         value_set: &str,
         coded: &CodedValue,
     ) -> Result<bool, TerminologyError> {
-        match self.core.member(value_set, coded) {
+        match self.offline.member(value_set, coded) {
             Some(verdict) => Ok(verdict),
             None => self.remote.validate_code(value_set, coded).await,
         }
@@ -725,9 +952,13 @@ mod tests {
 
     fn tiered(remote: RecordingRemote) -> (TieredTerminologyProvider, Arc<RecordingRemote>) {
         let remote = Arc::new(remote);
+        let offline = Arc::new(OfflineTerminology {
+            packages: Vec::new(),
+            core: Some(helios_fhir_validator::core_terminology(FhirVersion::R4)),
+        });
         (
             TieredTerminologyProvider::new(
-                helios_fhir_validator::core_terminology(FhirVersion::R4),
+                offline,
                 Arc::clone(&remote) as Arc<dyn TerminologyProvider>,
             ),
             remote,
@@ -792,6 +1023,109 @@ mod tests {
             .await
             .unwrap_err();
         assert!(err.0.contains("hts down"), "{err}");
+    }
+
+    fn demo_package(root: &std::path::Path) {
+        let dir = root.join("example.term").join("1.0.0");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("package.json"),
+            r#"{"name":"example.term","version":"1.0.0","fhirVersions":["4.0.1"]}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("ValueSet-demo.json"),
+            r#"{
+                "resourceType":"ValueSet",
+                "url":"https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-demo",
+                "version":"0.1.0",
+                "name":"AtriusInDemo",
+                "compose":{"include":[{
+                    "system":"https://atrius.in/fhir/r4/atrius-in/CodeSystem/demo",
+                    "concept":[{"code":"in-set","display":"In set"}]
+                }]}
+            }"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("ValueSet-filter.json"),
+            r#"{
+                "resourceType":"ValueSet",
+                "url":"https://atrius.in/fhir/r4/atrius-in/ValueSet/needs-filter",
+                "version":"0.1.0",
+                "name":"NeedsFilter",
+                "compose":{"include":[{
+                    "system":"http://snomed.info/sct",
+                    "filter":[{"property":"concept","op":"is-a","value":"404684003"}]
+                }]}
+            }"#,
+        )
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn package_code_is_answered_offline_and_a_filter_goes_to_hts() {
+        let tmp = tempfile::tempdir().unwrap();
+        demo_package(tmp.path());
+        let mut cfg = ValidationConfig::default();
+        cfg.terminology = "tiered".to_string();
+        cfg.package_cache = Some(tmp.path().display().to_string());
+        cfg.terminology_packages = vec!["example.term@1.0.0".into()];
+        let remote = Arc::new(RecordingRemote {
+            calls: Mutex::new(Vec::new()),
+            verdict: true,
+            fail: false,
+        });
+        let service =
+            ValidationService::from_config(&cfg, Some("http://127.0.0.1:9"), FhirVersion::R4)
+                .unwrap();
+        let offline = Arc::clone(
+            service
+                .offline_by_version
+                .get(&FhirVersion::R4)
+                .expect("R4 offline"),
+        );
+        let tx = TieredTerminologyProvider::new(
+            offline,
+            Arc::clone(&remote) as Arc<dyn TerminologyProvider>,
+        );
+        let demo = "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-demo";
+        assert!(
+            tx.validate_code(demo, &CodedValue::Code("in-set".into()))
+                .await
+                .unwrap()
+        );
+        assert!(
+            !tx.validate_code(demo, &CodedValue::Code("out-of-set".into()))
+                .await
+                .unwrap()
+        );
+        assert!(
+            remote.calls.lock().unwrap().is_empty(),
+            "a package ValueSet must not call HTS"
+        );
+        let filter = "https://atrius.in/fhir/r4/atrius-in/ValueSet/needs-filter";
+        assert!(
+            tx.validate_code(filter, &CodedValue::Code("404684003".into()))
+                .await
+                .unwrap()
+        );
+        assert_eq!(remote.calls.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn an_r5_request_uses_r5_core_not_the_default_version() {
+        let cfg = ValidationConfig::default();
+        let service = ValidationService::from_config(&cfg, None, FhirVersion::R4).unwrap();
+        let vs = "http://hl7.org/fhir/ValueSet/FHIR-version";
+        let code = CodedValue::Code("4.0".into());
+        let r4 = service.terminology_for(FhirVersion::R4).unwrap();
+        assert!(!r4.validate_code(vs, &code).await.unwrap());
+        #[cfg(feature = "R5")]
+        {
+            let r5 = service.terminology_for(FhirVersion::R5).unwrap();
+            assert!(r5.validate_code(vs, &code).await.unwrap());
+        }
     }
 
     #[test]
