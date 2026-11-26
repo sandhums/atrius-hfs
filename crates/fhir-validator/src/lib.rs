@@ -96,9 +96,11 @@ pub use engine::{
     Validator, dotted_to_fhirpath,
 };
 pub use packages::{
-    MaterializeReport, PackageCache, PackageError, PackageId, PackageManifest, PackageRef,
-    ResolvedPackage, ScannedPackage, materialize_package, materialize_package_layers,
-    materialize_tgz, resolve_packages, scan_package_dir,
+    BoundSource, ExpandedValueSet, MaterializeReport, OfflineTerminology, PackageCache,
+    PackageError, PackageId, PackageManifest, PackageRef, PackageReport, PackageTerminology,
+    ResolvedPackage, ScannedPackage, SkippedValueSet, TerminologyCode, TerminologyReport,
+    fhir_version_for_package, materialize_package, materialize_package_layers, materialize_tgz,
+    resolve_packages, scan_package_dir, terminology_layers,
 };
 pub use resolver::{CompositeResolver, SchemaRegistry, SchemaResolver, strip_canonical_version};
 pub use schema::{Binding, Constraint, FhirSchema, Match, Slice, Slicing};

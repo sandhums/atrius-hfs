@@ -34,8 +34,9 @@
 //!
 //! ## Terminology
 //!
-//! CodeSystem / ValueSet resources found in a package are discovered but
-//! **not** loaded into the schema registry — import those via HTS.
+//! [`terminology`] expands CodeSystem / ValueSet resources from named
+//! packages for offline binding checks. They are still not loaded into the
+//! schema registry.
 
 mod cache;
 mod error;
@@ -43,6 +44,7 @@ mod manifest;
 mod materialize;
 mod resolve;
 mod scan;
+pub mod terminology;
 
 pub use cache::PackageCache;
 pub use error::PackageError;
@@ -50,6 +52,11 @@ pub use manifest::{PackageId, PackageManifest, PackageRef};
 pub use materialize::{MaterializeReport, materialize_package};
 pub use resolve::{ResolvedPackage, resolve_packages};
 pub use scan::{ScannedPackage, scan_package_dir};
+pub use terminology::{
+    BoundSource, ExpandedValueSet, OfflineTerminology, PackageReport, PackageTerminology,
+    SkippedValueSet, TerminologyCode, TerminologyReport, fhir_version_for_package,
+    terminology_layers,
+};
 
 use crate::resolver::SchemaRegistry;
 use std::path::Path;
