@@ -226,7 +226,7 @@ def main() -> int:
     sample_vs = [
         f"{NDHM}/ValueSet/ndhm-identifier-type-code",
         f"{ATRIUS_IN}/ValueSet/atrius-in-visit-mode",
-        f"{ATRIUS_IN}/ValueSet/atrius-in-encounter-class",
+        f"{ATRIUS_IN}/ValueSet/atrius-in-cds-flag",
     ]
     for url in sample_vs:
         print(f"Verifying $expand: {url}")
