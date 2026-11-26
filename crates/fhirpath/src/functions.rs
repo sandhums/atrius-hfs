@@ -350,6 +350,11 @@ pub fn builtin_functions() -> &'static [FunctionInfo] {
             category: Other,
         },
         FunctionInfo {
+            name: "hasData",
+            signature: "hasData()",
+            category: Other,
+        },
+        FunctionInfo {
             name: "hasValue",
             signature: "hasValue()",
             category: Existence,
@@ -388,6 +393,11 @@ pub fn builtin_functions() -> &'static [FunctionInfo] {
             name: "isDistinct",
             signature: "isDistinct()",
             category: Existence,
+        },
+        FunctionInfo {
+            name: "isKnown",
+            signature: "isKnown()",
+            category: Other,
         },
         FunctionInfo {
             name: "join",
