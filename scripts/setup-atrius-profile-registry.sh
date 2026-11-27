@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fetch the published Atrius IG package and seed HFS_FHIR_PACKAGE_CACHE.
 #
-# Default source: https://atrius.in/fhir/r4/atrius-in/package.tgz
+# Default source: https://atrius.in/fhir/package.tgz
 # Expands into manifests/atrius-ig-package/, optionally writes audit manifests,
 # then seeds {HFS_FHIR_PACKAGE_CACHE}/{name}/{version}/ (default: data/fhir-packages).
 #

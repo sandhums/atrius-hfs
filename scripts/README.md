@@ -82,13 +82,13 @@ standard Patient extensions (`patient-nationality`, …) come from the
 package cache.
 
 After `./scripts/setup-atrius-profile-registry.sh`, use the values it prints
-(e.g. `atrius.fhir.r4.india@0.1.0` from the IG `package.json`). HFS overlays
+(e.g. `atrius.fhir.india.r4@0.1.0` from the IG `package.json`). HFS overlays
 only packages named in `HFS_FHIR_PACKAGES`; sushi `dependsOn` entries in that
 `package.json` (NDHM, THO, Extensions Pack, …) are not loaded unless listed:
 
 ```bash
 HFS_FHIR_PACKAGE_CACHE=./data/fhir-packages
-HFS_FHIR_PACKAGES=atrius.fhir.r4.india@0.1.0
+HFS_FHIR_PACKAGES=atrius.fhir.india.r4@0.1.0
 HFS_VALIDATION_MODE=enforce
 HFS_TERMINOLOGY_SERVER=http://127.0.0.1:9091
 ```

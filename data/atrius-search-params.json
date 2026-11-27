@@ -7,7 +7,7 @@
       "resource": {
         "resourceType": "SearchParameter",
         "id": "Location-physical-type",
-        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/Location-physical-type",
+        "url": "https://atrius.in/fhir/SearchParameter/Location-physical-type",
         "version": "0.1.0",
         "name": "physical-type",
         "status": "active",
@@ -25,7 +25,7 @@
       "resource": {
         "resourceType": "SearchParameter",
         "id": "ChargeItem-status",
-        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ChargeItem-status",
+        "url": "https://atrius.in/fhir/SearchParameter/ChargeItem-status",
         "version": "0.1.0",
         "name": "status",
         "status": "active",
@@ -43,7 +43,7 @@
       "resource": {
         "resourceType": "SearchParameter",
         "id": "ChargeItemDefinition-schedule-id",
-        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ChargeItemDefinition-schedule-id",
+        "url": "https://atrius.in/fhir/SearchParameter/ChargeItemDefinition-schedule-id",
         "version": "0.1.0",
         "name": "schedule-id",
         "status": "active",
@@ -53,7 +53,7 @@
           "ChargeItemDefinition"
         ],
         "type": "token",
-        "expression": "ChargeItemDefinition.extension('https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-schedule-of-charges-ref').value.as(string)",
+        "expression": "ChargeItemDefinition.extension('https://atrius.in/fhir/StructureDefinition/atrius-in-schedule-of-charges-ref').value.as(string)",
         "xpathUsage": "normal"
       }
     },
@@ -61,7 +61,7 @@
       "resource": {
         "resourceType": "SearchParameter",
         "id": "ChargeItem-gst-rate-class",
-        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ChargeItem-gst-rate-class",
+        "url": "https://atrius.in/fhir/SearchParameter/ChargeItem-gst-rate-class",
         "version": "0.1.0",
         "name": "gst-rate-class",
         "status": "active",
@@ -71,7 +71,7 @@
           "ChargeItem"
         ],
         "type": "token",
-        "expression": "ChargeItem.extension('https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-gst-rate-class').value.as(code)",
+        "expression": "ChargeItem.extension('https://atrius.in/fhir/StructureDefinition/atrius-in-gst-rate-class').value.as(code)",
         "xpathUsage": "normal"
       }
     },
@@ -79,7 +79,7 @@
       "resource": {
         "resourceType": "SearchParameter",
         "id": "Location-part-of",
-        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/Location-part-of",
+        "url": "https://atrius.in/fhir/SearchParameter/Location-part-of",
         "version": "0.1.0",
         "name": "part-of",
         "status": "active",
@@ -100,7 +100,7 @@
       "resource": {
         "resourceType": "SearchParameter",
         "id": "Organization-part-of",
-        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/Organization-part-of",
+        "url": "https://atrius.in/fhir/SearchParameter/Organization-part-of",
         "version": "0.1.0",
         "name": "part-of",
         "status": "active",
@@ -121,7 +121,7 @@
       "resource": {
         "resourceType": "SearchParameter",
         "id": "ResearchStudy-part-of",
-        "url": "https://atrius.in/fhir/r4/atrius-in/SearchParameter/ResearchStudy-part-of",
+        "url": "https://atrius.in/fhir/SearchParameter/ResearchStudy-part-of",
         "version": "0.1.0",
         "name": "part-of",
         "status": "active",

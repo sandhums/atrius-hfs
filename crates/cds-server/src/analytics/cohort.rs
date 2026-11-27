@@ -119,7 +119,7 @@ pub fn export_hints(hfs_base: &str, group_id: &str) -> Value {
         "bulkExport": format!("{base}/Group/{group_id}/$export"),
         "body": {
             "group": format!("Group/{group_id}"),
-            "view": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-patient"
+            "view": "https://atrius.in/fhir/ViewDefinition/atrius-in-patient"
         },
         "note": "Pass group as Group/{id} on HFS $sql-run / $sql-export (or GET Group/{id}/$export). Review the Group before kicking off an export."
     })

@@ -210,7 +210,7 @@ mod tests {
     fn builds_guidance_response_with_module_canonical() {
         let gr = guidance_response_for_feedback(
             "er-chest-pain-pathway",
-            Some("https://atrius.in/fhir/r4/atrius-in/PlanDefinition/er-chest-pain-pathway"),
+            Some("https://atrius.in/fhir/PlanDefinition/er-chest-pain-pathway"),
             &feedback(FeedbackOutcome::Accepted),
         );
         assert_eq!(gr["resourceType"], "GuidanceResponse");

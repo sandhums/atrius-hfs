@@ -4,7 +4,7 @@
     {
       "kind": "view-definition",
       "id": "atrius-in-patient",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-patient",
+      "canonical": "https://atrius.in/fhir/ViewDefinition/atrius-in-patient",
       "title": "Atrius India bronze Patient",
       "description": "One row per Patient. Join key is patient_id. MRN uses the HIS identifier system.",
       "resource": "Patient",
@@ -21,7 +21,7 @@
     {
       "kind": "view-definition",
       "id": "atrius-in-encounter",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-encounter",
+      "canonical": "https://atrius.in/fhir/ViewDefinition/atrius-in-encounter",
       "title": "Atrius India bronze Encounter",
       "description": "One row per Encounter. class_code is AMB/IMP/EMER for HMIS-style aggregates.",
       "resource": "Encounter",
@@ -39,7 +39,7 @@
     {
       "kind": "view-definition",
       "id": "atrius-in-observation",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-observation",
+      "canonical": "https://atrius.in/fhir/ViewDefinition/atrius-in-observation",
       "title": "Atrius India bronze Observation",
       "description": "One row per Observation. Quantity, string, and codeable values are separate columns. Join on patient_id / encounter_id.",
       "resource": "Observation",
@@ -58,7 +58,7 @@
     {
       "kind": "view-definition",
       "id": "atrius-in-condition",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-condition",
+      "canonical": "https://atrius.in/fhir/ViewDefinition/atrius-in-condition",
       "title": "Atrius India bronze Condition",
       "description": "One row per Condition with ICD-10, ICD-11 MMS, and SNOMED columns plus the IDSP reportable flag.",
       "resource": "Condition",
@@ -77,7 +77,7 @@
     {
       "kind": "view-definition",
       "id": "atrius-in-medicationrequest",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-medicationrequest",
+      "canonical": "https://atrius.in/fhir/ViewDefinition/atrius-in-medicationrequest",
       "title": "Atrius India bronze MedicationRequest",
       "description": "One row per MedicationRequest. medication[x] is split into CodeableConcept columns and a Reference key.",
       "resource": "MedicationRequest",
@@ -93,7 +93,7 @@
     {
       "kind": "view-definition",
       "id": "atrius-in-claim",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-claim",
+      "canonical": "https://atrius.in/fhir/ViewDefinition/atrius-in-claim",
       "title": "Atrius India bronze Claim",
       "description": "One row per Claim header. Line items are a separate view so this grain stays one row per claim.",
       "resource": "Claim",
@@ -109,7 +109,7 @@
     {
       "kind": "view-definition",
       "id": "atrius-in-claim-item",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-claim-item",
+      "canonical": "https://atrius.in/fhir/ViewDefinition/atrius-in-claim-item",
       "title": "Atrius India bronze Claim item",
       "description": "One row per Claim.item (forEach). Join to the claim header on claim_id.",
       "resource": "Claim",
@@ -126,7 +126,7 @@
     {
       "kind": "sql-query",
       "id": "atrius-in-patient-latest-observation",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/Library/atrius-in-patient-latest-observation",
+      "canonical": "https://atrius.in/fhir/Library/atrius-in-patient-latest-observation",
       "title": "Patient + latest Observation of a given code",
       "description": "One row per Patient with that patient's most recent Observation matching :code / :code_system (defaults: LOINC 4548-4 HbA1c).",
       "resource": "Observation",
@@ -143,15 +143,15 @@
         "patient"
       ],
       "dependsOn": [
-        "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-patient",
-        "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-observation"
+        "https://atrius.in/fhir/ViewDefinition/atrius-in-patient",
+        "https://atrius.in/fhir/ViewDefinition/atrius-in-observation"
       ],
       "runHint": "PUT the bronze views and this SQLQuery Library, then POST /$sql-run with subjectCanonical set to this Library URL. This endpoint never runs the SELECT."
     },
     {
       "kind": "sql-query",
       "id": "atrius-in-encounter-diagnoses",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/Library/atrius-in-encounter-diagnoses",
+      "canonical": "https://atrius.in/fhir/Library/atrius-in-encounter-diagnoses",
       "title": "Encounter + diagnoses + charge totals",
       "description": "One row per Encounter-Condition pair with grouped charge_net / charge_lines so diagnoses and claim lines do not cartesian-expand.",
       "resource": "Encounter",
@@ -164,16 +164,16 @@
         "join"
       ],
       "dependsOn": [
-        "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-encounter",
-        "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-condition",
-        "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-claim-item"
+        "https://atrius.in/fhir/ViewDefinition/atrius-in-encounter",
+        "https://atrius.in/fhir/ViewDefinition/atrius-in-condition",
+        "https://atrius.in/fhir/ViewDefinition/atrius-in-claim-item"
       ],
       "runHint": "PUT the bronze views and this SQLQuery Library, then POST /$sql-run with subjectCanonical set to this Library URL. This endpoint never runs the SELECT."
     },
     {
       "kind": "sql-query",
       "id": "atrius-in-claim-line-items",
-      "canonical": "https://atrius.in/fhir/r4/atrius-in/Library/atrius-in-claim-line-items",
+      "canonical": "https://atrius.in/fhir/Library/atrius-in-claim-line-items",
       "title": "Claim header + line items",
       "description": "One row per Claim.item, with header status, type, and total repeated.",
       "resource": "Claim",
@@ -186,8 +186,8 @@
         "sequence"
       ],
       "dependsOn": [
-        "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-claim",
-        "https://atrius.in/fhir/r4/atrius-in/ViewDefinition/atrius-in-claim-item"
+        "https://atrius.in/fhir/ViewDefinition/atrius-in-claim",
+        "https://atrius.in/fhir/ViewDefinition/atrius-in-claim-item"
       ],
       "runHint": "PUT the bronze views and this SQLQuery Library, then POST /$sql-run with subjectCanonical set to this Library URL. This endpoint never runs the SELECT."
     }

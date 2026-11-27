@@ -6,7 +6,7 @@
 #   ATRIUS_IG_PACKAGE_TGZ=/path/to/package.tgz ./scripts/load-atrius-ig-package.sh
 #
 #   # From published URL (default: atrius.in canonical package)
-#   ATRIUS_IG_PACKAGE_URL=https://atrius.in/fhir/r4/atrius-in/package.tgz \
+#   ATRIUS_IG_PACKAGE_URL=https://atrius.in/fhir/package.tgz \
 #     ./scripts/load-atrius-ig-package.sh
 #
 # Prints expanded directory path on stdout (for ATRIUS_IG_EXPANDED).
@@ -23,7 +23,7 @@ URL="${ATRIUS_IG_PACKAGE_URL:-}"
 EXPAND_DIR="${ATRIUS_IG_EXPANDED:-${ROOT}/manifests/atrius-ig-package}"
 
 if [[ -z "${TARBALL}" && -z "${URL}" ]]; then
-  URL="https://atrius.in/fhir/r4/atrius-in/package.tgz"
+  URL="https://atrius.in/fhir/package.tgz"
 fi
 
 mkdir -p "${EXPAND_DIR}"

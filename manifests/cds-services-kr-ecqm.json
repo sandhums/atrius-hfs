@@ -15,7 +15,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-critical-labs",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-critical-labs"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/atrius-critical-labs"
     },
     {
       "id": "atrius-ddi-check",
@@ -32,7 +32,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-ddi-check",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-ddi-check"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/atrius-ddi-check"
     },
     {
       "id": "atrius-imaging-appropriateness",
@@ -50,7 +50,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-imaging-appropriateness",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-imaging-appropriateness"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/atrius-imaging-appropriateness"
     },
     {
       "id": "atrius-preventive-care",
@@ -69,7 +69,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-preventive-care",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-preventive-care"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/atrius-preventive-care"
     },
     {
       "id": "atrius-renal-dosing",
@@ -87,7 +87,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atrius-renal-dosing",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atrius-renal-dosing"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/atrius-renal-dosing"
     },
     {
       "id": "atriuscms165controllinghighbp",
@@ -107,7 +107,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "atriuscms165controllinghighbp",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/atriuscms165controllinghighbp"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/atriuscms165controllinghighbp"
     },
     {
       "id": "er-chest-pain-pathway",
@@ -131,7 +131,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "er-chest-pain-pathway",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/er-chest-pain-pathway"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/er-chest-pain-pathway"
     },
     {
       "id": "er-acute-breathlessness-pathway",
@@ -153,7 +153,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "er-acute-breathlessness-pathway",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/er-acute-breathlessness-pathway"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/er-acute-breathlessness-pathway"
     },
     {
       "id": "hf-admission-protocol",
@@ -172,7 +172,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "hf-admission-protocol",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/hf-admission-protocol"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/hf-admission-protocol"
     },
     {
       "id": "sepsis-bundle",
@@ -191,7 +191,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "sepsis-bundle",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/sepsis-bundle"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/sepsis-bundle"
     },
     {
       "id": "surgical-safety-checklist-rule",
@@ -209,7 +209,7 @@
       "resolveFromFhir": true,
       "cdsHooksVersion": "1.0",
       "planDefinitionId": "surgical-safety-checklist-rule",
-      "planDefinitionUrl": "https://atrius.in/fhir/r4/atrius-in/PlanDefinition/surgical-safety-checklist-rule"
+      "planDefinitionUrl": "https://atrius.in/fhir/PlanDefinition/surgical-safety-checklist-rule"
     }
   ]
 }

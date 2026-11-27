@@ -6,7 +6,7 @@
 //!     --fhir-version R4 \
 //!     --package hl7.terminology.r4@7.2.0 \
 //!     --package hl7.fhir.r4.core@4.0.1 \
-//!     --bound-by atrius.fhir.r4.india@0.1.0 \
+//!     --bound-by atrius.fhir.india.r4@0.1.0 \
 //!     --bound-type AuditEvent \
 //!     --out r4.json.gz
 //! ```

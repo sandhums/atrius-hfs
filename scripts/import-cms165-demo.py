@@ -40,7 +40,7 @@ HTS_DB_DEFAULT = REPO_ROOT / "data/hts.db"
 CPT_SYSTEM = "http://www.ama-assn.org/go/cpt"
 
 ATRIUS_OFFICE_VISIT_VS = (
-    "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-office-visit"
+    "https://atrius.in/fhir/ValueSet/atrius-in-office-visit"
 )
 
 # Must match clinical HFS `HFS_DEFAULT_TENANT` when callers omit `X-Tenant-ID` (sidecar).

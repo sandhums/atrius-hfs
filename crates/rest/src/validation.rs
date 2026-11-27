@@ -997,7 +997,7 @@ mod tests {
             verdict: true,
             fail: false,
         });
-        let vs = "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-composition-section-codes";
+        let vs = "https://atrius.in/fhir/ValueSet/atrius-in-composition-section-codes";
         assert!(
             tx.validate_code(vs, &CodedValue::Code("422843007".into()))
                 .await
@@ -1038,11 +1038,11 @@ mod tests {
             dir.join("ValueSet-demo.json"),
             r#"{
                 "resourceType":"ValueSet",
-                "url":"https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-demo",
+                "url":"https://atrius.in/fhir/ValueSet/atrius-in-demo",
                 "version":"0.1.0",
                 "name":"AtriusInDemo",
                 "compose":{"include":[{
-                    "system":"https://atrius.in/fhir/r4/atrius-in/CodeSystem/demo",
+                    "system":"https://atrius.in/fhir/CodeSystem/demo",
                     "concept":[{"code":"in-set","display":"In set"}]
                 }]}
             }"#,
@@ -1052,7 +1052,7 @@ mod tests {
             dir.join("ValueSet-filter.json"),
             r#"{
                 "resourceType":"ValueSet",
-                "url":"https://atrius.in/fhir/r4/atrius-in/ValueSet/needs-filter",
+                "url":"https://atrius.in/fhir/ValueSet/needs-filter",
                 "version":"0.1.0",
                 "name":"NeedsFilter",
                 "compose":{"include":[{
@@ -1090,7 +1090,7 @@ mod tests {
             offline,
             Arc::clone(&remote) as Arc<dyn TerminologyProvider>,
         );
-        let demo = "https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-demo";
+        let demo = "https://atrius.in/fhir/ValueSet/atrius-in-demo";
         assert!(
             tx.validate_code(demo, &CodedValue::Code("in-set".into()))
                 .await
@@ -1105,7 +1105,7 @@ mod tests {
             remote.calls.lock().unwrap().is_empty(),
             "a package ValueSet must not call HTS"
         );
-        let filter = "https://atrius.in/fhir/r4/atrius-in/ValueSet/needs-filter";
+        let filter = "https://atrius.in/fhir/ValueSet/needs-filter";
         assert!(
             tx.validate_code(filter, &CodedValue::Code("404684003".into()))
                 .await

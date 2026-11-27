@@ -150,7 +150,7 @@ async fn measure_evaluate_persists_measure_report() {
                 "resourceType": "MeasureReport",
                 "status": "complete",
                 "type": "individual",
-                "measure": "https://atrius.in/fhir/r4/atrius-in/Measure/AtriusCMS165ControllingHighBP",
+                "measure": "https://atrius.in/fhir/Measure/AtriusCMS165ControllingHighBP",
                 "subject": { "reference": "Patient/cms165-demo" },
                 "period": { "start": "2026-01-01", "end": "2026-12-31" }
             }

@@ -44,7 +44,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-ATRIUS_SD = "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/"
+ATRIUS_SD = "https://atrius.in/fhir/StructureDefinition/"
 HL7_CONDITION_CATEGORY = "http://terminology.hl7.org/CodeSystem/condition-category"
 HL7_CONDITION_CLINICAL = "http://terminology.hl7.org/CodeSystem/condition-clinical"
 HL7_CONDITION_VER = "http://terminology.hl7.org/CodeSystem/condition-ver-status"

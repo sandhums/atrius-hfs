@@ -66,7 +66,7 @@ fi
 patient() {
   jq -n --arg id "$1" --arg birth "${2:-1960-01-01}" '{
     resourceType: "Patient", id: $id, gender: "unknown", birthDate: $birth,
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
     identifier: [{
       type: {coding: [{system: "http://terminology.hl7.org/CodeSystem/v2-0203", code: "MR", display: "Medical record number"}]},
       system: "https://atrius.in/smoke", value: $id
@@ -96,7 +96,7 @@ bundle() { jq -n --argjson entries "${1:-[]}" '{resourceType: "Bundle", type: "s
 lab_obs() { # id loinc display value unit ucum patient effective
   jq -n --arg id "$1" --arg code "$2" --arg disp "$3" --argjson val "$4" --arg unit "$5" --arg ucum "$6" --arg pt "$7" --arg eff "$8" '{
     resourceType: "Observation", id: $id, status: "final",
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-observation"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-observation"]},
     category: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory"}]}],
     code: {coding: [{system: "http://loinc.org", code: $code, display: $disp}]},
     subject: {reference: ("Patient/" + $pt)},
@@ -108,14 +108,14 @@ lab_obs() { # id loinc display value unit ucum patient effective
 # Sepsis CQL retrieves ObservationVitalSigns — stamp vital-signs profile/category.
 vital_obs() {
   lab_obs "$@" | jq '
-    .meta.profile = ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-observation-vital-signs"]
+    .meta.profile = ["https://atrius.in/fhir/StructureDefinition/atrius-in-observation-vital-signs"]
     | .category = [{coding: [{system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "vital-signs"}]}]'
 }
 
 condition() { # id sct display patient onset
   jq -n --arg id "$1" --arg code "$2" --arg disp "$3" --arg pt "$4" --arg onset "$5" '{
     resourceType: "Condition", id: $id,
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-encounter-diagnosis"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-condition-encounter-diagnosis"]},
     clinicalStatus: {coding: [{system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active"}]},
     verificationStatus: {coding: [{system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "confirmed"}]},
     category: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/condition-category", code: "encounter-diagnosis"}]}],
@@ -128,7 +128,7 @@ condition() { # id sct display patient onset
 med_request() { # sct display status patient
   jq -n --arg code "$1" --arg disp "$2" --arg status "$3" --arg pt "$4" '{
     resourceType: "MedicationRequest", status: $status, intent: "order",
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-medicationrequest"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-medicationrequest"]},
     medicationCodeableConcept: {coding: [{system: "http://snomed.info/sct", code: $code, display: $disp}], text: $disp},
     subject: {reference: ("Patient/" + $pt)},
     authoredOn: (now | todate),
@@ -267,14 +267,14 @@ check "hf-admission: active HF fires bundle + BNP cards" \
    and (map(.summary) | any(test("HF admission bundle"; "i")))
    and (map(.summary) | any(test("natriuretic|BNP"; "i")))' "$resp"
 check "hf-admission: CarePlan shipped in response extension" \
-  '.extension["https://atrius.in/fhir/r4/atrius-in/cds-hooks/extension/care-plan"].resourceType == "CarePlan"' "$resp"
+  '.extension["https://atrius.in/fhir/cds-hooks/extension/care-plan"].resourceType == "CarePlan"' "$resp"
 
 # --- 6. Imaging appropriateness ---------------------------------------------
 pt=img-smoke
 seed_patient $pt 1980-01-01
 lbp_recent="$(condition lbp1 279039007 'Low back pain' $pt "$(date -u -v-14d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)")"
 red_flag="$(condition ces1 192970008 'Cauda equina syndrome' $pt "$now")"
-draft_mri='{"resourceType":"ServiceRequest","status":"draft","intent":"order","meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-servicerequest"]},"code":{"coding":[{"system":"http://loinc.org","code":"24968-0","display":"MR Lumbar spine"}]},"subject":{"reference":"Patient/'$pt'"},"authoredOn":"'$now'"}'
+draft_mri='{"resourceType":"ServiceRequest","status":"draft","intent":"order","meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-servicerequest"]},"code":{"coding":[{"system":"http://loinc.org","code":"24968-0","display":"MR Lumbar spine"}]},"subject":{"reference":"Patient/'$pt'"},"authoredOn":"'$now'"}'
 mk_img() {
   jq -n --argjson patient "$(patient $pt 1980-01-01)" --argjson conds "$(bundle "$1")" \
     --argjson empty "$(bundle '[]')" --argjson draft "$draft_mri" '{
@@ -316,12 +316,12 @@ check "renal-dosing: gabapentin + eGFR 25 fires dose-adjusted suggestion" \
 pt=surg-smoke
 seed_patient $pt
 surg_enc='{"resourceType":"Encounter","id":"surg-smoke-enc","status":"in-progress",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
   "type":[{"coding":[{"system":"http://snomed.info/sct","code":"387713003","display":"Surgical procedure"}]}],
   "subject":{"reference":"Patient/'$pt'"}}'
 checklist_qr='{"resourceType":"QuestionnaireResponse","id":"surg-smoke-qr","status":"completed",
-  "questionnaire":"https://atrius.in/fhir/r4/atrius-in/Questionnaire/surgical-safety-checklist|0.1.0",
+  "questionnaire":"https://atrius.in/fhir/Questionnaire/surgical-safety-checklist|0.1.0",
   "subject":{"reference":"Patient/'$pt'"},"encounter":{"reference":"Encounter/surg-smoke-enc"},
   "authored":"'$now'",
   "item":[{"linkId":"sign-in","item":[{"linkId":"sign-in-identity","answer":[{"valueBoolean":true}]}]}]}'
@@ -344,7 +344,7 @@ check "surgical-safety: completed checklist QR is silent" '.cards | length == 0'
 pt=vte-smoke
 seed_patient $pt 1960-01-01
 vte_enc='{"resourceType":"Encounter","id":"vte-smoke-enc","status":"in-progress",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
   "type":[{"coding":[{"system":"http://snomed.info/sct","code":"32485007","display":"Hospital admission"}]}],
   "subject":{"reference":"Patient/'$pt'"},
@@ -370,7 +370,7 @@ check "vte-prophylaxis: active enoxaparin is silent" '.cards | length == 0' "$re
 pt=otpx-smoke
 seed_patient $pt
 ot_enc='{"resourceType":"Encounter","id":"otpx-smoke-enc","status":"in-progress",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
   "type":[{"coding":[{"system":"http://snomed.info/sct","code":"387713003","display":"Surgical procedure"}]}],
   "subject":{"reference":"Patient/'$pt'"}}'
@@ -394,13 +394,13 @@ check "ot-prophylaxis: active ceftriaxone is silent" '.cards | length == 0' "$re
 pt=dcr-smoke
 seed_patient $pt 1960-01-01
 dcr_enc='{"resourceType":"Encounter","id":"dcr-smoke-enc","status":"in-progress",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
   "type":[{"coding":[{"system":"http://snomed.info/sct","code":"32485007","display":"Hospital admission"}]}],
   "subject":{"reference":"Patient/'$pt'"},
   "period":{"start":"'"$now"'"}}'
 pending_task='{"resourceType":"Task","id":"dcr-lab-task","status":"in-progress","intent":"order",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-task"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-task"]},
   "code":{"coding":[{"system":"http://hl7.org/fhir/CodeSystem/task-code","code":"fulfill"}]},
   "for":{"reference":"Patient/'$pt'"},
   "encounter":{"reference":"Encounter/dcr-smoke-enc"}}'

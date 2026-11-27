@@ -105,7 +105,7 @@ const SQLITE_STEPS: &[(&str, fn(&Connection) -> StorageResult<()>)] = &[
     ("search_index_token_code_first", migrate_v45_to_v46),
     ("bulk_submissions_updated_at", migrate_v46_to_v47),
     ("search_index_value_reference_target", migrate_v47_to_v48),
-        ("search_index_quantity_high", migrate_v48_to_v49),
+    ("search_index_quantity_high", migrate_v48_to_v49),
     (OUTBOX_DEAD_LETTER_STEP, migrate_v26_to_v27),
 ];
 

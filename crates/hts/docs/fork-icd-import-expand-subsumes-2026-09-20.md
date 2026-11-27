@@ -300,7 +300,7 @@ CMS951 fixture seed):
 
 ```text
 # must be 1, not 0 — 44054006 is in the VS and on the patient
-GET /Condition?patient=cms951-numerator-panel&code:in=https://atrius.in/fhir/r4/atrius-in/ValueSet/atrius-in-diabetes
+GET /Condition?patient=cms951-numerator-panel&code:in=https://atrius.in/fhir/ValueSet/atrius-in-diabetes
 
 python3 scripts/measure-eval-runner.py --measure cms951
 ```

@@ -24,7 +24,7 @@ cds_smoke_preflight_search || { echo "FATAL: Observation search unavailable (ES?
 patient() {
   jq -n --arg id "$1" '{
     resourceType: "Patient", id: $id, gender: "unknown", birthDate: "1960-01-01",
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
     identifier: [{system: "https://atrius.in/smoke", value: $id}],
     name: [{family: "Smoke", given: [$id]}]
   }'
@@ -45,7 +45,7 @@ bundle() { jq -n --argjson entries "${1:-[]}" '{resourceType: "Bundle", type: "s
 med_request() {
   jq -n --arg code "$1" --arg disp "$2" --arg status "$3" --arg pt "$4" '{
     resourceType: "MedicationRequest", status: $status, intent: "order",
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-medicationrequest"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-medicationrequest"]},
     medicationCodeableConcept: {coding: [{system: "http://snomed.info/sct", code: $code, display: $disp}], text: $disp},
     subject: {reference: ("Patient/" + $pt)}, authoredOn: (now | todate)
   }'
@@ -69,7 +69,7 @@ check() {
 
 seed_patient "$pt"
 ot_enc='{"resourceType":"Encounter","id":"otpx-smoke-enc","status":"in-progress",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
   "type":[{"coding":[{"system":"http://snomed.info/sct","code":"387713003","display":"Surgical procedure"}]}],
   "subject":{"reference":"Patient/'"$pt"'"}}'

@@ -25,7 +25,7 @@ set -euo pipefail
 
 ROOT="${ATRIUS_HFS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 IG="${ATRIUS_IG_DRAFT:-/Users/sandhu/AtriusIGDraft}"
-PUBLISHED_PACKAGE_URL="${ATRIUS_IG_PACKAGE_URL:-https://atrius.in/fhir/r4/atrius-in/package.tgz}"
+PUBLISHED_PACKAGE_URL="${ATRIUS_IG_PACKAGE_URL:-https://atrius.in/fhir/package.tgz}"
 MANIFEST_DIR="${ROOT}/manifests"
 DEFAULT_EXPANDED="${MANIFEST_DIR}/atrius-ig-package"
 CORE_OUT="${MANIFEST_DIR}/atrius-r4-profile-manifest-core.json"

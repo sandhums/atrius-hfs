@@ -69,7 +69,7 @@ Cassandra and Neo4j cargo features (`cdrs-tokio` / `neo4rs`) were never implemen
 
    ```bash
    HFS_FHIR_PACKAGE_CACHE=/path/to/atrius-hfs/data/fhir-packages
-   HFS_FHIR_PACKAGES=atrius.fhir.r4.india@0.1.0   # from the IG package.json
+   HFS_FHIR_PACKAGES=atrius.fhir.india.r4@0.1.0   # from the IG package.json
    HFS_VALIDATION_MODE=enforce
    ```
 

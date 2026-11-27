@@ -126,7 +126,7 @@ being wrong.
 ### 3.1 IG validation is silently off in the clinical deployments
 
 **Status (4 Sep 2026):** clinical env examples + setup scripts now set
-`HFS_VALIDATION_MODE=enforce` and `HFS_FHIR_PACKAGES=atrius.fhir.r4.india@0.1.0`;
+`HFS_VALIDATION_MODE=enforce` and `HFS_FHIR_PACKAGES=atrius.fhir.india.r4@0.1.0`;
 the resolver no longer requires sushi `dependsOn` packages in the cache. See
 §6. The 3 Sep snapshot below is kept as the defect that motivated that work.
 **Closed 6 Sep:** `.env.abdm.example` is a dedicated `ndhm.in` validator
@@ -741,7 +741,7 @@ start. Replacements:
 
 ```text
 HFS_FHIR_PACKAGE_CACHE=./data/fhir-packages   # or /opt/atrius/data/fhir-packages
-HFS_FHIR_PACKAGES=atrius.fhir.r4.india@0.1.0  # from published IG package.json
+HFS_FHIR_PACKAGES=atrius.fhir.india.r4@0.1.0  # from published IG package.json
 HFS_VALIDATION_MODE=enforce
 ```
 
@@ -757,7 +757,7 @@ HFS_VALIDATION_MODE=enforce
 | `.gitignore`                                          | `/data/fhir-packages/`                                                                                            |
 
 
-`name@version` is `atrius.fhir.r4.india@0.1.0` (IG publisher), not the
+`name@version` is `atrius.fhir.india.r4@0.1.0` (IG publisher), not the
 placeholder `atrius.in.r4`.
 
 **Scripts no longer tell operators to set** `HFS_PROFILE_VALIDATION_MODE=strict`**.**
@@ -806,7 +806,7 @@ the runtime validation surface. Sushi `dependsOn` is the publish graph.
 
 | Package in published `package.json` | Clinical HFS                                                                                    |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `atrius.fhir.r4.india@0.1.0`        | Overlay this (listed)                                                                           |
+| `atrius.fhir.india.r4@0.1.0`        | Overlay this (listed)                                                                           |
 | `hl7.fhir.r4.core@4.0.1`            | Skip — embedded R4 core pack                                                                    |
 | `hl7.terminology.r4@7.2.0`          | Skip — CS/VS via HTS                                                                            |
 | `ndhm.in@6.5.0`                     | Skip on clinical store. List explicitly only on an ABDM export validator                        |

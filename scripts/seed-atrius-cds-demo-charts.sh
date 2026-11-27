@@ -40,7 +40,7 @@ put() { # path json — print OperationOutcome diagnostics on failure
 condition_ed() { # id code display patient encounter onset
   jq -n --arg id "$1" --arg code "$2" --arg disp "$3" --arg pt "$4" --arg enc "$5" --arg onset "$6" '{
     resourceType: "Condition", id: $id,
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-condition-encounter-diagnosis"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-condition-encounter-diagnosis"]},
     text: {status: "generated", div: ("<div xmlns=\"http://www.w3.org/1999/xhtml\">" + $disp + "</div>")},
     clinicalStatus: {coding: [{system: "http://terminology.hl7.org/CodeSystem/condition-clinical", code: "active"}]},
     verificationStatus: {coding: [{system: "http://terminology.hl7.org/CodeSystem/condition-ver-status", code: "confirmed"}]},
@@ -58,13 +58,13 @@ echo "Seeding Atrius CDS demo charts on $clinical"
 # --- HF admission (hf-smoke2 / hf-smoke-enc) ---------------------------------
 put "Patient/hf-smoke2" "$(jq -n --arg now "$now" '{
   resourceType:"Patient", id:"hf-smoke2", gender:"male", birthDate:"1950-01-01",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"hf-smoke2"}],
   name:[{family:"Smoke", given:["HF"]}]
 }')"
 put "Encounter/hf-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"hf-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"IMP"},
   subject:{reference:"Patient/hf-smoke2"}
 }')"
@@ -73,18 +73,18 @@ put "Condition/hf-smoke-cond" "$(condition_ed hf-smoke-cond 84114007 'Heart fail
 # --- Acute breathlessness (dyspnea-smoke / dyspnea-smoke-enc) ----------------
 put "Patient/dyspnea-smoke" "$(jq -n '{
   resourceType:"Patient", id:"dyspnea-smoke", gender:"female", birthDate:"1955-06-15",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"dyspnea-smoke"}],
   name:[{family:"Smoke", given:["Dyspnea"]}]
 }')"
 put "Encounter/dyspnea-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"dyspnea-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"EMER", display:"emergency"},
   subject:{reference:"Patient/dyspnea-smoke"},
   reasonCode:[{
     coding:[
-      {system:"https://atrius.in/fhir/r4/atrius-in/CodeSystem/atrius-in-reason-for-encounter", code:"dyspnea", display:"Dyspnea"},
+      {system:"https://atrius.in/fhir/CodeSystem/atrius-in-reason-for-encounter", code:"dyspnea", display:"Dyspnea"},
       {system:"http://snomed.info/sct", code:"267036007", display:"Dyspnea"}
     ],
     text:"Dyspnea"
@@ -95,13 +95,13 @@ put "Condition/dyspnea-smoke-cond" "$(condition_ed dyspnea-smoke-cond 267036007 
 # --- Sepsis (sepsis-smoke / sepsis-smoke-enc) --------------------------------
 put "Patient/sepsis-smoke" "$(jq -n '{
   resourceType:"Patient", id:"sepsis-smoke", gender:"female", birthDate:"1960-01-01",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"sepsis-smoke"}],
   name:[{family:"Smoke", given:["Sepsis"]}]
 }')"
 put "Encounter/sepsis-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"sepsis-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"IMP"},
   subject:{reference:"Patient/sepsis-smoke"}
 }')"
@@ -113,7 +113,7 @@ for row in \
   put "Observation/$id" "$(jq -n --arg id "$id" --arg code "$code" --arg disp "$disp" \
     --argjson val "$val" --arg unit "$unit" --arg ucum "$ucum" --arg now "$now" '{
     resourceType:"Observation", id:$id, status:"final",
-    meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-observation"]},
+    meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-observation"]},
     category:[{coding:[{system:"http://terminology.hl7.org/CodeSystem/observation-category", code:"vital-signs"}]}],
     code:{coding:[{system:"http://loinc.org", code:$code, display:$disp}]},
     subject:{reference:"Patient/sepsis-smoke"},
@@ -126,13 +126,13 @@ done
 # --- Surgical safety (surg-smoke / surg-smoke-enc) ---------------------------
 put "Patient/surg-smoke" "$(jq -n '{
   resourceType:"Patient", id:"surg-smoke", gender:"male", birthDate:"1975-01-01",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"surg-smoke"}],
   name:[{family:"Smoke", given:["Surgical"]}]
 }')"
 put "Encounter/surg-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"surg-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"IMP"},
   type:[{coding:[{system:"http://snomed.info/sct", code:"387713003", display:"Surgical procedure"}]}],
   subject:{reference:"Patient/surg-smoke"}
@@ -141,19 +141,19 @@ put "Encounter/surg-smoke-enc" "$(jq -n '{
 # --- Critical labs (crit-ui-smoke) -------------------------------------------
 put "Patient/crit-ui-smoke" "$(jq -n '{
   resourceType:"Patient", id:"crit-ui-smoke", gender:"female", birthDate:"1965-06-01",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"crit-ui-smoke"}],
   name:[{family:"Smoke", given:["CriticalLabs"]}]
 }')"
 put "Encounter/crit-ui-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"crit-ui-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"AMB"},
   subject:{reference:"Patient/crit-ui-smoke"}
 }')"
 put "Observation/crit-ui-k" "$(jq -n --arg now "$now" '{
   resourceType:"Observation", id:"crit-ui-k", status:"final",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-observation"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-observation"]},
   category:[{coding:[{system:"http://terminology.hl7.org/CodeSystem/observation-category", code:"laboratory"}]}],
   code:{coding:[{system:"http://loinc.org", code:"2823-3", display:"Potassium"}]},
   subject:{reference:"Patient/crit-ui-smoke"},
@@ -165,13 +165,13 @@ put "Observation/crit-ui-k" "$(jq -n --arg now "$now" '{
 # --- Preventive care (prev-ui-smoke, ~58yo) ----------------------------------
 put "Patient/prev-ui-smoke" "$(jq -n '{
   resourceType:"Patient", id:"prev-ui-smoke", gender:"male", birthDate:"1968-01-01",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"prev-ui-smoke"}],
   name:[{family:"Smoke", given:["Preventive"]}]
 }')"
 put "Encounter/prev-ui-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"prev-ui-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"AMB"},
   subject:{reference:"Patient/prev-ui-smoke"}
 }')"
@@ -179,19 +179,19 @@ put "Encounter/prev-ui-smoke-enc" "$(jq -n '{
 # --- DDI / renal chart background (optional order-sign demos) ----------------
 put "Patient/ddi-smoke" "$(jq -n '{
   resourceType:"Patient", id:"ddi-smoke", gender:"male", birthDate:"1960-01-01",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"ddi-smoke"}],
   name:[{family:"Smoke", given:["DDI"]}]
 }')"
 put "Encounter/ddi-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"ddi-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"AMB"},
   subject:{reference:"Patient/ddi-smoke"}
 }')"
 put "MedicationRequest/ddi-statin" "$(jq -n --arg now "$now" '{
   resourceType:"MedicationRequest", id:"ddi-statin", status:"active", intent:"order",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-medicationrequest"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-medicationrequest"]},
   text:{status:"generated", div:"<div xmlns=\"http://www.w3.org/1999/xhtml\">Simvastatin</div>"},
   medicationCodeableConcept:{
     coding:[{system:"http://snomed.info/sct", code:"387584000", display:"Simvastatin"}],
@@ -206,19 +206,19 @@ put "MedicationRequest/ddi-statin" "$(jq -n --arg now "$now" '{
 
 put "Patient/renal-smoke" "$(jq -n '{
   resourceType:"Patient", id:"renal-smoke", gender:"female", birthDate:"1955-01-01",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
   identifier:[{system:"https://atrius.in/smoke", value:"renal-smoke"}],
   name:[{family:"Smoke", given:["Renal"]}]
 }')"
 put "Encounter/renal-smoke-enc" "$(jq -n '{
   resourceType:"Encounter", id:"renal-smoke-enc", status:"in-progress",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   class:{system:"http://terminology.hl7.org/CodeSystem/v3-ActCode", code:"AMB"},
   subject:{reference:"Patient/renal-smoke"}
 }')"
 put "Observation/renal-egfr" "$(jq -n --arg now "$now" '{
   resourceType:"Observation", id:"renal-egfr", status:"final",
-  meta:{profile:["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-observation"]},
+  meta:{profile:["https://atrius.in/fhir/StructureDefinition/atrius-in-observation"]},
   category:[{coding:[{system:"http://terminology.hl7.org/CodeSystem/observation-category", code:"laboratory"}]}],
   code:{coding:[{system:"http://loinc.org", code:"98979-8", display:"eGFR (CKD-EPI 2021)"}]},
   subject:{reference:"Patient/renal-smoke"},

@@ -28,7 +28,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ATRIUS_IN = "https://atrius.in/fhir/r4/atrius-in"
+ATRIUS_IN = "https://atrius.in/fhir"
 NDHM = "https://nrces.in/ndhm/fhir/r4"
 EXPECTED_FHIR_PREFIX = {"r4": "4.0", "r5": "5.0"}
 DEFAULT_NDHM_DIR = Path.home() / "Downloads" / "ndhm"

@@ -1,32 +1,29 @@
 //! Every Atrius IG URL cds-server writes, defined once.
 //!
 //! [`IG_CANONICALS`] must each resolve to a resource in the Atrius IG package
-//! (`atrius.fhir.r4.india`); the test below checks them against the package copy in
+//! (`atrius.fhir.india.r4`); the test below checks them against the package copy in
 //! `data/fhir-packages`, which atrius-his `scripts/sync-ig.sh` keeps current.
 
 pub const ATRIUS_IN_GROUP_PROFILE: &str =
-    "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-group";
+    "https://atrius.in/fhir/StructureDefinition/atrius-in-group";
 pub const ATRIUS_IN_FLAG_PROFILE: &str =
-    "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-flag";
+    "https://atrius.in/fhir/StructureDefinition/atrius-in-flag";
 pub const CDS_FEEDBACK_EXTENSION: &str =
-    "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-cds-feedback";
+    "https://atrius.in/fhir/StructureDefinition/atrius-in-cds-feedback";
 pub const CDS_SUBSCRIPTION_SOURCE_EXTENSION: &str =
-    "https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-cds-subscription-source";
-pub const CDS_FLAG_SYSTEM: &str =
-    "https://atrius.in/fhir/r4/atrius-in/CodeSystem/atrius-in-cds-flag";
+    "https://atrius.in/fhir/StructureDefinition/atrius-in-cds-subscription-source";
+pub const CDS_FLAG_SYSTEM: &str = "https://atrius.in/fhir/CodeSystem/atrius-in-cds-flag";
 pub const CDS_OVERRIDE_REASON_SYSTEM: &str =
-    "https://atrius.in/fhir/r4/atrius-in/CodeSystem/atrius-in-cds-override-reason";
+    "https://atrius.in/fhir/CodeSystem/atrius-in-cds-override-reason";
 pub const CDS_HOOKS_CARD_IDENTIFIER_SYSTEM: &str =
-    "https://atrius.in/fhir/r4/atrius-in/identifier/cds-hooks-card";
-pub const CQL_COHORT_IDENTIFIER_SYSTEM: &str =
-    "https://atrius.in/fhir/r4/atrius-in/identifier/cql-cohort";
+    "https://atrius.in/fhir/identifier/cds-hooks-card";
+pub const CQL_COHORT_IDENTIFIER_SYSTEM: &str = "https://atrius.in/fhir/identifier/cql-cohort";
 
 /// CDS Hooks response `extension` keys (not FHIR artifacts; documented on the IG
 /// `cds-clinical-reasoning` page). clinical-ui reads both.
-pub const CARE_PLAN_EXTENSION_KEY: &str =
-    "https://atrius.in/fhir/r4/atrius-in/cds-hooks/extension/care-plan";
+pub const CARE_PLAN_EXTENSION_KEY: &str = "https://atrius.in/fhir/cds-hooks/extension/care-plan";
 pub const APPLY_TIMING_EXTENSION_KEY: &str =
-    "https://atrius.in/fhir/r4/atrius-in/cds-hooks/extension/cds-apply-timing";
+    "https://atrius.in/fhir/cds-hooks/extension/cds-apply-timing";
 
 pub const IG_CANONICALS: &[&str] = &[
     ATRIUS_IN_GROUP_PROFILE,
@@ -45,7 +42,7 @@ mod tests {
     use std::collections::HashSet;
     use std::path::PathBuf;
 
-    const BASE: &str = "https://atrius.in/fhir/r4/atrius-in";
+    const BASE: &str = "https://atrius.in/fhir";
 
     #[test]
     fn every_constant_is_under_the_ig_base() {
@@ -63,7 +60,7 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|| {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../../data/fhir-packages/atrius.fhir.r4.india/0.1.0")
+                    .join("../../data/fhir-packages/atrius.fhir.india.r4/0.1.0")
             });
         let Ok(entries) = std::fs::read_dir(&dir) else {
             eprintln!(

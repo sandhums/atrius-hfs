@@ -25,7 +25,7 @@ cds_smoke_preflight_search || { echo "FATAL: Observation search unavailable (ES?
 patient() {
   jq -n --arg id "$1" --arg birth "${2:-1960-01-01}" '{
     resourceType: "Patient", id: $id, gender: "unknown", birthDate: $birth,
-    meta: {profile: ["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-patient"]},
+    meta: {profile: ["https://atrius.in/fhir/StructureDefinition/atrius-in-patient"]},
     identifier: [{system: "https://atrius.in/smoke", value: $id}],
     name: [{family: "Smoke", given: [$id]}]
   }'
@@ -62,13 +62,13 @@ check() {
 
 seed_patient "$pt" 1960-01-01
 dcr_enc='{"resourceType":"Encounter","id":"dcr-smoke-enc","status":"in-progress",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-encounter"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-encounter"]},
   "class":{"system":"http://terminology.hl7.org/CodeSystem/v3-ActCode","code":"IMP"},
   "type":[{"coding":[{"system":"http://snomed.info/sct","code":"32485007","display":"Hospital admission"}]}],
   "subject":{"reference":"Patient/'"$pt"'"},
   "period":{"start":"'"$now"'"}}'
 pending_task='{"resourceType":"Task","id":"dcr-lab-task","status":"in-progress","intent":"order",
-  "meta":{"profile":["https://atrius.in/fhir/r4/atrius-in/StructureDefinition/atrius-in-task"]},
+  "meta":{"profile":["https://atrius.in/fhir/StructureDefinition/atrius-in-task"]},
   "code":{"coding":[{"system":"http://hl7.org/fhir/CodeSystem/task-code","code":"fulfill"}]},
   "for":{"reference":"Patient/'"$pt"'"},
   "encounter":{"reference":"Encounter/dcr-smoke-enc"}}'
