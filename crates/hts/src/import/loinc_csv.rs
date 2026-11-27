@@ -423,7 +423,8 @@ struct LoincArchivePaths {
     /// Per-language `*LinguisticVariant.csv` files (excludes the index), sorted
     /// for deterministic processing order.
     lv_variants: Vec<String>,
-    /// Parsed from a top-level `Loinc_<ver>/` directory in the ZIP, e.g. `2.82`.
+    /// Parsed from a top-level `Loinc_<ver>/` directory in the ZIP, or, when the
+    /// archive is flat, from the file name `Loinc_<ver>.zip`.
     release_version: Option<String>,
 }
 
@@ -444,6 +445,14 @@ fn loinc_release_version_from_entry(entry_path: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// Regenstrief distributes some releases as a flat zip whose only `Loinc_<ver>`
+/// token is the file name (`Loinc_2.83.zip`). `loinc.xml` in that layout leaves
+/// `<version>` unset, so the archive name is the version source.
+fn loinc_release_version_from_filename(path: &Path) -> Option<String> {
+    let name = path.file_stem()?.to_str()?;
+    loinc_release_version_from_entry(name)
 }
 
 fn find_loinc_paths(path: &Path) -> Result<LoincArchivePaths, HtsError> {
@@ -487,6 +496,12 @@ fn find_loinc_paths(path: &Path) -> Result<LoincArchivePaths, HtsError> {
                 lv_variants.push(name);
             }
         }
+    }
+
+    // A nested `Loinc_<ver>/` folder wins. A flat archive (LoincTable/ at the
+    // zip root) carries the release only in the file name.
+    if release_version.is_none() {
+        release_version = loinc_release_version_from_filename(path);
     }
 
     lv_variants.sort();
@@ -1579,6 +1594,14 @@ LOINC_NUM,COMPONENT,LONG_COMMON_NAME,SHORTNAME\r\n\
             super::loinc_release_version_from_entry("LoincTable/Loinc.csv"),
             None
         );
+        assert_eq!(
+            super::loinc_release_version_from_filename(Path::new("/tmp/Loinc_2.83.zip")).as_deref(),
+            Some("2.83")
+        );
+        assert_eq!(
+            super::loinc_release_version_from_filename(Path::new("/tmp/.tmpAbC123.zip")),
+            None
+        );
     }
 
     #[tokio::test]
@@ -1631,5 +1654,58 @@ LOINC_NUM,COMPONENT,LONG_COMMON_NAME,SHORTNAME\r\n\
             )
             .unwrap();
         assert_eq!(version.as_deref(), Some("2.77"));
+    }
+
+    #[tokio::test]
+    async fn import_loinc_flat_zip_takes_version_from_filename() {
+        let backend = SqliteTerminologyBackend::in_memory().unwrap();
+        let ctx = TenantContext::system();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Loinc_2.83.zip");
+        {
+            let file = std::fs::File::create(&path).unwrap();
+            let mut zip = zip::ZipWriter::new(file);
+            let opts = zip::write::SimpleFileOptions::default();
+
+            zip.start_file("LoincTable/Loinc.csv", opts).unwrap();
+            zip.write_all(LOINC_TABLE_CSV.as_bytes()).unwrap();
+
+            zip.start_file(
+                "AccessoryFiles/ComponentHierarchyBySystem/ComponentHierarchyBySystem.csv",
+                opts,
+            )
+            .unwrap();
+            zip.write_all(HIERARCHY_CSV.as_bytes()).unwrap();
+
+            zip.finish().unwrap();
+        }
+
+        let stats = import_loinc_csv(
+            &backend,
+            &ctx,
+            &path,
+            500,
+            false,
+            &LanguageFilter::default(),
+        )
+        .await
+        .unwrap();
+
+        assert!(stats.concepts > 0, "got 0 concepts");
+        assert!(
+            stats.errors.is_empty(),
+            "unexpected errors: {:?}",
+            stats.errors
+        );
+
+        let conn = backend.pool().get().unwrap();
+        let version: Option<String> = conn
+            .query_row(
+                "SELECT version FROM code_systems WHERE url = 'http://loinc.org'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(version.as_deref(), Some("2.83"));
     }
 }

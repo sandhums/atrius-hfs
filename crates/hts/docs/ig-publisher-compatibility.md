@@ -220,35 +220,62 @@ to the core row, and `resource_json` stays byte-faithful to what the package shi
 
 ## 3. LOINC import version labeling
 
+**Keep this on an `upstream/main` merge.** The version parser is
+`loinc_release_version_from_filename` in `src/import/loinc_csv.rs`. An upstream
+copy that only reads an inner `Loinc_<ver>/` folder imports Regenstrief's flat
+2.83 zip with a blank `CodeSystem.version` and overwrites a row that was
+already labeled.
+
 LOINC ZIP layouts use a top-level folder such as `Loinc_2.82/LoincTable/Loinc.csv`.
 Previously HTS imported concepts but left `CodeSystem.version` unset (`NULL`).
 Multiple rows for `http://loinc.org` (HL7 stub, consult-minimal pack, full import)
 then competed during validation; an empty or minimal row could win.
+
+Regenstrief 2.83 does not use that folder. `Loinc_2.83.zip` starts at
+`LoincTable/`, `LoincTableCore/`, and `AccessoryFiles/`. `loinc.xml` in that
+archive leaves `<version>` commented out. The only `Loinc_2.83` token is the
+file name.
 
 ### Behaviour
 
 On LOINC CSV/ZIP import:
 
 1. Parse release version from the first `Loinc_<ver>/` path segment (e.g. `2.82`).
-2. Store it on `CodeSystemMeta.version` for the imported edition.
-3. Combined with improved `fetch_versions` ordering, the full import is preferred
+2. When no entry has that segment, parse the same token from the zip file name
+   (`Loinc_2.83.zip` → `2.83`). The inner folder wins when both are present.
+3. Store it on `CodeSystemMeta.version` and in `resource_json` for the imported edition.
+4. Combined with improved `fetch_versions` ordering, the full import is preferred
    over empty stubs when version is unpinned or `current`.
 
 ### Code changes
 
-- `src/import/loinc_csv.rs` — `loinc_release_version_from_entry()`, `LoincArchivePaths.release_version`
+- `src/import/loinc_csv.rs` — `loinc_release_version_from_entry()`, `loinc_release_version_from_filename()`, `LoincArchivePaths.release_version`
 
 ### Tests
 
-- `loinc_release_version_from_entry_parses_top_level_folder`
-- `import_loinc_nested_zip_layout` — asserts `version = 2.77` from fixture path
+- `loinc_release_version_from_entry_parses_top_level_folder` — folder `2.82`, file name `Loinc_2.83.zip`, and a temp-file name that is not a release
+- `import_loinc_nested_zip_layout` — asserts `version = 2.77` from the inner folder
+- `import_loinc_flat_zip_takes_version_from_filename` — `LoincTable/Loinc.csv` inside `Loinc_2.83.zip` asserts `version = 2.83`
 
 ### Operational note
 
-If an existing database already has the full LOINC import but `version` was wrong,
-you can `UPDATE code_systems SET version='2.82' WHERE url='http://loinc.org' AND …`
-or delete stale stub rows — reimport is optional once ordering + version label are
-correct.
+A database that already has the full LOINC import with a blank version does not
+need another import. Stop HTS, then set both the column and the stored resource.
+Lookups read the column. A read of the CodeSystem returns `resource_json`.
+
+```sql
+UPDATE code_systems
+SET version = '2.83',
+    resource_json = json_set(resource_json, '$.version', '2.83')
+WHERE url = 'http://loinc.org'
+  AND COALESCE(version, '') = '';
+```
+
+The Atrius development database was updated this way on 2026-11-27
+(185,132 concepts, version `2.83`). Do not re-run `hts import` of
+`Loinc_2.83.zip` with a binary built before the filename fallback: that import
+writes the concepts again and clears the version. Delete stale stub rows for
+`http://loinc.org` when a second empty row is competing with the full edition.
 
 ---
 

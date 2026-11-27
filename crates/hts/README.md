@@ -43,7 +43,7 @@ All six standard [FHIR Terminology Service](http://hl7.org/fhir/terminology-serv
 
 | Document | Description |
 |----------|-------------|
-| [IG Publisher compatibility](docs/ig-publisher-compatibility.md) | `$validate-code` parameter aliases, SNOMED `version=current`, LOINC version labeling — required for HL7 IG Publisher `-tx` validation |
+| [IG Publisher compatibility](docs/ig-publisher-compatibility.md) | `$validate-code` parameter aliases, SNOMED `version=current`, LOINC version labeling. Keep on merge: a flat `Loinc_<ver>.zip` (no inner `Loinc_<ver>/` folder) records `CodeSystem.version` from the file name. Dropping that fallback reimports LOINC 2.83 with a blank version and overwrites the labeled row. |
 | [Expand paths architecture](docs/expand-paths-architecture.md) | ValueSet `$expand` code paths |
 | [ICD import / expand / subsumes fork (2026-09-20)](docs/fork-icd-import-expand-subsumes-2026-09-20.md) | Items 1–3 adopted upstream (#2114 / #2125). Keep on merge: idempotent DELETE of imported resources (item 4) and HFS `:in` paging (item 5) |
 | [BCP 47 languages fork (2026-09-22)](docs/fork-bcp47-languages.md) | Keep on `upstream/main` merge: expand enumerated language ValueSets without a CodeSystem; validate well-formed tags against `urn:ietf:bcp:47` |
@@ -210,6 +210,8 @@ cargo build --release -p helios-hts --features R4,R4B,R5,R6,sqlite
 
 Bulk-import terminology data into the HTS database. `<PATH>` can be either a single distribution file or a **directory** — when given a directory, `hts import` iterates its entries, auto-detects each file's format, and imports them all in one pass (one broken file is logged and reported via exit code `2` rather than aborting the rest). The release archive's `terminology-data/` directory is designed for exactly this.
 
+The Atrius R4 development reload (which files to load, the India drug extension, and WHO ICD-10/11) is [docs/local-terminology-import/README.md](docs/local-terminology-import/README.md).
+
 ```bash
 # One command — imports every bundled terminology that shipped in the release
 ./hts import ./terminology-data
@@ -228,8 +230,12 @@ hts import ./hl7.terminology.r4-6.0.0.tgz \
   --storage-backend postgres \
   --database-url "postgresql://user:pass@localhost/hts"
 
-# SNOMED CT RF2 ZIP (requires NRC license)
-hts import ./SnomedCT_InternationalRF2_*.zip --format snomed-rf2
+# SNOMED CT International RF2 ZIP (requires an NRC license). Snapshot, not Full or Delta.
+hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260801T120000Z.zip --format snomed-rf2
+# NRCeS India Drug Extension. Import after International, onto that release.
+# Standalone import drops every relationship whose destination is an International concept.
+hts import ./SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260831T120000Z.zip \
+  --format snomed-rf2 --extends 20260801
 
 # LOINC CSV ZIP (requires free registration at loinc.org)
 hts import ./Loinc_*.zip --format loinc
@@ -945,7 +951,7 @@ Owned by [SNOMED International](https://www.snomed.org) and licensed under the [
 Download the **Snapshot** ZIP (not Full or Delta) - it contains the current state of all concepts without historical versions.
 
 ```bash
-hts import ./SnomedCT_InternationalRF2_PRODUCTION_20250901T120000Z.zip --format snomed-rf2
+hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260801T120000Z.zip --format snomed-rf2
 ```
 
 For large imports, add `--batch-size 200 --verbose` to monitor progress.
@@ -1013,18 +1019,23 @@ extension code fail because the highest version is the International one.
 Layer the extension **into** the base release it depends on instead:
 
 ```bash
-# 1. International first (stored as version 20260501)
-hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260501T120000Z.zip --format snomed-rf2
-# 2. Extension layered onto it — same (url, version) row, hierarchy joined
-hts import ./SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260313T120000Z.zip \
-    --format snomed-rf2 --extends 20260501
+# 1. International first (stored as version 20260801)
+hts import ./SnomedCT_InternationalRF2_PRODUCTION_20260801T120000Z.zip --format snomed-rf2
+# 2. NRCeS India Drug Extension IN1000189, layered onto that release.
+#    Same (url, version) row; the hierarchy is joined.
+hts import ./SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260831T120000Z.zip \
+    --format snomed-rf2 --extends 20260801
 ```
+
+`--extends` is the International version (`20260801`), taken from the
+International filename, not the extension's own date (`20260831`). The
+NRCeS package module id is `IN1000189`.
 
 Extension concepts are written under the base `(url, version)`; a
 relationship is kept when its destination exists in either the package or
 the base; the base closure and FTS index are rebuilt once afterwards. The
 stored CodeSystem title records both parts, e.g.
-`SNOMED CT (20260501 + IN1000189 20260313)`. This is how SNOMED itself
+`SNOMED CT (20260801 + IN1000189 20260831)`. This is how SNOMED itself
 defines an edition (International + extensions), and it duplicates nothing.
 
 Two diagnostics are reported as non-fatal import errors (exit code 2):
