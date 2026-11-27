@@ -544,6 +544,8 @@ impl SqliteTerminologyBackend {
         let inline_compose_index: InlineComposeIndex = Arc::default();
         let property_result_cache: PropertyResultCache = Arc::default();
         let plain_fts_cache: PlainFtsCache = Arc::default();
+        let cs_system_id_cache: Arc<RwLock<SystemIdCacheMap>> =
+            Arc::new(RwLock::new(HashMap::new()));
         // Bootstrap: apply WAL + schema on a single connection.
         {
             let mut conn = pool.get().map_err(|e| {
@@ -630,7 +632,7 @@ impl SqliteTerminologyBackend {
                 // async hot path in expand() fire immediately without waiting for
                 // a background build thread.  No-op on first run (empty cache).
                 value_set::reconcile_implicit_cache_at_startup(&conn);
-                value_set::prebuild_implicit_index(&conn, &implicit_index);
+                value_set::prebuild_implicit_index(&cs_system_id_cache, &conn, &implicit_index);
 
                 // Pre-warm the inline-compose in-memory index from any persisted
                 // "inline-compose:*" entries.  Eliminates spawn_blocking contention
@@ -661,7 +663,7 @@ impl SqliteTerminologyBackend {
             validate_code_response_cache: Arc::new(RwLock::new(HashMap::new())),
             cs_version_for_url_cache: Arc::new(RwLock::new(HashMap::new())),
             cs_exists_cache: Arc::new(RwLock::new(HashMap::new())),
-            cs_system_id_cache: Arc::new(RwLock::new(HashMap::new())),
+            cs_system_id_cache,
             cs_language_cache: Arc::new(RwLock::new(HashMap::new())),
         })
     }
@@ -718,7 +720,7 @@ impl SqliteTerminologyBackend {
             );
         }
         value_set::reconcile_implicit_cache_at_startup(&conn);
-        value_set::prebuild_implicit_index(&conn, &self.implicit_index);
+        value_set::prebuild_implicit_index(&self.cs_system_id_cache, &conn, &self.implicit_index);
         value_set::prebuild_inline_compose_index(&conn, &self.inline_compose_index);
         Ok(())
     }

@@ -128,7 +128,7 @@ crates/rest/src/bulk_submit_*.rs
 crates/rest/src/export/
 crates/persistence/
 crates/sof/
-crates/hts/          # except tiny CDS-related tweaks — re-apply manually if needed
+crates/hts/          # take main, then re-apply the HTS keep-list. Never `checkout --theirs` on sqlite/value_set.rs
 crates/hfs/          # ValidationService is constructed inside helios-rest build_app
 crates/fhirpath/     # except terminology_client extensions listed below
 crates/audit/
@@ -198,7 +198,24 @@ evaluated. Remaining limitations (not a second engine):
 
 ### `crates/hts`
 
-SQLite URL→`system_id` and CodeSystem language memos live on `SqliteTerminologyBackend` (`cs_system_id_cache`, `cs_language_cache`). `invalidate_caches` is exhaustive. Do not restore process-wide `OnceLock` maps.
+SQLite URL→`system_id` and CodeSystem language memos live on `SqliteTerminologyBackend` (`cs_system_id_cache`, `cs_language_cache`). `invalidate_caches` is exhaustive and is the only invalidation. Do not restore process-wide `OnceLock` maps (`SYSTEM_ID_CACHE`, `invalidate_cs_id_cache`, `invalidate_cs_language_cache`). Helios keys a static by database path and skips in-memory databases; this fork does not. `resolve_system_id_cached` in `sqlite/value_set.rs` must call `backend.cs_system_id_cache()`. A field that is only cleared, while lookups read a static, is the bug from 26 Nov 2026 (`5240cca91` took main's file whole).
+
+`crates/hts/src/backends/sqlite/value_set.rs` conflicts often. Do not `git checkout --theirs` or `git checkout MERGE_HEAD --` that file. Take Helios's new hunks (for example `expansion_too_costly`) onto the fork file and keep the Atrius `crate::bcp47::` calls. All eleven:
+
+- `validate_code`: `validate_all_languages_code` before the stored-ValueSet lookup
+- `expand_inline_plain_fts`: unbounded include → `unbounded_expansion_error`
+- `expand_inline_filtered`: unbounded include → that error; enumerated include → `enumerated_bcp47_expansion`, then `matches_text_filter`
+- `expand_single_include_local`: after the version-mismatch check, unbounded → error, enumerated → those codes. A resolved CodeSystem id still wins
+- `load_plain_corpus_and_cache`: unbounded include returns `None` so the caller falls through to `expand_inline_plain_fts`
+
+Postgres `value_set.rs` usually auto-merges; keep its `bcp47::` calls too. Detail: `crates/hts/docs/fork-bcp47-languages.md`. After the merge:
+
+```bash
+cargo test -p helios-hts --lib --features sqlite -- \
+  expand_enumerated_bcp47 expand_all_languages_is_too_costly \
+  validate_languages_uses_enumerated_codes \
+  validate_all_languages_accepts_well_formed_tag
+```
 
 ### `crates/fhirpath`
 
@@ -259,6 +276,7 @@ Keep Atrius outbox, heartbeat, and `fhirPathCriteria` evaluation. Take Helios `w
 | Conflict location | Resolution |
 |-------------------|------------|
 | `crates/fhir/src/r4.rs` (Helios) vs `crates/fhir/src/r4/` (this fork) | Keep the **directory**. Do not take Helios's flat `r4.rs` (E0761 if it sits beside `r4/`). There is no `r4/terminology/`. If Helios's `r*.rs` changed more than buildId, regenerate — [fhir-model-regen.md](../fhir-model-regen.md) |
+| `crates/hts/src/backends/sqlite/value_set.rs` | Do **not** take `main` whole. Re-apply the [HTS keep-list](#crateshts): lookups stay on `backend.cs_system_id_cache()` (no `SYSTEM_ID_CACHE` / `invalidate_cs_id_cache`) and all 11 `crate::bcp47::` call sites stay. Take Helios hunks such as `expansion_too_costly` onto the fork file. 26 Nov 2026 `5240cca91` took main's blob and dropped both |
 | `crates/rest/**` | Take **`main`**, re-apply [REST touch points](#cratesrest) |
 | `crates/persistence/**` | Take **`main`**, re-apply named ledger + outbox |
 | `crates/hfs/**` | Take **`main`**, re-apply [HFS touch points](#crateshfs) (`storage` + ingest validator + write observer) |
@@ -382,7 +400,7 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 4. **Hand-editing `Cargo.lock`** — regenerate via `cargo build`.
 5. **Committing `org/*.class` or local terminology zips** — huge diffs and merge noise.
 6. **Keeping “dual validators” on the sync keep-list** — there is no second engine; restoring `fhir-validation` undoes the 1 Aug cutover.
-7. **Taking a shared file from `main` whole without re-checking the keep-list** — the merge compiles and `--lib` passes, but fork behaviour disappears silently and only integration tests notice (2 Nov 2026: `batch.rs`).
+7. **Taking a shared file from `main` whole without re-checking the keep-list** — the merge compiles and `--lib` passes, but fork behaviour disappears silently and only integration tests notice (2 Nov 2026: `batch.rs`; 26 Nov 2026: `sqlite/value_set.rs`, which lost the per-backend system-id cache lookups and the 11 BCP 47 call sites).
 8. **Accepting Git's suggested move of `docs/` into a crate directory** — since Helios `#1654` ignores `/docs/`, rename detection offers to relocate the tracked Atrius docs on every merge (4 Nov 2026: into `crates/persistence/`). Keep them in `docs/` and `git add -f`.
 
 ---
@@ -402,7 +420,7 @@ Merge order: `main` → cds-stack → clinical-reasoning integration.
 
 27 Nov 2026: `main` `215d03ed9` (Helios `56b5b1707` / **0.2.10**; **#2671** drop `system/*` wildcard grant shortcuts, **#2673** admin-tier routes tenant-bound, **#2823** conditional criteria search scope, **#2827** patient-scope history deletes, **#2829** bundle DELETE entry-type check, **#2820** subscription operation route typing, **#2706** blank `HFS_AUTH_TENANT_CLAIM` rejected at config, **#2839** SQL unfiltered sort perf, HTS expand cache bounds + `not_found_url_put`, **package-terminology** / validator slice binding work on feat) → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-11-27` → `547937303`. Ledger unchanged SQLite **51** / Postgres **60**. Workspace **0.2.10**, MSRV **1.95**. **82** behind / **51** non-merge since `pre-merge-main-2026-11-26` (large ort merge, not rebuilt). Conflicts (3): `auth/config.rs` + `jwks_bearer.rs` — Helios `claim_name_from_env` + blank-tenant validation **and** fork `HFS_AUTH_REQUIRE_TENANT_CLAIM` + JTI Redis validate; `hts/operations/expand.rs` — main `not_found_url_put` + `BoundedCache` insert. Post-merge: `bulk_export.rs` `list_owner_filter` (#2671, drop `has_system_wildcard`). **`helios-auth`**, **`helios-rest`**, **`helios-persistence`**, **`helios-fhirpath`**, **`helios-hts`** changed — refresh HIS pins after push. Verification: `cargo build`, `cds-server`, rest **R4,sqlite** lib **1097**, rest **+subscriptions** **1109**, hts lib **877**, `fhirpath_triggers_integration` **4/4**. Prior: 26 Nov merge, tag `pre-merge-main-2026-11-26`.
 
-26 Nov 2026: `main` `215d03ed9` (Helios `fb7d12ed5` / **0.2.10**; **#2796** UI admin routes require system scope, **#2788** HTS XML element-name splice, **#2783** HTS bootstrap skip refused owner resources, **#2779** expansion ceiling (`expansion_too_costly`), **#d0dcae0fe** SQLite system-id cache keyed by DB file, FHIRPath **`isKnown()`** / **`hasData()`** / **`sameSubject()`**, remove **@claude** workflow) → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-11-26` → `928d13ce8`. Ledger unchanged SQLite **51** / Postgres **60**. Workspace **0.2.10**, MSRV **1.95**. 19 behind / **10** non-merge since `pre-merge-main-2026-11-25`. Conflicts (2): delete `.github/workflows/claude.yml` (Helios removed; fork Atrius gate obsolete); `hts/.../sqlite/value_set.rs` — took **main** (DB-file-keyed `cs_id_cache` + `expansion_too_costly`; fork per-backend `cs_system_id_cache` field retained on `SqliteTerminologyBackend` for other paths). **`helios-hts`**, **`helios-fhirpath`**, **`helios-ui`** changed — refresh HIS pins after push. Verification: `cargo build`, `cds-server`, rest **R4,sqlite** lib **1092**, rest **+subscriptions** **1104**, hts lib **853**, `fhirpath_triggers_integration` **4/4**. Prior: 25 Nov merge, tag `pre-merge-main-2026-11-25`.
+26 Nov 2026: `main` `215d03ed9` (Helios `fb7d12ed5` / **0.2.10**; **#2796** UI admin routes require system scope, **#2788** HTS XML element-name splice, **#2783** HTS bootstrap skip refused owner resources, **#2779** expansion ceiling (`expansion_too_costly`), **#d0dcae0fe** SQLite system-id cache keyed by DB file, FHIRPath **`isKnown()`** / **`hasData()`** / **`sameSubject()`**, remove **@claude** workflow) → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-11-26` → `928d13ce8`. Ledger unchanged SQLite **51** / Postgres **60**. Workspace **0.2.10**, MSRV **1.95**. 19 behind / **10** non-merge since `pre-merge-main-2026-11-25`. Conflicts (2): delete `.github/workflows/claude.yml` (Helios removed; fork Atrius gate obsolete); `hts/.../sqlite/value_set.rs` — took **main** whole (DB-file-keyed `cs_id_cache` + `expansion_too_costly`). **Wrong resolution**, corrected 27 Nov 2026: that blob dropped the 11 `bcp47::` call sites and left lookups on the static while `invalidate_caches` cleared the unused instance field. Do not repeat; see the [HTS keep-list](#crateshts). **`helios-hts`**, **`helios-fhirpath`**, **`helios-ui`** changed — refresh HIS pins after push. Verification: `cargo build`, `cds-server`, rest **R4,sqlite** lib **1092**, rest **+subscriptions** **1104**, hts lib **853**, `fhirpath_triggers_integration` **4/4**. Prior: 25 Nov merge, tag `pre-merge-main-2026-11-25`.
 
 25 Nov 2026: `main` `a118f9feb` (Helios `7ade40f51` / **0.2.10**; **#2593** CapabilityStatement lists only SearchParameters the active storage serves (`serves_search_param` on each backend), **#2781** HTS refuse owner-ranked import replacement, **#2777** HTS UI CSRF/cross-site guard on import POST, RUSTSEC **cookie** 0.18.3) → `feat-clinical-reasoning`. Rollback tag `pre-merge-main-2026-11-25` → `8c5ca9cef`. Ledger unchanged SQLite **51** / Postgres **60**. Workspace **0.2.10**, MSRV **1.95**. 11 behind / **5** non-merge since `pre-merge-main-2026-11-23` merge tip. Conflicts (**0**): clean ort merge (`capabilities.rs`, query builders, composite `serves_search_param`, HTS import authority + UI tests). **`helios-persistence`**, **`helios-rest`**, **`helios-hts`**, **`helios-hts-ui`** changed — refresh HIS pins after push. Verification: `cargo build`, `cds-server`, rest **R4,sqlite** lib **1092**, rest **+subscriptions** **1104**, hts lib **857**, `fhirpath_triggers_integration` **4/4**. Prior: 23 Nov merge, tag `pre-merge-main-2026-11-23`.
 

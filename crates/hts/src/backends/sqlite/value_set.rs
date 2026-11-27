@@ -53,37 +53,8 @@ use crate::types::{
     ValidateCodeResponse,
 };
 
-use super::SqliteTerminologyBackend;
 use super::concept_index_cache::{CONCEPT_INDEX_CACHE_MAX_KEYS, ConceptIndexCache, now_ms};
-
-// ─── Process-wide CodeSystem URL → (system_id, version) cache ───────────────
-//
-// Many `code_systems` rows can share the same canonical URL — e.g. an empty
-// stub from `hl7.terminology` plus a full RF2 import of SNOMED. Iter5 fixed
-// the correctness bug by adding an `EXISTS(SELECT 1 FROM concepts ...)`
-// priority subquery to the resolver SQL so the row with concepts is preferred,
-// but that subquery runs on EVERY hot-path lookup (validate-code, expand
-// per-include, etc.) and dominates wRPS at high concurrency.
-//
-// This cache memoises the resolved `(system_id, version)` per URL across
-// requests. Cache invalidation is coarse: any code_systems write (import,
-// CRUD) calls `invalidate_cs_id_cache()`, which clears the whole map. In
-// typical operation imports happen at startup and the cache is then stable
-// for the life of the process, so the cost amortises over millions of
-// subsequent requests.
-//
-// The map is keyed by database file first, then URL: system ids are
-// server-assigned, so an id resolved against one database means nothing in
-// another. In-memory databases (`SqliteTerminologyBackend::in_memory`, used by
-// tests that each open their own) have no file name to key on and bypass the
-// cache; sharing it between them answered one test's expansions with another
-// test's ids.
-type SystemIdCacheMap = HashMap<String, HashMap<String, (String, Option<String>)>>;
-static SYSTEM_ID_CACHE: OnceLock<RwLock<SystemIdCacheMap>> = OnceLock::new();
-
-fn cs_id_cache() -> &'static RwLock<SystemIdCacheMap> {
-    SYSTEM_ID_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
-}
+use super::{SqliteTerminologyBackend, SystemIdCacheMap};
 
 /// Truncate a URL to at most 80 characters for `hts::probe` log labels,
 /// appending an ellipsis when it was shortened. Operates on `char` boundaries,
@@ -99,22 +70,17 @@ fn truncate_url_for_probe(u: &str) -> String {
     }
 }
 
-/// Clear the process-wide URL→system_id cache. Called by code paths that
-/// write to the `code_systems` table (CRUD + bulk import).
-pub(crate) fn invalidate_cs_id_cache() {
-    if let Some(cache) = SYSTEM_ID_CACHE.get() {
-        if let Ok(mut w) = cache.write() {
-            w.clear();
-        }
-    }
-}
-
 /// Resolve `system_id` for a CodeSystem canonical URL, preferring rows that
 /// actually have concepts (skipping empty stubs imported by terminology
-/// packages). Uses a process-wide cache to avoid the EXISTS subquery on every
-/// request.
-fn resolve_system_id_cached(conn: &Connection, url: &str) -> Result<Option<String>, HtsError> {
-    if let Some(rec) = resolve_system_id_with_version_cached(conn, url)? {
+/// packages). Uses the backend's URL→id cache to avoid the EXISTS subquery
+/// on every request. The map lives on [`SqliteTerminologyBackend`] and is
+/// cleared by [`crate::traits::TerminologyCaches::invalidate_caches`].
+fn resolve_system_id_cached(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
+    conn: &Connection,
+    url: &str,
+) -> Result<Option<String>, HtsError> {
+    if let Some(rec) = resolve_system_id_with_version_cached(cs_system_id_cache, conn, url)? {
         Ok(Some(rec.0))
     } else {
         Ok(None)
@@ -125,17 +91,14 @@ fn resolve_system_id_cached(conn: &Connection, url: &str) -> Result<Option<Strin
 /// version. Used by the compose-include path which wants to populate
 /// `ExpansionContains.version`.
 fn resolve_system_id_with_version_cached(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     url: &str,
 ) -> Result<Option<(String, Option<String>)>, HtsError> {
-    // `path()` is `Some("")` for an in-memory database: nothing to key on.
-    let db_file = conn.path().filter(|p| !p.is_empty());
-    if let Some(db_file) = db_file {
-        if let Ok(read) = cs_id_cache().read() {
-            if let Some(rec) = read.get(db_file).and_then(|by_url| by_url.get(url)) {
-                return Ok(Some(rec.clone()));
-            }
-        }
+    if let Ok(read) = cs_system_id_cache.read()
+        && let Some(rec) = read.get(url)
+    {
+        return Ok(Some(rec.clone()));
     }
 
     // Multiple `code_systems` rows can share the same canonical URL — e.g. a
@@ -158,7 +121,7 @@ fn resolve_system_id_with_version_cached(
     // The full rule lives in `backends::cs_precedence_order_by` and is shared
     // verbatim with the Postgres resolver.
     // The cache memoises the resolved `(id, version)` so the SQL runs once
-    // per URL per process.
+    // per URL per backend instance.
     let sql = format!(
         "SELECT id, version FROM code_systems WHERE url = ?1 \
          ORDER BY {} LIMIT 1",
@@ -171,12 +134,10 @@ fn resolve_system_id_with_version_cached(
         .optional()
         .map_err(|e| HtsError::StorageError(e.to_string()))?;
 
-    if let (Some(db_file), Some(rec)) = (db_file, row.as_ref()) {
-        if let Ok(mut w) = cs_id_cache().write() {
-            w.entry(db_file.to_owned())
-                .or_default()
-                .insert(url.to_owned(), rec.clone());
-        }
+    if let Some(rec) = row.as_ref()
+        && let Ok(mut w) = cs_system_id_cache.write()
+    {
+        w.insert(url.to_owned(), rec.clone());
     }
 
     Ok(row)
@@ -614,6 +575,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                     let prop_key = format!("prop-result:{}", compose_cache_hash(compose_str.as_bytes()));
                     let plain_key = plain_fts_cache_key(compose);
                     expand_inline_filtered(
+                        backend.cs_system_id_cache(),
                         &conn,
                         compose,
                         filter,
@@ -719,7 +681,12 @@ impl ValueSetOperations for SqliteTerminologyBackend {
 
                             // Single-include is-a / descendent-of: BFS with LIMIT.
                             if let Some((sys_url, sys_id, root_code, include_root)) =
-                                extract_simple_hierarchy_compose(&conn, compose, &mut warnings)?
+                                extract_simple_hierarchy_compose(
+                                    backend.cs_system_id_cache(),
+                                    &conn,
+                                    compose,
+                                    &mut warnings,
+                                )?
                             {
                                 let page = bfs_isa_page(
                                     &conn,
@@ -745,6 +712,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             // be O(N_descendants) per branch and blocks the connection
                             // pool at high concurrency.
                             if let Some(page) = try_multiinclude_hierarchy_page(
+                                backend.cs_system_id_cache(),
                                 &conn,
                                 compose,
                                 count as usize,
@@ -936,6 +904,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                             if let Some(count) = req.count.filter(|&c| c > 0) {
                                 let page_offset = req.offset.unwrap_or(0) as usize;
                                 if let Some((page, total)) = compose_page_fast(
+                                    backend.cs_system_id_cache(),
                                     &conn,
                                     compose_json.as_deref(),
                                     page_offset,
@@ -965,6 +934,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                         let prop_key = format!("prop-result:{}", compose_cache_hash(compose_str.as_bytes()));
                                         let plain_key = plain_fts_cache_key(&compose);
                                         expand_inline_filtered(
+                                            backend.cs_system_id_cache(),
                                             &conn,
                                             &compose,
                                             filter,
@@ -1070,7 +1040,11 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                 };
 
                                 if let Some((cs_url, pattern)) = cs_pat {
-                                    let system_id = resolve_system_id_cached(&conn, &cs_url)?;
+                                    let system_id = resolve_system_id_cached(
+                                        backend.cs_system_id_cache(),
+                                        &conn,
+                                        &cs_url,
+                                    )?;
 
                                     if let Some(system_id) = system_id {
                                         let filter_lower =
@@ -1113,6 +1087,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                                             &bg_index_pending,
                                             &implicit_index,
                                             &inline_compose_index,
+                                            backend.cs_system_id_cache().clone(),
                                             ImplicitFillJob {
                                                 url: url.to_string(),
                                                 max_rows: req
@@ -1137,6 +1112,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         // limit, whatever `count` says and whatever limit this
                         // request carries: a larger set is served from memory.
                         let persisted = ensure_implicit_cache(
+                            backend.cs_system_id_cache(),
                             &conn,
                             url,
                             req.date.as_deref(),
@@ -1152,7 +1128,12 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         if !persisted && req.count.is_none() && filter_lower.is_none() {
                             if let Some(cap) = req.max_expansion_size {
                                 let (_, system_id, pattern) =
-                                    resolve_implicit_vs(&conn, url, req.date.as_deref())?;
+                                    resolve_implicit_vs(
+                                        backend.cs_system_id_cache(),
+                                        &conn,
+                                        url,
+                                        req.date.as_deref(),
+                                    )?;
                                 let n = implicit_vs_size(&conn, &system_id, &pattern)?;
                                 if n > i64::from(cap) {
                                     return Err(HtsError::expansion_too_costly(
@@ -1168,7 +1149,13 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         // so subsequent requests bypass SQLite entirely (EX03
                         // optimisation).
                         let concept_idx =
-                            load_implicit_index(&conn, url, req.date.as_deref(), &implicit_index)?;
+                            load_implicit_index(
+                                backend.cs_system_id_cache(),
+                                &conn,
+                                url,
+                                req.date.as_deref(),
+                                &implicit_index,
+                            )?;
 
                         let sql_offset = i64::from(req.offset.unwrap_or(0));
                         let sql_limit = req.count.map(i64::from).unwrap_or(-1);
@@ -1396,6 +1383,10 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                 .get()
                 .map_err(|e| HtsError::StorageError(format!("Pool error: {e}")))?;
 
+            if let Some(resp) = crate::bcp47::validate_all_languages_code(&url, &req) {
+                return Ok(resp);
+            }
+
             let selected_vs_version = if let Some(id) = req.selected_value_set_id.as_deref() {
                 conn.query_row(
                     "SELECT version FROM value_sets WHERE \
@@ -1531,6 +1522,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         // code systems like SNOMED CT with ~350k concepts).
                         if let Some((cs_url, pattern)) = parse_fhir_vs_url(&url) {
                             let found = validate_fhir_vs(
+                                backend.cs_system_id_cache(),
                                 &conn,
                                 &cs_url,
                                 &pattern,
@@ -1599,6 +1591,7 @@ impl ValueSetOperations for SqliteTerminologyBackend {
                         // there and in the code system otherwise. Validating a code
                         // never writes the set.
                         let found = lookup_implicit_vs_code(
+                            backend.cs_system_id_cache(),
                             &conn,
                             &url,
                             req.date.as_deref(),
@@ -2523,6 +2516,7 @@ fn fetch_cache_legacy(conn: &Connection, vs_id: &str) -> Result<Vec<ExpansionCon
 /// Returns `None` if any include is not a plain full-system include so the
 /// caller can fall through to the general path.
 fn expand_inline_plain_fts(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     includes: &[serde_json::Value],
     filter_lower: &str,
@@ -2533,9 +2527,12 @@ fn expand_inline_plain_fts(
     let mut pairs: Vec<(String, String)> = Vec::with_capacity(includes.len());
     for inc in includes {
         let system_url = inc["system"].as_str().unwrap_or("");
-        match resolve_system_id_cached(conn, system_url)? {
+        match resolve_system_id_cached(cs_system_id_cache, conn, system_url)? {
             Some(id) => pairs.push((system_url.to_owned(), id)),
             None => {
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return Err(crate::bcp47::unbounded_expansion_error());
+                }
                 let msg = format!(
                     "CodeSystem {system_url} was not found and has been excluded from the expansion"
                 );
@@ -2629,6 +2626,7 @@ fn expand_inline_plain_fts(
 /// Rust over the (already bounded) result set.  Explicit `concept[]` lists are
 /// also filtered in Rust since they are already small.
 fn expand_inline_filtered(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     compose: &serde_json::Value,
     text_filter: &str,
@@ -2657,16 +2655,28 @@ fn expand_inline_filtered(
         });
         if all_plain {
             if let Some((plain_key, cache)) = plain_fts_cache {
-                if let Some(concept_idx) =
-                    load_plain_corpus_and_cache(conn, includes, plain_key, cache, warnings)
-                {
+                if let Some(concept_idx) = load_plain_corpus_and_cache(
+                    cs_system_id_cache,
+                    conn,
+                    includes,
+                    plain_key,
+                    cache,
+                    warnings,
+                ) {
                     // Apply text filter via trigram index in Rust.
                     // Return all matches (no pagination) — the caller in expand()
                     // handles pagination via the filtered.skip().take() path.
                     return Ok(page_in_memory(&concept_idx, Some(&filter_lower), 0, -1));
                 }
             }
-            return expand_inline_plain_fts(conn, includes, &filter_lower, limit_hint, warnings);
+            return expand_inline_plain_fts(
+                cs_system_id_cache,
+                conn,
+                includes,
+                &filter_lower,
+                limit_hint,
+                warnings,
+            );
         }
     }
 
@@ -2709,9 +2719,20 @@ fn expand_inline_filtered(
             _ => continue,
         };
 
-        let system_id = match resolve_system_id_cached(conn, system_url)? {
+        let system_id = match resolve_system_id_cached(cs_system_id_cache, conn, system_url)? {
             Some(id) => id,
             None => {
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return Err(crate::bcp47::unbounded_expansion_error());
+                }
+                if let Some(codes) = crate::bcp47::enumerated_bcp47_expansion(system_url, inc) {
+                    results.extend(
+                        codes
+                            .into_iter()
+                            .filter(|c| crate::bcp47::matches_text_filter(c, &filter_lower)),
+                    );
+                    continue;
+                }
                 let msg = format!(
                     "CodeSystem {system_url} was not found and has been excluded from the expansion"
                 );
@@ -3349,7 +3370,9 @@ fn compute_expansion_depth_inner(
         .iter()
         .any(|inc| inc["valueSet"].as_array().is_some_and(|a| !a.is_empty()));
     let mut included: Vec<ExpansionContains> = if !any_vs_ref {
-        if let Some(result) = try_multi_include_property_only(conn, includes, warnings)? {
+        if let Some(result) =
+            try_multi_include_property_only(backend.cs_system_id_cache(), conn, includes, warnings)?
+        {
             result
         } else {
             expand_includes_per_clause(backend, conn, includes, warnings, depth, ctx)?
@@ -3617,7 +3640,12 @@ fn expand_single_include_local(
     };
     let (system_id, cs_version) = match system_id_cache.get(&cache_key) {
         Some(cached) => cached.clone(),
-        None => match resolve_compose_system_id(conn, system_url, inc_version)? {
+        None => match resolve_compose_system_id(
+            backend.cs_system_id_cache(),
+            conn,
+            system_url,
+            inc_version,
+        )? {
             Some((id, ver)) => {
                 system_id_cache.insert(cache_key, (id.clone(), ver.clone()));
                 (id, ver)
@@ -3653,6 +3681,15 @@ fn expand_single_include_local(
                             "__UNKNOWN_CS_VERSION_EXP__:{text}"
                         )));
                     }
+                }
+                // `urn:ietf:bcp:47` is not shipped as a CodeSystem. Enumerated
+                // language ValueSets already carry their codes; the open
+                // `all-languages` include cannot be materialised.
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return Err(crate::bcp47::unbounded_expansion_error());
+                }
+                if let Some(codes) = crate::bcp47::enumerated_bcp47_expansion(system_url, inc) {
+                    return Ok(codes);
                 }
                 let msg = format!(
                     "CodeSystem {system_url} was not found and has been excluded from the expansion"
@@ -4567,6 +4604,7 @@ fn is_property_only_include(inc: &serde_json::Value) -> bool {
 /// systems, non-property filters, explicit concept lists, etc.) so the caller
 /// can fall back to the generic per-include loop.
 fn try_multi_include_property_only(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     includes: &[serde_json::Value],
     warnings: &mut Vec<String>,
@@ -4587,7 +4625,7 @@ fn try_multi_include_property_only(
         return Ok(None);
     }
 
-    let system_id = match resolve_system_id_cached(conn, first_system)? {
+    let system_id = match resolve_system_id_cached(cs_system_id_cache, conn, first_system)? {
         Some(id) => id,
         None => {
             let msg = format!(
@@ -5606,6 +5644,7 @@ fn batch_property_eq_in_set(
 /// Returns `None` when the compose is not a qualifying multi-include (caller
 /// should fall through to `compute_expansion`).
 fn try_multiinclude_hierarchy_page(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     compose: &serde_json::Value,
     count: usize,
@@ -5664,7 +5703,7 @@ fn try_multiinclude_hierarchy_page(
             _ => return Ok(None),
         };
 
-        match resolve_system_id_cached(conn, system_url)? {
+        match resolve_system_id_cached(cs_system_id_cache, conn, system_url)? {
             Some(id) => entries.push(Entry {
                 sys_url: system_url.to_owned(),
                 sys_id: id,
@@ -5766,6 +5805,7 @@ fn parse_fhir_vs_url(url: &str) -> Option<(String, FhirVsPattern)> {
 /// one or more systems) serve the first page in milliseconds instead of
 /// requiring a full DB scan that can exceed the 30 s request timeout.
 fn compose_page_fast(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     compose_json: Option<&str>,
     offset: usize,
@@ -5872,7 +5912,11 @@ fn compose_page_fast(
         } else {
             let system_id: Option<String> = system_cache
                 .entry(system_url.clone())
-                .or_insert_with(|| resolve_system_id_cached(conn, system_url).ok().flatten())
+                .or_insert_with(|| {
+                    resolve_system_id_cached(cs_system_id_cache, conn, system_url)
+                        .ok()
+                        .flatten()
+                })
                 .clone();
 
             if let Some(sid) = system_id {
@@ -5928,6 +5972,7 @@ fn compose_needs_general_path(compose: &serde_json::Value) -> bool {
 /// Returns `Some((system_url, system_id, root_code, include_root))` on a match,
 /// `None` when the compose does not fit the pattern.
 fn extract_simple_hierarchy_compose(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     compose: &serde_json::Value,
     warnings: &mut Vec<String>,
@@ -5969,7 +6014,7 @@ fn extract_simple_hierarchy_compose(
         _ => return Ok(None),
     };
 
-    let system_id = match resolve_system_id_cached(conn, system_url)? {
+    let system_id = match resolve_system_id_cached(cs_system_id_cache, conn, system_url)? {
         Some(id) => id,
         None => {
             warnings.push(format!(
@@ -6265,6 +6310,7 @@ fn bfs_isa_page(
 /// Returns `Ok(None)` when no row matches so callers can skip the include
 /// rather than abort the whole expansion.
 fn resolve_compose_system_id(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     url: &str,
     version: Option<&str>,
@@ -6272,7 +6318,7 @@ fn resolve_compose_system_id(
     // Hot-path fast lane: when the include doesn't pin a version, the cached
     // (id, version) tuple is exactly what we want, no SQL needed.
     if version.is_none() {
-        return resolve_system_id_with_version_cached(conn, url);
+        return resolve_system_id_with_version_cached(cs_system_id_cache, conn, url);
     }
 
     // Version-pinned: must enumerate all candidate rows to find the matching
@@ -6611,8 +6657,8 @@ fn lookup_value_set_version(
     conn: &Connection,
     url: &str,
 ) -> Option<String> {
-    // Per-instance cache: stable until the next re-import. Same invalidation
-    // hook as cs_id_cache (clear all on bundle write).
+    // Per-instance cache: stable until the next re-import. Cleared with
+    // `cs_system_id_cache` on every terminology write.
     let cache = backend.vs_version_for_msg_cache();
     if let Ok(read) = cache.read() {
         if let Some(v) = read.get(url) {
@@ -7810,6 +7856,7 @@ fn finish_validate_code_response(
 /// Returns the matching [`ExpansionContains`] on success, or `None` when the
 /// code is not a member of the implicit ValueSet.
 fn validate_fhir_vs(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     cs_url: &str,
     pattern: &FhirVsPattern,
@@ -7826,7 +7873,7 @@ fn validate_fhir_vs(
     // Multiple `code_systems` rows can share the same canonical URL — e.g. a
     // stub from `hl7.terminology` plus the real RF2 import. The cached
     // resolver picks the row that actually has concepts.
-    let system_id = match resolve_system_id_cached(conn, cs_url)? {
+    let system_id = match resolve_system_id_cached(cs_system_id_cache, conn, cs_url)? {
         Some(id) => id,
         None => {
             return Err(HtsError::NotFound(format!(
@@ -8114,6 +8161,7 @@ pub(crate) fn reconcile_implicit_cache_at_startup(conn: &Connection) {
 /// The code system and concept pattern behind an implicit ValueSet URL:
 /// `(code system URL, system id, pattern)`.
 fn resolve_implicit_vs(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     url: &str,
     date: Option<&str>,
@@ -8128,7 +8176,7 @@ fn resolve_implicit_vs(
             "A definition for the value Set \'{url}\' could not be found"
         )));
     };
-    let system_id = resolve_system_id_cached(conn, &cs_url)?
+    let system_id = resolve_system_id_cached(cs_system_id_cache, conn, &cs_url)?
         .ok_or_else(|| HtsError::NotFound(format!("CodeSystem not found: {cs_url}")))?;
     Ok((cs_url, system_id, pattern))
 }
@@ -8178,6 +8226,7 @@ fn implicit_cache_is_populated(conn: &Connection, url: &str) -> Result<bool, Hts
 /// table is trimmed to [`IMPLICIT_CACHE_MAX_KEYS`]; see
 /// [`trim_implicit_cache_keys`] for `hot`.
 fn ensure_implicit_cache(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     url: &str,
     date: Option<&str>,
@@ -8188,7 +8237,7 @@ fn ensure_implicit_cache(
         return Ok(true);
     }
 
-    let (cs_url, system_id, pattern) = resolve_implicit_vs(conn, url, date)?;
+    let (cs_url, system_id, pattern) = resolve_implicit_vs(cs_system_id_cache, conn, url, date)?;
 
     // Size the set before taking the write lock: a set over the limit is
     // never written, and turning it away must not wait behind other writers.
@@ -8255,6 +8304,7 @@ fn queue_implicit_fill(
     pending: &Arc<std::sync::Mutex<HashSet<String>>>,
     implicit_index: &super::ImplicitIndex,
     inline_compose_index: &super::InlineComposeIndex,
+    cs_system_id_cache: Arc<RwLock<SystemIdCacheMap>>,
     job: ImplicitFillJob,
 ) {
     let fresh = pending
@@ -8270,6 +8320,7 @@ fn queue_implicit_fill(
         let pending = pending.clone();
         let implicit_index = implicit_index.clone();
         let inline_compose_index = inline_compose_index.clone();
+        let cs_system_id_cache = cs_system_id_cache.clone();
         // The loop ends when every clone of the backend, and with it every
         // sender, is gone.
         let spawned = std::thread::Builder::new()
@@ -8277,7 +8328,13 @@ fn queue_implicit_fill(
             .spawn(move || {
                 for job in rx {
                     if let Ok(conn) = pool.get() {
-                        run_implicit_fill(&conn, &job, &implicit_index, &inline_compose_index);
+                        run_implicit_fill(
+                            &cs_system_id_cache,
+                            &conn,
+                            &job,
+                            &implicit_index,
+                            &inline_compose_index,
+                        );
                     }
                     if let Ok(mut p) = pending.lock() {
                         p.remove(&job.url);
@@ -8298,26 +8355,29 @@ fn queue_implicit_fill(
 }
 
 fn run_implicit_fill(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     job: &ImplicitFillJob,
     implicit_index: &super::ImplicitIndex,
     inline_compose_index: &super::InlineComposeIndex,
 ) {
     let hot: [&ConceptIndexCache; 2] = [implicit_index, inline_compose_index];
-    let Ok(persisted) = ensure_implicit_cache(conn, &job.url, None, job.max_rows, &hot) else {
+    let Ok(persisted) =
+        ensure_implicit_cache(cs_system_id_cache, conn, &job.url, None, job.max_rows, &hot)
+    else {
         return;
     };
     if !persisted {
         // Too large for the table. Memory can still hold it, within the
         // index's byte budget, unless it is larger than any index we keep.
-        let fits = resolve_implicit_vs(conn, &job.url, None)
+        let fits = resolve_implicit_vs(cs_system_id_cache, conn, &job.url, None)
             .and_then(|(_, system_id, pattern)| implicit_vs_size(conn, &system_id, &pattern))
             .is_ok_and(|n| n <= IMPLICIT_INDEX_MAX_CONCEPTS);
         if !fits {
             return;
         }
     }
-    let _ = load_implicit_index(conn, &job.url, None, implicit_index);
+    let _ = load_implicit_index(cs_system_id_cache, conn, &job.url, None, implicit_index);
 }
 
 /// Look up a single code in the implicit expansion cache.
@@ -8392,6 +8452,7 @@ fn lookup_in_implicit_cache(
 /// cache: in the persisted rows when the key is there, otherwise directly in
 /// the code system behind the URL.
 fn lookup_implicit_vs_code(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     url: &str,
     date: Option<&str>,
@@ -8401,7 +8462,7 @@ fn lookup_implicit_vs_code(
     if implicit_cache_is_populated(conn, url)? {
         return lookup_in_implicit_cache(conn, url, code, system);
     }
-    let (cs_url, system_id, pattern) = resolve_implicit_vs(conn, url, date)?;
+    let (cs_url, system_id, pattern) = resolve_implicit_vs(cs_system_id_cache, conn, url, date)?;
     if system.is_some_and(|s| s != cs_url) {
         return Ok(None);
     }
@@ -8449,6 +8510,7 @@ fn lookup_implicit_vs_code(
 /// index is kept in `index` within that cache's key and byte budgets; one too
 /// large to keep is still returned for this request.
 fn load_implicit_index(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     url: &str,
     date: Option<&str>,
@@ -8474,7 +8536,8 @@ fn load_implicit_index(
         rows.collect::<rusqlite::Result<Vec<_>>>()
             .map_err(storage_err)?
     } else {
-        let (cs_url, system_id, pattern) = resolve_implicit_vs(conn, url, date)?;
+        let (cs_url, system_id, pattern) =
+            resolve_implicit_vs(cs_system_id_cache, conn, url, date)?;
         let map_row = |r: &rusqlite::Row<'_>| Ok((cs_url.clone(), r.get(0)?, r.get(1)?));
         match &pattern {
             FhirVsPattern::AllConcepts => {
@@ -9272,7 +9335,11 @@ pub(crate) fn prebuild_concepts_fts(conn: &Connection) -> usize {
 /// rolling deploy) the index is rebuilt in memory from the persisted rows,
 /// allowing the async hot path in [`expand`] to fire from the very first
 /// request without waiting for a background build thread.
-pub(crate) fn prebuild_implicit_index(conn: &Connection, index: &super::ImplicitIndex) {
+pub(crate) fn prebuild_implicit_index(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
+    conn: &Connection,
+    index: &super::ImplicitIndex,
+) {
     // Oldest first, so that if the index's byte budget cannot hold every key
     // the most recently used ones are the ones left in memory.
     let urls: Vec<String> = conn
@@ -9287,7 +9354,7 @@ pub(crate) fn prebuild_implicit_index(conn: &Connection, index: &super::Implicit
         .unwrap_or_default();
 
     for url in &urls {
-        let _ = load_implicit_index(conn, url, None, index);
+        let _ = load_implicit_index(cs_system_id_cache, conn, url, None, index);
     }
 
     if !urls.is_empty() {
@@ -9531,6 +9598,7 @@ const PLAIN_FTS_CACHE_MAX_CONCEPTS: usize = 500_000;
 /// A concurrent request that already populated the same key returns the
 /// existing Arc without rebuilding the index.
 fn load_plain_corpus_and_cache(
+    cs_system_id_cache: &Arc<RwLock<SystemIdCacheMap>>,
     conn: &Connection,
     includes: &[serde_json::Value],
     cache_key: &str,
@@ -9552,9 +9620,12 @@ fn load_plain_corpus_and_cache(
     let mut pairs: Vec<(String, String)> = Vec::with_capacity(includes.len());
     for inc in includes {
         let system_url = inc["system"].as_str().unwrap_or("");
-        match resolve_system_id_cached(conn, system_url) {
+        match resolve_system_id_cached(cs_system_id_cache, conn, system_url) {
             Ok(Some(id)) => pairs.push((system_url.to_owned(), id)),
             Ok(None) => {
+                if crate::bcp47::is_unbounded_bcp47_include(system_url, inc) {
+                    return None;
+                }
                 let msg = format!(
                     "CodeSystem {system_url} was not found and has been excluded from the expansion"
                 );
@@ -9676,6 +9747,181 @@ mod tests {
 
     fn backend() -> SqliteTerminologyBackend {
         SqliteTerminologyBackend::in_memory().expect("in-memory backend should initialise")
+    }
+
+    fn language_valueset_bundle(url: &str, include: &str) -> String {
+        format!(
+            r#"{{
+              "resourceType": "Bundle",
+              "type": "collection",
+              "entry": [{{
+                "resource": {{
+                  "resourceType": "ValueSet",
+                  "url": "{url}",
+                  "status": "active",
+                  "compose": {{ "include": [{include}] }}
+                }}
+              }}]
+            }}"#
+        )
+    }
+
+    #[tokio::test]
+    async fn expand_enumerated_bcp47_without_codesystem() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/languages",
+            r#"{"system":"urn:ietf:bcp:47","concept":[
+                {"code":"hi","display":"Hindi"},
+                {"code":"pa","display":"Punjabi"},
+                {"code":"en-US","display":"English (United States)"}
+            ]}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let resp = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+
+        assert!(resp.warnings.is_empty(), "{:?}", resp.warnings);
+        let codes: Vec<&str> = resp.contains.iter().map(|c| c.code.as_str()).collect();
+        assert_eq!(codes, ["hi", "pa", "en-US"]);
+        assert_eq!(resp.contains[0].display.as_deref(), Some("Hindi"));
+        assert_eq!(resp.contains[0].system, "urn:ietf:bcp:47");
+    }
+
+    #[tokio::test]
+    async fn expand_enumerated_bcp47_text_filter() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/languages",
+            r#"{"system":"urn:ietf:bcp:47","concept":[
+                {"code":"hi","display":"Hindi"},
+                {"code":"pa","display":"Punjabi"}
+            ]}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let resp = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    filter: Some("pun".into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+
+        let codes: Vec<&str> = resp.contains.iter().map(|c| c.code.as_str()).collect();
+        assert_eq!(codes, ["pa"]);
+    }
+
+    #[tokio::test]
+    async fn expand_all_languages_is_too_costly() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/all-languages",
+            r#"{"system":"urn:ietf:bcp:47"}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let err = b
+            .expand(
+                &ctx(),
+                ExpandRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/all-languages".into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, HtsError::TooCostly(_)), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn validate_languages_uses_enumerated_codes() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/languages",
+            r#"{"system":"urn:ietf:bcp:47","concept":[
+                {"code":"hi","display":"Hindi"},
+                {"code":"pa","display":"Punjabi"}
+            ]}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let hi = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    code: "hi".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(hi.result);
+        assert_eq!(hi.display.as_deref(), Some("Hindi"));
+
+        let regional = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/languages".into()),
+                    code: "hi-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!regional.result);
+    }
+
+    #[tokio::test]
+    async fn validate_all_languages_accepts_well_formed_tag() {
+        let b = backend();
+        let bundle = language_valueset_bundle(
+            "http://hl7.org/fhir/ValueSet/all-languages",
+            r#"{"system":"urn:ietf:bcp:47"}"#,
+        );
+        b.import_bundle(&ctx(), bundle.as_bytes()).await.unwrap();
+
+        let ok = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/all-languages".into()),
+                    code: "hi-IN".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(ok.result);
+        assert_eq!(ok.system.as_deref(), Some("urn:ietf:bcp:47"));
+
+        let bad = b
+            .validate_code(
+                &ctx(),
+                ValidateCodeRequest {
+                    url: Some("http://hl7.org/fhir/ValueSet/all-languages".into()),
+                    code: "Hindi".into(),
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
+        assert!(!bad.result);
     }
 
     #[test]
@@ -10822,7 +11068,9 @@ mod tests {
         let b = fvs_backend().await;
         let conn = b.pool().get().unwrap();
         for url in [FVS_ROOT, FVS_CHILD1, FVS_ALL] {
-            assert!(ensure_implicit_cache(&conn, url, None, None, &[]).unwrap());
+            assert!(
+                ensure_implicit_cache(b.cs_system_id_cache(), &conn, url, None, None, &[]).unwrap()
+            );
         }
         assert_eq!(implicit_cache_urls(&conn).len(), 3);
         assert_eq!(implicit_cache_key_rows(&conn).len(), 3);
@@ -10862,11 +11110,11 @@ mod tests {
         let conn = b.pool().get().unwrap();
         // ROOT is filled first, so by table stamps alone it is the oldest.
         for url in [FVS_ROOT, FVS_CHILD1, FVS_ALL] {
-            ensure_implicit_cache(&conn, url, None, None, &[]).unwrap();
+            ensure_implicit_cache(b.cs_system_id_cache(), &conn, url, None, None, &[]).unwrap();
         }
         // It is being served from memory, which never touches the table.
         let hot = ConceptIndexCache::default();
-        load_implicit_index(&conn, FVS_ROOT, None, &hot).unwrap();
+        load_implicit_index(b.cs_system_id_cache(), &conn, FVS_ROOT, None, &hot).unwrap();
         hot.set_last_used(FVS_ROOT, now_ms() + 60_000);
 
         let evicted = trim_implicit_cache_keys(&conn, 2, &[&hot]).unwrap();
@@ -10878,11 +11126,17 @@ mod tests {
         let b = fvs_backend().await;
         let conn = b.pool().get().unwrap();
 
-        assert!(!ensure_implicit_cache(&conn, FVS_ROOT, None, Some(1), &[]).unwrap());
+        assert!(
+            !ensure_implicit_cache(b.cs_system_id_cache(), &conn, FVS_ROOT, None, Some(1), &[])
+                .unwrap()
+        );
         assert!(implicit_cache_urls(&conn).is_empty());
         assert!(implicit_cache_key_rows(&conn).is_empty());
 
-        assert!(ensure_implicit_cache(&conn, FVS_ROOT, None, Some(3), &[]).unwrap());
+        assert!(
+            ensure_implicit_cache(b.cs_system_id_cache(), &conn, FVS_ROOT, None, Some(3), &[])
+                .unwrap()
+        );
         assert_eq!(implicit_cache_urls(&conn), vec![FVS_ROOT.to_string()]);
     }
 
@@ -11055,7 +11309,7 @@ mod tests {
 
         // What is loaded into memory afterwards is what the table kept.
         let index: super::super::ImplicitIndex = Arc::default();
-        prebuild_implicit_index(&conn, &index);
+        prebuild_implicit_index(b.cs_system_id_cache(), &conn, &index);
         assert_eq!(index.len(), IMPLICIT_CACHE_MAX_KEYS);
     }
 
