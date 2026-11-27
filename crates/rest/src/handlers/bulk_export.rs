@@ -1131,15 +1131,10 @@ fn owns_job(principal: Option<&Principal>, owner_subject: Option<&str>) -> bool 
     }
 }
 
-/// Jobs the list endpoint may return: the caller's own, unless they hold
-/// `system/*` (or auth is off). Matches the per-id `system/*` override in
-/// spirit; typed `user/*` wildcards do not see other owners' jobs.
+/// Jobs the list endpoint may return: always scoped to the caller's subject
+/// (#2671: `system/*` no longer widens export-job visibility).
 fn list_owner_filter(principal: Option<&Principal>) -> Option<String> {
-    match principal {
-        None => None,
-        Some(p) if p.scopes.has_system_wildcard() => None,
-        Some(p) => Some(p.subject.clone()),
-    }
+    principal.map(|p| p.subject.clone())
 }
 
 #[cfg(test)]
@@ -1153,7 +1148,7 @@ mod tests {
     }
 
     #[test]
-    fn list_owner_filter_is_caller_unless_system_wildcard() {
+    fn list_owner_filter_is_always_caller_subject() {
         assert_eq!(list_owner_filter(None), None);
         let typed = principal("alice", "system/Patient.rs");
         assert_eq!(list_owner_filter(Some(&typed)).as_deref(), Some("alice"));
@@ -1163,7 +1158,7 @@ mod tests {
             Some("alice")
         );
         let admin = principal("alice", "system/*.rs");
-        assert_eq!(list_owner_filter(Some(&admin)), None);
+        assert_eq!(list_owner_filter(Some(&admin)).as_deref(), Some("alice"));
     }
 
     #[tokio::test]
